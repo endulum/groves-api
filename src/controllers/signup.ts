@@ -40,7 +40,7 @@ const controller: {
     const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASS as string, salt);
     await prisma.user.create({
       data: {
-        username: req.body.username,
+        username: req.body.username as string,
         password: hashedPassword,
       },
     });

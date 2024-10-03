@@ -6,12 +6,14 @@
   "scripts": {
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
+    "docker:db": "docker exec -it integration-tests-prisma psql -U prisma tests",
     "test": "npm run docker:up && npx dotenv -e .env.test -- npx prisma migrate deploy && npx dotenv -e .env.test -- jest --runInBand --watch",
     "dev": "ENV=development nodemon --exec ts-node ./app.ts",
     "start": "ENV=production node ./dist/app.js",
     "build": "tsc && cp -r ./src/views ./dist/src/views",
     "clean": "rm -r ./dist",
     "generate": "npx dotenv -e .env.development -- npx prisma generate",
+    "migrate": "npx dotenv -e .env.development -- npx prisma migrate dev",
     "resetdb": "nodemon prisma/reset.ts"
   },
   "keywords": [],

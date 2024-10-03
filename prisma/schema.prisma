@@ -13,8 +13,8 @@ model User {
   username String   @unique @db.VarChar(32)
   password String   @db.VarChar(64)
   joined   DateTime @default(now())
-  bio      String
-  role     Role
+  bio      String?
+  role     Role     @default(BASIC)
 
   communitiesFollowed Community[] @relation("communityFollowers")
   adminOf             Community[] @relation("communityAdmin")
@@ -26,8 +26,11 @@ model User {
 model Community {
   id Int @id @default(autoincrement())
 
-  wiki   String
-  status Status
+  urlName       String
+  canonicalName String
+  description   String
+  wiki          String
+  status        Status
 
   followers  User[]    @relation("communityFollowers")
   admin      User      @relation("communityAdmin", fields: [adminId], references: [id])
