@@ -39,9 +39,10 @@ describe('get user', () => {
   test('GET /user/:userNameOrId - 200 and user details with username', async () => {
     const response = await helpers.req('GET', '/user/admin', null, null);
     expect(response.status).toBe(200);
-    await Promise.all(['username', 'id', 'bio', 'role'].map(async (property) => {
+    await Promise.all(['username', 'id', 'bio', 'verdancy', 'role'].map(async (property) => {
       expect(response.body).toHaveProperty(property);
     }));
+    // console.log(response.body);
   });
 });
 

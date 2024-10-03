@@ -2,7 +2,7 @@ import { RequestHandler } from 'express';
 import asyncHandler from 'express-async-handler';
 import jsonwebtoken from 'jsonwebtoken';
 
-import { User } from '@prisma/client';
+import { Post, User } from '@prisma/client';
 import prisma from '../prisma';
 
 interface IJwtPayload extends jsonwebtoken.JwtPayload {
@@ -43,11 +43,21 @@ const controller: {
 
   exists: asyncHandler(async (req, res, next) => {
     let user: User | null = null;
+    const include = {
+      communitiesFollowed: true,
+      adminOf: true,
+      moderatorOf: true,
+      posts: true,
+      comments: true,
+    };
+
     const id = parseInt(req.params.userNameOrId, 10);
     if (id % 1 !== 0) {
-      user = await prisma.user.findUnique({ where: { username: req.params.userNameOrId } });
+      user = await prisma.user.findUnique({
+        where: { username: req.params.userNameOrId }, include,
+      });
     } else {
-      user = await prisma.user.findUnique({ where: { id } });
+      user = await prisma.user.findUnique({ where: { id }, include });
     }
     if (user) {
       req.thisUser = user;
@@ -58,11 +68,18 @@ const controller: {
   }),
 
   get: asyncHandler(async (req, res) => {
+    const verdancy = req.thisUser.posts
+      .concat(req.thisUser.comments)
+      .reduce((acc: number, curr: Post) => {
+        const total = curr.upvotes - curr.downvotes;
+        return total > 0 ? acc + total : acc + 0;
+      }, 0);
     res.json({
       username: req.thisUser.username,
       id: req.thisUser.id,
       joined: req.thisUser.joined,
       bio: req.thisUser.bio,
+      verdancy,
       role: req.thisUser.role,
     });
   }),
