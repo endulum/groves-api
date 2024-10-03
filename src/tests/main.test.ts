@@ -48,6 +48,7 @@ describe('get user', () => {
 describe('change account details', () => {
   const correctInputs = {
     username: 'admin',
+    bio: 'Snazzy bio here.',
     password: 'new-password',
     confirmPassword: 'new-password',
     currentPassword: process.env.ADMIN_PASS,
@@ -68,6 +69,7 @@ describe('change account details', () => {
       { username: 'basic' },
       { username: 'a' },
       { username: '&&&&' },
+      { bio: Array(1000).fill('A').join('') },
       { password: '.' },
       { password: 'some mismatched password' },
       { confirmPassword: 'some mismatched password' },
@@ -95,8 +97,8 @@ describe('change account details', () => {
 
   test('POST /account - 200 and changes account details (without password)', async () => {
     const { token } = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
-    const response = await helpers.req('POST', '/account', { username: 'owo' }, token);
+    const response = await helpers.req('POST', '/account', { username: 'owo', bio: 'Snazzy bio here.' }, token);
     expect(response.status).toBe(200);
-    await helpers.req('POST', '/account', { username: 'admin' }, token);
+    await helpers.req('POST', '/account', { username: 'admin', bio: '' }, token);
   });
 });

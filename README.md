@@ -8,7 +8,7 @@ Groves is an arboreal clone of Reddit.
 - [x] `GET /`: returns `200` if valid token provided and `400` otherwise
 ### User
 - [x] `GET /user/:userNameOrId`: shows details of user if exists
-- [ ] `POST /account`: accepts fields `username`, `bio`, `password`, `confirmPassword`, and `currentPassword` and edits the authenticated User with this information
+- [x] `POST /account`: accepts fields `username`, `bio`, `password`, `confirmPassword`, and `currentPassword` and edits the authenticated User with this information
 - [ ] `DELETE /account`: accepts field `password` and deletes the authenticated User object
 ### Communities
 - [ ] `GET /communities`: shows all existing unarchived communities, filters using query params `name` and `sort`

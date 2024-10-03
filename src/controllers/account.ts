@@ -12,6 +12,10 @@ const controller: {
 } = {
   validate: [
     usernameValidation,
+    body('bio')
+      .trim()
+      .isLength({ max: 200 }).withMessage('Bios cannot be more than 200 characters long.')
+      .escape(),
     body('password')
       .trim()
       .custom(async (value) => {
