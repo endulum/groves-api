@@ -7,7 +7,7 @@ Groves is an arboreal clone of Reddit.
 - [x] `POST /signup`: accepts fields `username`, `password`, and `confirmPassword` and creates a User object with this information
 - [x] `GET /`: returns `200` if valid token provided and `400` otherwise
 ### User
-- [ ] `GET /user/:userNameOrId`: shows details of user if exists
+- [x] `GET /user/:userNameOrId`: shows details of user if exists
 - [ ] `POST /account`: accepts fields `username`, `bio`, `password`, `confirmPassword`, and `currentPassword` and edits the authenticated User with this information
 - [ ] `DELETE /account`: accepts field `password` and deletes the authenticated User object
 ### Communities

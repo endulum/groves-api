@@ -2,6 +2,7 @@ import { RequestHandler } from 'express';
 import asyncHandler from 'express-async-handler';
 import jsonwebtoken from 'jsonwebtoken';
 
+import { User } from '@prisma/client';
 import prisma from '../prisma';
 
 interface IJwtPayload extends jsonwebtoken.JwtPayload {
@@ -41,17 +42,18 @@ const controller: {
   }),
 
   exists: asyncHandler(async (req, res, next) => {
-    const id = parseInt(req.params.userId, 10);
+    let user: User | null = null;
+    const id = parseInt(req.params.userNameOrId, 10);
     if (id % 1 !== 0) {
-      res.sendStatus(404);
+      user = await prisma.user.findUnique({ where: { username: req.params.userNameOrId } });
     } else {
-      const user = await prisma.user.findUnique({ where: { id } });
-      if (!user) {
-        res.sendStatus(404);
-      } else {
-        req.thisUser = user;
-        next();
-      }
+      user = await prisma.user.findUnique({ where: { id } });
+    }
+    if (user) {
+      req.thisUser = user;
+      next();
+    } else {
+      res.sendStatus(404);
     }
   }),
 
@@ -59,6 +61,8 @@ const controller: {
     res.json({
       username: req.thisUser.username,
       id: req.thisUser.id,
+      joined: req.thisUser.joined,
+      bio: req.thisUser.bio,
       role: req.thisUser.role,
     });
   }),

@@ -12,7 +12,7 @@ router.route('/')
     res.json(req.user);
   }));
 
-router.route('/user/:userId')
+router.route('/user/:userNameOrId')
   .get(user.exists, user.get);
 
 router.route('/account')
