@@ -7,21 +7,82 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Session {
-  id        String   @id
-  sid       String   @unique
-  data      String
-  expiresAt DateTime
+model User {
+  id Int @id @default(autoincrement())
+
+  username String   @unique @db.VarChar(32)
+  password String   @db.VarChar(64)
+  joined   DateTime @default(now())
+  bio      String
+  role     Role
+
+  communitiesFollowed Community[] @relation("communityFollowers")
+  adminOf             Community[] @relation("communityAdmin")
+  moderatorOf         Community[] @relation("communityModerators")
+  posts               Post[]
+  comments            Comment[]   @relation("commentAuthor")
 }
 
-model User {
-  id       Int    @id @default(autoincrement())
-  username String @unique @db.VarChar(32)
-  password String @db.VarChar(255)
-  role     Role   @default(BASIC)
+model Community {
+  id Int @id @default(autoincrement())
+
+  wiki   String
+  status Status
+
+  followers  User[]    @relation("communityFollowers")
+  admin      User      @relation("communityAdmin", fields: [adminId], references: [id])
+  adminId    Int
+  moderators User[]    @relation("communityModerators")
+  posts      Post[]    @relation("postCommunity")
+  comments   Comment[] @relation("commentCommunity")
+}
+
+model Post {
+  id String @id @default(cuid())
+
+  title      String    @db.VarChar(64)
+  content    String
+  datePosted DateTime  @default(now())
+  lastEdited DateTime?
+  upvotes    Int
+  downvotes  Int
+  status     Status
+  pinned     Boolean
+
+  author      User      @relation(fields: [authorId], references: [id])
+  authorId    Int
+  community   Community @relation("postCommunity", fields: [communityId], references: [id])
+  communityId Int
+  comments    Comment[] @relation("commentPost")
+}
+
+model Comment {
+  id String @id @default(cuid())
+
+  content    String
+  datePosted DateTime @default(now())
+  upvotes    Int
+  downvotes  Int
+  status     Status
+
+  author      User      @relation("commentAuthor", fields: [authorId], references: [id])
+  authorId    Int
+  post        Post      @relation("commentPost", fields: [postId], references: [id])
+  postId      String
+  community   Community @relation("commentCommunity", fields: [communityId], references: [id])
+  communityId Int
+  parent      Comment?  @relation("parentComment", fields: [parentId], references: [id])
+  parentId    String?
+  children    Comment[] @relation("parentComment")
 }
 
 enum Role {
   BASIC
   ADMIN
+}
+
+enum Status {
+  ACTIVE // can be seen and replied to
+  FROZEN // cannot be replied to
+  HIDDEN // cannot be seen or replied to
 }
