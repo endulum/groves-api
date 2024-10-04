@@ -43,10 +43,8 @@ const controller: {
   }),
 
   get: asyncHandler(async (req, res) => {
-    if (req.thisCommunity.status === 'HIDDEN') {
-      if (!req.user || !(req.user.role === 'ADMIN')) {
-        res.sendStatus(404);
-      }
+    if (req.thisCommunity.status === 'HIDDEN' && (!req.user || !(req.user.role === 'ADMIN'))) {
+      res.sendStatus(404);
     } else {
       res.json(req.thisCommunity);
     }

@@ -11,18 +11,15 @@ interface IJwtPayload extends jsonwebtoken.JwtPayload {
 
 const controller: {
   deserialize: RequestHandler,
+  authenticate: RequestHandler,
   exists: RequestHandler,
   get: RequestHandler
 } = {
-  // todo: some routes only optionally need a user. don't need to 401 redirect all the time
-  deserialize: asyncHandler(async (req, res, next) => {
+  deserialize: asyncHandler(async (req, _res, next) => {
     const bearerHeader = req.headers.authorization;
     const bearerToken = bearerHeader?.split(' ')[1];
 
-    if (bearerToken === undefined) {
-      res.sendStatus(401);
-      return;
-    }
+    if (bearerToken === undefined) return next();
 
     let decoded;
     try {
@@ -31,14 +28,20 @@ const controller: {
       const user = await prisma.user.findUnique({
         where: { id: parseInt(decoded.id, 10) },
       });
-      if (!user) {
-        res.sendStatus(404);
-      } else {
-        req.user = user;
-        next();
-      }
-    } catch {
+      req.user = user;
+    } catch (err) {
+      console.error(err);
+      req.user = null;
+    }
+
+    return next();
+  }),
+
+  authenticate: asyncHandler(async (req, res, next) => {
+    if (!req.user) {
       res.sendStatus(401);
+    } else {
+      next();
     }
   }),
 

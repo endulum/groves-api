@@ -38,7 +38,7 @@ describe('seeing communities', () => {
     expect(response.status).toEqual(404);
   });
 
-  test.skip('GET /community/:communityNameOrId - 200 if hidden and viewer is site admin', async () => {
+  test('GET /community/:communityNameOrId - 200 if hidden and viewer is site admin', async () => {
     const siteAdmin = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
     const response = await helpers.req('GET', '/community/hidden', null, siteAdmin.token);
     expect(response.status).toEqual(200);
