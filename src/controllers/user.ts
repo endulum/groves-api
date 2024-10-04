@@ -14,6 +14,7 @@ const controller: {
   exists: RequestHandler,
   get: RequestHandler
 } = {
+  // todo: some routes only optionally need a user. don't need to 401 redirect all the time
   deserialize: asyncHandler(async (req, res, next) => {
     const bearerHeader = req.headers.authorization;
     const bearerToken = bearerHeader?.split(' ')[1];

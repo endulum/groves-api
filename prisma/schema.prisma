@@ -26,10 +26,10 @@ model User {
 model Community {
   id Int @id @default(autoincrement())
 
-  urlName       String
+  urlName       String  @unique
   canonicalName String
   description   String
-  wiki          String
+  wiki          String?
   status        Status
 
   followers  User[]    @relation("communityFollowers")

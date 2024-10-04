@@ -61,6 +61,52 @@ export async function createUsers() {
   });
 }
 
-export async function wipeTables(tables: Array<'user' | 'session'>) {
-  if (tables.includes('user')) await prisma.user.deleteMany({});
+export async function wipeTables(tables: Array<'user' | 'session' | 'community'>) {
+  if (tables.includes('community')) await prisma.community.deleteMany();
+  if (tables.includes('user')) await prisma.user.deleteMany();
+}
+
+export async function createDummyCommunities() {
+  await Promise.all([
+    {
+      urlName: 'askgroves',
+      canonicalName: 'Ask Groves',
+      description: 'This is the place to ask and answer thought-provoking questions.',
+    }, {
+      urlName: 'nostupidquestions',
+      canonicalName: 'No Stupid Questions',
+      description: 'Ask away!',
+    }, {
+      urlName: 'damnthatsinteresting',
+      canonicalName: 'Damn, that\'s interesting!',
+      description: 'For the most interesting things on the internet',
+    }, {
+      urlName: 'gaming',
+      canonicalName: 'Gaming',
+      description: 'The number one gaming forum on the Internet.',
+    }, {
+      urlName: 'worldnews',
+      canonicalName: 'World News',
+      description: 'A place for major news from around the world, excluding US-internal news.',
+    }, {
+      urlName: 'frozen',
+      canonicalName: 'Frozen',
+      description: 'You shouldn\'t see this one in global search!',
+    }, {
+      urlName: 'hidden',
+      canonicalName: 'Hidden',
+      description: 'You shouldn\'t see this one!',
+    },
+  ].map(async (community, index) => {
+    await prisma.community.create({
+      data: {
+        urlName: community.urlName,
+        canonicalName: community.canonicalName,
+        description: community.description,
+        // eslint-disable-next-line no-nested-ternary
+        status: index === 5 ? 'FROZEN' : index === 6 ? 'HIDDEN' : 'ACTIVE',
+        adminId: 1,
+      },
+    });
+  }));
 }
