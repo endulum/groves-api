@@ -12,9 +12,9 @@ Groves is an arboreal clone of Reddit.
 - [ ] `DELETE /account`: accepts field `password` and deletes the authenticated User object
 ### Communities
 - [x] `GET /communities`: shows all existing unarchived communities, ~~filters using query params `name` and `sort`~~
-- [ ] `POST /communities`: accepts field `name` and creates a Community object with this information
+- [x] `POST /communities`: accepts fields `urlName`, `canonicalName`, and `description` and creates a Community object with this information
 - [x] `GET /community/:communityNameOrId`: shows an Community and its details
-- [ ] `POST /community/:communityNameOrId`: accepts fields `name` and `wiki` and edits the Community object with this information
+- [x] `PUT /community/:communityNameOrId`: accepts fields `urlName`, `canonicalName`, and `description` and edits the Community object with this information
 - [ ] `POST /community/:communityNameOrId/promote`: accepts field `username` and appoints a User as "moderator" for this Community (admins also have mod powers)
 - [ ] `POST /community/:communityNameOrId/demote`: accepts field `username` and removes a "moderator" of this Community from their position
 - [ ] `POST /community/:communityNameOrId/status`: toggles status of Community between

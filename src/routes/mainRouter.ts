@@ -9,6 +9,8 @@ import community from '../controllers/community';
 const router = express.Router();
 
 const editAccountDetails = [account.validate, handleValidationErrors, account.submit];
+const createCommunity = [community.validate, handleValidationErrors, community.create];
+const editCommunity = [community.validate, handleValidationErrors, community.edit];
 
 router.route('/')
   .get(user.deserialize, asyncHandler(async (req, res) => {
@@ -22,9 +24,11 @@ router.route('/account')
   .post(user.deserialize, user.authenticate, ...editAccountDetails);
 
 router.route('/communities')
-  .get(community.getAll);
+  .get(community.getAll)
+  .post(user.deserialize, user.authenticate, ...createCommunity);
 
 router.route('/community/:communityNameOrId')
-  .get(user.deserialize, community.exists, community.get);
+  .get(user.deserialize, community.exists, community.get)
+  .put(user.deserialize, community.exists, community.isModOrAdminOf, ...editCommunity);
 
 export default router;

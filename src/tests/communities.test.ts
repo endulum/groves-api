@@ -44,3 +44,86 @@ describe('seeing communities', () => {
     expect(response.status).toEqual(200);
   });
 });
+
+describe('creating communities', () => {
+  const correctInputs = {
+    urlName: 'uspolitics',
+    canonicalName: 'U.S. Politics',
+    description: 'News and discussion about U.S. politics.',
+  };
+
+  test('POST /communities - 400 if errors', async () => {
+    const wrongInputsArray = [
+      { urlName: '' },
+      { canonicalName: '' },
+      { description: '' },
+      { urlName: 'a' },
+      { urlName: Array(1000).fill('A').join('') },
+      { urlName: '&&&' },
+      { canonicalName: 'a' },
+      { canonicalName: Array(1000).fill('A').join('') },
+      { description: Array(1000).fill('A').join('') },
+    ];
+
+    await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
+      const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
+      const response = await helpers.req('POST', '/communities', { ...correctInputs, ...wrongInputs }, user.token);
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('errors');
+      expect(response.body.errors.length).toEqual(1);
+    }));
+  });
+
+  test('POST /communities - 200 and creates a community', async () => {
+    const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
+    let response = await helpers.req('POST', '/communities', correctInputs, user.token);
+    expect(response.status).toBe(200);
+    response = await helpers.req('GET', `/community/${correctInputs.urlName}`, null, null);
+    expect(response.status).toBe(200);
+    // console.log(response.body);
+  });
+});
+
+describe('editing a community', () => {
+  const correctInputs = {
+    urlName: 'politics',
+    canonicalName: 'Politics',
+    description: 'News and discussion about politics.',
+  };
+
+  test('PUT /community/:communityNameOrId - 403 if not admin or mod', async () => {
+    const user = await helpers.getUser('basic', process.env.ADMIN_PASS as string);
+    const response = await helpers.req('PUT', '/community/uspolitics', correctInputs, user.token);
+    expect(response.status).toBe(403);
+  });
+
+  test('PUT /community/:communityNameOrId - 400 if errors', async () => {
+    const wrongInputsArray = [
+      { urlName: '' },
+      { canonicalName: '' },
+      { description: '' },
+      { urlName: 'a' },
+      { urlName: Array(1000).fill('A').join('') },
+      { urlName: '&&&' },
+      { canonicalName: 'a' },
+      { canonicalName: Array(1000).fill('A').join('') },
+      { description: Array(1000).fill('A').join('') },
+    ];
+
+    await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
+      const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
+      const response = await helpers.req('PUT', '/community/uspolitics', { ...correctInputs, ...wrongInputs }, user.token);
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('errors');
+      expect(response.body.errors.length).toEqual(1);
+    }));
+  });
+
+  test('PUT /community/:communityNameOrId - 200 and creates a community', async () => {
+    const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
+    let response = await helpers.req('PUT', '/community/uspolitics', correctInputs, user.token);
+    expect(response.status).toBe(200);
+    response = await helpers.req('GET', `/community/${correctInputs.urlName}`, null, null);
+    expect(response.status).toBe(200);
+  });
+});
