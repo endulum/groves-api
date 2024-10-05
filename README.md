@@ -9,11 +9,10 @@ Groves is an arboreal clone of Reddit.
 ### User
 - [x] `GET /user/:userNameOrId`: shows details of user if exists
 - [x] `POST /account`: accepts fields `username`, `bio`, `password`, `confirmPassword`, and `currentPassword` and edits the authenticated User with this information
-- [ ] `DELETE /account`: accepts field `password` and deletes the authenticated User object
 ### Communities
 - [x] `GET /communities`: shows all existing unarchived communities, ~~filters using query params `name` and `sort`~~
 - [x] `POST /communities`: accepts fields `urlName`, `canonicalName`, and `description` and creates a Community object with this information
-- [x] `GET /community/:communityNameOrId`: shows an Community and its details
+- [x] `GET /community/:communityNameOrId`: shows a Community and its details
 - [x] `PUT /community/:communityNameOrId`: accepts fields `urlName`, `canonicalName`, and `description` and edits the Community object with this information
 - [ ] `POST /community/:communityNameOrId/promote`: accepts field `username` and appoints a User as "moderator" for this Community (admins also have mod powers)
 - [ ] `POST /community/:communityNameOrId/demote`: accepts field `username` and removes a "moderator" of this Community from their position
@@ -21,7 +20,7 @@ Groves is an arboreal clone of Reddit.
 - - `ACTIVE`: can be posted to by anyone, followed by anyone, edited by moderation only
 - - `FROZEN`: "archived", cannot be interacted with by anyone, even admin
 - - `HIDDEN`: (only site admins can do this) same as `FROZEN` but cannot be seen by anyone, not even admin
-### Posts
+<!-- ### Posts
 - [ ] `GET /community/:communityNameOrId/posts`: shows all existing unhidden posts under this Community, filters using query params `name` and `sort` (Community moderators can see hidden posts)
 - [ ] `POST /community/:communityNameOrId/posts`: accepts field `title` and `content` and creates a Post object under this Community with this information
 - [ ] `GET /post/:postId`: shows a post (if not hidden) and its details
@@ -39,4 +38,4 @@ Groves is an arboreal clone of Reddit.
 - - `ACTIVE`: can be replied to by anyone, voted by anyone
 - - `FROZEN`: cannot be replied to or voted
 - - `HIDDEN`: same as `FROZEN` but cannot be seen by anyone except moderation
-- [ ] `POST /comment/:commentId/vote`: accepts field `up` as boolean and increments Comment's `upvote` or `downvote` count with this information
+- [ ] `POST /comment/:commentId/vote`: accepts field `up` as boolean and increments Comment's `upvote` or `downvote` count with this information -->

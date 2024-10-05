@@ -14,7 +14,7 @@
     "clean": "rm -r ./dist",
     "generate": "npx dotenv -e .env.development -- npx prisma generate",
     "migrate": "npx dotenv -e .env.development -- npx prisma migrate dev",
-    "resetdb": "nodemon prisma/reset.ts"
+    "resetdb": "npx dotenv -e .env.development -- nodemon prisma/reset.ts"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +22,7 @@
   "dependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "@eslint/js": "^9.11.1",
+    "@faker-js/faker": "^9.0.3",
     "@prisma/client": "^5.19.0",
     "bcryptjs": "^2.4.3",
     "dotenv": "^16.4.5",
@@ -29,6 +30,7 @@
     "express-async-handler": "^1.2.0",
     "express-validator": "^7.2.0",
     "jsonwebtoken": "^9.0.2",
+    "lorem-ipsum": "^2.0.8",
     "supertest": "^7.0.0"
   },
   "devDependencies": {

@@ -4,20 +4,31 @@
   },
   "files": [
     "app.ts",
+    "./prisma/reset.ts",
     "./src/index.d.ts",
     "eslint.config.mjs"
   ],
-  "include": ["./src/tests/*.ts",],
-  "exclude": ["node_modules"],
+  "include": [
+    "./src/tests/*.ts",
+  ],
+  "exclude": [
+    "node_modules"
+  ],
   "compilerOptions": {
     "allowJs": true,
     "module": "CommonJS",
+    "moduleResolution": "Node",
     "sourceMap": true,
     "outDir": "dist",
     "strict": true,
-    "lib": ["esnext"],
+    "lib": [
+      "esnext"
+    ],
     "esModuleInterop": true,
-    "typeRoots": ["index.d.ts", "./node_modules/@types"],
+    "typeRoots": [
+      "index.d.ts",
+      "./node_modules/@types"
+    ],
     "skipLibCheck": true
   }
 }
