@@ -57,6 +57,7 @@ export default [...compat.extends(
     'max-len': [
       'warn',
       {
+        code: 90,
         ignoreComments: true,
         ignoreStrings: true,
       },

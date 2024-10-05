@@ -20,7 +20,10 @@ const editCommunity = [
   community.validate, handleValidationErrors, community.edit,
 ];
 const areYouMod = [community.exists, community.isMod];
-// const areYouAdmin = [community.exists, community.isAdmin];
+const areYouAdmin = [community.exists, community.isAdmin];
+const promoteUser = [
+  community.validatePromotion, handleValidationErrors, community.promote,
+];
 // const editCommunityWiki = [
 //   community.validateWiki, handleValidationErrors, community.editWiki
 // ]
@@ -44,8 +47,8 @@ router.route('/communities')
 router.route('/community/:communityNameOrId')
   .get(user.deserialize, community.exists, community.get)
   .put(...authUser, ...areYouMod, ...editCommunity);
-// router.route('/community/:communityNameOrId/promote')
-//   .post(...authUser, ...areYouAdmin, community.promote);
+router.route('/community/:communityNameOrId/promote')
+  .post(...authUser, ...areYouAdmin, ...promoteUser);
 // router.route('/community/:communityNameOrId/demote')
 //   .post(...authUser, ...areYouAdmin, community.demote);
 // router.route('/community/:communityNameOrId/wiki')

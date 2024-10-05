@@ -158,3 +158,58 @@ describe('see communities', () => {
     expect(response.status).toEqual(200);
   });
 });
+
+describe('community administration and moderation', () => {
+  beforeAll(async () => {
+    await prisma.community.create({
+      data: {
+        urlName: 'comm',
+        canonicalName: 'Community',
+        description: 'This is an ordinary community.',
+        adminId: 2,
+        moderators: {
+          connect: { id: 3 },
+        },
+      },
+    });
+  });
+
+  afterAll(async () => { await helpers.wipeTables(['community']); });
+
+  test('POST /community/:communityNameOrId/promote - 403 if not admin of community', async () => {
+    const user = await helpers.getUser('demo-3', 'password');
+    const response = await helpers.req('POST', '/community/comm/promote', { username: 'demo-3' }, user.token);
+    expect(response.status).toBe(403);
+  });
+
+  test('POST /community/:communityNameOrId/promote - 400 if errors', async () => {
+    const wrongInputArray = [
+      { username: '' },
+      { username: 'demo-1' },
+      { username: 'demo-2' },
+      { username: 'owo' },
+    ];
+
+    const user = await helpers.getUser('demo-1', 'password');
+    await Promise.all(wrongInputArray.map(async (wrongInput) => {
+      const response = await helpers.req('POST', '/community/comm/promote', wrongInput, user.token);
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('errors');
+      expect(response.body.errors.length).toEqual(1);
+    }));
+  });
+
+  test('POST /community/:communityNameOrId/promote - 200 and adds user to community moderators', async () => {
+    const user = await helpers.getUser('demo-1', 'password');
+    const response = await helpers.req('POST', '/community/comm/promote', { username: 'demo-3' }, user.token);
+    expect(response.status).toBe(200);
+
+    const thisCommunity = await prisma.community.findUnique({
+      where: { urlName: 'comm' },
+      include: { moderators: true },
+    });
+    expect(thisCommunity?.moderators.map((c) => c.username)).toEqual(['demo-2', 'demo-3']);
+  });
+});
+
+// todo: prevent passwords from showing up...

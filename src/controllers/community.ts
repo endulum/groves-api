@@ -13,7 +13,11 @@ const controller: {
   get: RequestHandler,
   validate: ValidationChain[],
   create: RequestHandler,
-  edit: RequestHandler
+  edit: RequestHandler,
+  validatePromotion: ValidationChain,
+  promote: RequestHandler,
+  // validateDemotion: ValidationChain,
+  // demote: RequestHandler
 } = {
   getAll: asyncHandler(async (_req, res) => {
     // todo: use query params to filter results
@@ -131,6 +135,38 @@ const controller: {
         urlName: req.body.urlName,
         canonicalName: req.body.canonicalName,
         description: req.body.description,
+      },
+    });
+    res.sendStatus(200);
+  }),
+
+  validatePromotion: body('username')
+    .trim()
+    .notEmpty().withMessage('Please enter a username.')
+    .bail()
+    .custom(async (value, { req }) => {
+      const existingUser = await prisma.user.findUnique({
+        where: { username: value },
+        include: { moderatorOf: true, adminOf: true },
+      });
+      if (!existingUser) { throw new Error('No user exists with this username.'); }
+      if (existingUser.adminOf.map((c) => c.id).includes(req.thisCommunity.id)) {
+        throw new Error('You cannot promote yourself.');
+      }
+      if (existingUser.moderatorOf.map((c) => c.id).includes(req.thisCommunity.id)) {
+        throw new Error('This user is already a moderator of this community.');
+      }
+      req.thisUser = existingUser;
+    })
+    .escape(),
+
+  promote: asyncHandler(async (req, res) => {
+    await prisma.community.update({
+      where: { id: req.thisCommunity.id },
+      data: {
+        moderators: {
+          connect: { id: req.thisUser.id },
+        },
       },
     });
     res.sendStatus(200);

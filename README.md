@@ -14,7 +14,7 @@ Groves is an arboreal clone of Reddit.
 - [x] `POST /communities`: accepts fields `urlName`, `canonicalName`, and `description` and creates a Community object with this information
 - [x] `GET /community/:communityNameOrId`: shows a Community and its details
 - [x] `PUT /community/:communityNameOrId`: accepts fields `urlName`, `canonicalName`, and `description` and edits the Community object with this information
-- [ ] `POST /community/:communityNameOrId/promote`: accepts field `username` and appoints a User as "moderator" for this Community (admins also have mod powers)
+- [x] `POST /community/:communityNameOrId/promote`: accepts field `username` and appoints a User as "moderator" for this Community (admins also have mod powers)
 - [ ] `POST /community/:communityNameOrId/demote`: accepts field `username` and removes a "moderator" of this Community from their position
 - [ ] `POST /community/:communityNameOrId/status`: toggles status of Community between
 - - `ACTIVE`: can be posted to by anyone, followed by anyone, edited by moderation only
