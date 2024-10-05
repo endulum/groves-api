@@ -54,5 +54,12 @@ export default [...compat.extends(
         allow: ['warn', 'error'],
       },
     ],
+    'max-len': [
+      'warn',
+      {
+        ignoreComments: true,
+        ignoreStrings: true,
+      },
+    ],
   },
 }];

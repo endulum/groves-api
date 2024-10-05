@@ -24,7 +24,10 @@ const controller: {
     let decoded;
     try {
       if (!process.env.TOKEN_SECRET) throw new Error('Secret is not defined.');
-      decoded = jsonwebtoken.verify(bearerToken, process.env.TOKEN_SECRET) as IJwtPayload;
+      decoded = jsonwebtoken.verify(
+        bearerToken,
+        process.env.TOKEN_SECRET,
+      ) as IJwtPayload;
       const user = await prisma.user.findUnique({
         where: { id: parseInt(decoded.id, 10) },
       });

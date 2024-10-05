@@ -1,8 +1,8 @@
-import * as helpers from './helpers';
+import * as helpers from './helpers/helpers';
 
 beforeAll(async () => {
   await helpers.wipeTables(['user']);
-  await helpers.createUsers();
+  await helpers.createUsers(['basic']);
 });
 
 afterAll(async () => {

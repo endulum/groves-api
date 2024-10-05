@@ -1,9 +1,15 @@
 import * as helpers from './helpers';
-import prisma from '../prisma';
+import prisma from '../../prisma';
 
-afterAll(async () => {
-  await helpers.wipeTables(['user']);
-});
+async function clear() {
+  await prisma.community.deleteMany({});
+  await prisma.$queryRaw`ALTER SEQUENCE "Community_id_seq" RESTART WITH 1;`;
+  await prisma.user.deleteMany({});
+  await prisma.$queryRaw`ALTER SEQUENCE "User_id_seq" RESTART WITH 1;`;
+}
+
+beforeAll(async () => { await clear(); });
+afterAll(async () => { await clear(); });
 
 describe('wipeDatabase helper', () => {
   test('it works', async () => {
@@ -15,7 +21,7 @@ describe('wipeDatabase helper', () => {
 
 describe('createUser helper', () => {
   test('it works', async () => {
-    await helpers.createUsers();
+    await helpers.createUsers(['basic']);
     const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
     expect(admin).toBeDefined();
     const basic = await prisma.user.findFirst({ where: { role: 'BASIC' } });
@@ -26,7 +32,7 @@ describe('createUser helper', () => {
 
 describe('getUser helper', () => {
   test('it works', async () => {
-    await helpers.createUsers();
+    await helpers.createUsers([]);
     const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
     expect(user).toBeDefined();
     await Promise.all(['username', 'id', 'token'].map(async (property) => {

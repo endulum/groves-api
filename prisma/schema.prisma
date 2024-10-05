@@ -30,7 +30,7 @@ model Community {
   canonicalName String
   description   String
   wiki          String?
-  status        Status
+  status        Status  @default(ACTIVE)
 
   followers  User[]    @relation("communityFollowers")
   admin      User      @relation("communityAdmin", fields: [adminId], references: [id])

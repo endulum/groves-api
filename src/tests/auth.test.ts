@@ -1,8 +1,8 @@
-import * as helpers from './helpers';
+import * as helpers from './helpers/helpers';
 
 beforeAll(async () => {
   await helpers.wipeTables(['user']);
-  await helpers.createUsers();
+  await helpers.createUsers([]);
 });
 
 afterAll(async () => {
@@ -12,7 +12,7 @@ afterAll(async () => {
 describe('logging in', () => {
   const correctInputs = {
     username: 'admin',
-    password: process.env.ADMIN_PASS,
+    password: 'password',
   };
 
   test('POST /login - 400 and errors', async () => {
@@ -66,7 +66,10 @@ describe('signing up', () => {
   test('POST /signup - 200 and new user details returned', async () => {
     const response = await helpers.req('POST', '/signup', correctInputs, null);
     expect(response.status).toBe(200);
-    const user = await helpers.getUser(correctInputs.username, correctInputs.password);
+    const user = await helpers.getUser(
+      correctInputs.username,
+      correctInputs.password,
+    );
     expect(user).toBeDefined();
   });
 });

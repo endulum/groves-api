@@ -8,8 +8,8 @@ import prisma from '../prisma';
 const controller: {
   getAll: RequestHandler,
   exists: RequestHandler,
-  isAdminOf: RequestHandler,
-  isModOrAdminOf: RequestHandler,
+  isAdmin: RequestHandler,
+  isMod: RequestHandler,
   get: RequestHandler,
   validate: ValidationChain[],
   create: RequestHandler,
@@ -48,12 +48,12 @@ const controller: {
     }
   }),
 
-  isAdminOf: asyncHandler(async (req, res, next) => {
+  isAdmin: asyncHandler(async (req, res, next) => {
     if (req.thisCommunity.adminId !== req.user.id) res.sendStatus(403);
     else next();
   }),
 
-  isModOrAdminOf: asyncHandler(async (req, res, next) => {
+  isMod: asyncHandler(async (req, res, next) => {
     if (
       !req.thisCommunity.moderators.includes(req.user.id)
       && req.thisCommunity.adminId !== req.user.id
@@ -79,6 +79,19 @@ const controller: {
       .bail()
       .matches(/^[a-z0-9]+$/g)
       .withMessage('Community URL names must only contain lowercase and numbers.')
+      .bail()
+      .custom(async (value, { req }) => {
+        const existingCommunity = await prisma.community.findUnique({
+          where: { urlName: value },
+        });
+        if (
+          existingCommunity
+          && !('thisCommunity' in req
+            && existingCommunity.id === req.thisCommunity.id)
+        ) {
+          throw new Error('A community with this URL name already exists. Community URLs must be unique.');
+        }
+      })
       .escape(),
     body('canonicalName')
       .trim()

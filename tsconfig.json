@@ -10,6 +10,8 @@
   ],
   "include": [
     "./src/tests/*.ts",
+    "./src/tests/helpers/app.ts",
+    "./src/tests/helpers/helpers.ts", "src/tests/helpers/helpers.test.ts",
   ],
   "exclude": [
     "node_modules"

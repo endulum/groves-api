@@ -28,7 +28,10 @@ async function generateContent() {
   }
 
   const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(process.env.DUMMY_PASS as string, salt);
+  const hashedPassword = await bcrypt.hash(
+    process.env.DUMMY_PASS as string,
+    salt,
+  );
 
   await prisma.$queryRaw`ALTER SEQUENCE "User_id_seq" RESTART WITH 11;`;
 

@@ -1,72 +1,56 @@
-import * as helpers from './helpers';
+import * as helpers from './helpers/helpers';
+import prisma from '../prisma';
 
 beforeAll(async () => {
   await helpers.wipeTables(['user', 'community']);
-  await helpers.createUsers();
-  await helpers.createDummyCommunities();
+  await helpers.createUsers(['demo-1', 'demo-2', 'demo-3']);
 });
 
 afterAll(async () => {
   await helpers.wipeTables(['user', 'community']);
 });
 
-describe('seeing communities', () => {
-  test('GET /communities - 200 and all active communities', async () => {
-    const response = await helpers.req('GET', '/communities', null, null);
-    expect(response.status).toEqual(200);
-    response.body.forEach((community: { status: string }) => {
-      expect(community.status).toEqual('ACTIVE');
-    });
-    // console.log(response.body);
-  });
-
-  test('GET /community/:communityNameOrId - 404 if community not found', async () => {
-    const response = await helpers.req('GET', '/community/owo', null, null);
-    expect(response.status).toEqual(404);
-  });
-
-  test('GET /community/:communityNameOrId - 200 and community details', async () => {
-    const response = await helpers.req('GET', '/community/askgroves', null, null);
-    expect(response.status).toEqual(200);
-    await Promise.all(['urlName', 'canonicalName', 'id', 'description', 'wiki', 'status', 'followers', 'admin', 'moderators', 'posts'].map(async (property) => {
-      expect(response.body).toHaveProperty(property);
-    }));
-  });
-
-  test('GET /community/:communityNameOrId - 404 if community is hidden', async () => {
-    const response = await helpers.req('GET', '/community/hidden', null, null);
-    expect(response.status).toEqual(404);
-  });
-
-  test('GET /community/:communityNameOrId - 200 if hidden and viewer is site admin', async () => {
-    const siteAdmin = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
-    const response = await helpers.req('GET', '/community/hidden', null, siteAdmin.token);
-    expect(response.status).toEqual(200);
-  });
-});
-
-describe('creating communities', () => {
+describe('create and edit a community', () => {
   const correctInputs = {
-    urlName: 'uspolitics',
-    canonicalName: 'U.S. Politics',
-    description: 'News and discussion about U.S. politics.',
+    urlName: 'askgroves',
+    canonicalName: 'Ask Groves',
+    description: 'This is the place to ask and answer thought-provoking questions.',
   };
 
-  test('POST /communities - 400 if errors', async () => {
-    const wrongInputsArray = [
-      { urlName: '' },
-      { canonicalName: '' },
-      { description: '' },
-      { urlName: 'a' },
-      { urlName: Array(1000).fill('A').join('') },
-      { urlName: '&&&' },
-      { canonicalName: 'a' },
-      { canonicalName: Array(1000).fill('A').join('') },
-      { description: Array(1000).fill('A').join('') },
-    ];
+  const wrongInputsArray = [
+    { urlName: '' },
+    { canonicalName: '' },
+    { description: '' },
+    { urlName: 'a' },
+    { urlName: Array(1000).fill('A').join('') },
+    { urlName: '&&&' },
+    { urlName: 'bestofgroves' },
+    { canonicalName: 'a' },
+    { canonicalName: Array(1000).fill('A').join('') },
+    { description: Array(1000).fill('A').join('') },
+  ];
 
+  beforeAll(async () => {
+    await prisma.community.create({
+      data: {
+        urlName: 'bestofgroves',
+        canonicalName: 'Best of Groves',
+        description: 'The funniest and most memorable happenings.',
+        adminId: 1,
+      },
+    });
+  });
+
+  afterAll(async () => { await helpers.wipeTables(['community']); });
+
+  test('POST /communities - 401 if not logged in', async () => {
+    const response = await helpers.req('POST', '/communities', correctInputs, null);
+    expect(response.status).toBe(401);
+  });
+
+  test('POST /communities - 400 if errors', async () => {
+    const user = await helpers.getUser('demo-1', 'password');
     await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
-      const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
       const response = await helpers.req('POST', '/communities', { ...correctInputs, ...wrongInputs }, user.token);
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('errors');
@@ -74,56 +58,103 @@ describe('creating communities', () => {
     }));
   });
 
-  test('POST /communities - 200 and creates a community', async () => {
-    const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
-    let response = await helpers.req('POST', '/communities', correctInputs, user.token);
+  test('POST /communities - 200 and new community created', async () => {
+    const user = await helpers.getUser('demo-1', 'password');
+    const response = await helpers.req('POST', '/communities', correctInputs, user.token);
     expect(response.status).toBe(200);
-    response = await helpers.req('GET', `/community/${correctInputs.urlName}`, null, null);
-    expect(response.status).toBe(200);
-    // console.log(response.body);
+    const newCommunity = await prisma.community.findUnique({
+      where: { urlName: correctInputs.urlName },
+    });
+    expect(newCommunity).toBeDefined();
   });
-});
 
-describe('editing a community', () => {
-  const correctInputs = {
-    urlName: 'politics',
-    canonicalName: 'Politics',
-    description: 'News and discussion about politics.',
-  };
+  test('PUT /community/:communityNameOrId - 401 if not logged in', async () => {
+    const response = await helpers.req('PUT', `/community/${correctInputs.urlName}`, correctInputs, null);
+    expect(response.status).toBe(401);
+  });
 
-  test('PUT /community/:communityNameOrId - 403 if not admin or mod', async () => {
-    const user = await helpers.getUser('basic', process.env.ADMIN_PASS as string);
-    const response = await helpers.req('PUT', '/community/uspolitics', correctInputs, user.token);
+  test('PUT /community/:communityNameOrId - 403 if not mod', async () => {
+    const user = await helpers.getUser('demo-2', 'password');
+    const response = await helpers.req('PUT', `/community/${correctInputs.urlName}`, correctInputs, user.token);
     expect(response.status).toBe(403);
   });
 
-  test('PUT /community/:communityNameOrId - 400 if errors', async () => {
-    const wrongInputsArray = [
-      { urlName: '' },
-      { canonicalName: '' },
-      { description: '' },
-      { urlName: 'a' },
-      { urlName: Array(1000).fill('A').join('') },
-      { urlName: '&&&' },
-      { canonicalName: 'a' },
-      { canonicalName: Array(1000).fill('A').join('') },
-      { description: Array(1000).fill('A').join('') },
-    ];
+  // todo: 403 if frozen and not admin, 403 if hidden and not site admin
 
+  test('PUT /community/:communityNameOrId - 400 if errors', async () => {
+    const user = await helpers.getUser('demo-1', 'password');
     await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
-      const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
-      const response = await helpers.req('PUT', '/community/uspolitics', { ...correctInputs, ...wrongInputs }, user.token);
+      const response = await helpers.req('PUT', `/community/${correctInputs.urlName}`, { ...correctInputs, ...wrongInputs }, user.token);
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('errors');
       expect(response.body.errors.length).toEqual(1);
     }));
   });
 
-  test('PUT /community/:communityNameOrId - 200 and creates a community', async () => {
-    const user = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
-    let response = await helpers.req('PUT', '/community/uspolitics', correctInputs, user.token);
+  test('PUT /community/:communityNameOrId - 200 and edits community details', async () => {
+    const user = await helpers.getUser('demo-1', 'password');
+    const response = await helpers.req('PUT', `/community/${correctInputs.urlName}`, correctInputs, user.token);
     expect(response.status).toBe(200);
-    response = await helpers.req('GET', `/community/${correctInputs.urlName}`, null, null);
+  });
+});
+
+describe('see communities', () => {
+  beforeAll(async () => {
+    await prisma.community.createMany({
+      data: [
+        {
+          urlName: 'active',
+          canonicalName: 'Active Community',
+          description: 'You should be able to see this one.',
+          adminId: 2,
+        }, {
+          urlName: 'frozen',
+          canonicalName: 'Frozen Community',
+          description: 'You should not be able to see this one in global view.',
+          adminId: 2,
+          status: 'FROZEN',
+        }, {
+          urlName: 'hidden',
+          canonicalName: 'Hidden Community',
+          description: 'Nobody should be able to see this one except for the site admin.',
+          adminId: 2,
+          status: 'HIDDEN',
+        },
+      ],
+    });
+  });
+
+  afterAll(async () => { await helpers.wipeTables(['community']); });
+
+  test('GET /communities - show only "active" communities', async () => {
+    const response = await helpers.req('GET', '/communities', null, null);
     expect(response.status).toBe(200);
+    response.body.forEach((community: { status: string }) => {
+      expect(community.status).toEqual('ACTIVE');
+    });
+  });
+
+  test('GET /community/:communityNameOrId - 404 if community not found', async () => {
+    const response = await helpers.req('GET', '/community/owo', null, null);
+    expect(response.status).toEqual(404);
+  });
+
+  test('GET /community/:communityNameOrId - 404 if community is hidden', async () => {
+    const response = await helpers.req('GET', '/community/hidden', null, null);
+    expect(response.status).toEqual(404);
+  });
+
+  test('GET /community/:communityNameOrId - 200 and community details', async () => {
+    const response = await helpers.req('GET', '/community/active', null, null);
+    expect(response.status).toEqual(200);
+    await Promise.all(['urlName', 'canonicalName', 'id', 'description', 'wiki', 'status', 'followers', 'admin', 'moderators', 'posts'].map(async (property) => {
+      expect(response.body).toHaveProperty(property);
+    }));
+  });
+
+  test('GET /community/:communityNameOrId - 200 if hidden and viewer is site admin', async () => {
+    const siteAdmin = await helpers.getUser('admin', 'password');
+    const response = await helpers.req('GET', '/community/hidden', null, siteAdmin.token);
+    expect(response.status).toEqual(200);
   });
 });

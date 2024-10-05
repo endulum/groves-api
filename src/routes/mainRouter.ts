@@ -8,27 +8,50 @@ import community from '../controllers/community';
 
 const router = express.Router();
 
-const editAccountDetails = [account.validate, handleValidationErrors, account.submit];
-const createCommunity = [community.validate, handleValidationErrors, community.create];
-const editCommunity = [community.validate, handleValidationErrors, community.edit];
+// grouping similar middleware here
+const authUser = [user.deserialize, user.authenticate];
+const editAccount = [
+  account.validate, handleValidationErrors, account.submit,
+];
+const createCommunity = [
+  community.validate, handleValidationErrors, community.create,
+];
+const editCommunity = [
+  community.validate, handleValidationErrors, community.edit,
+];
+const areYouMod = [community.exists, community.isMod];
+// const areYouAdmin = [community.exists, community.isAdmin];
+// const editCommunityWiki = [
+//   community.validateWiki, handleValidationErrors, community.editWiki
+// ]
 
+// index
 router.route('/')
-  .get(user.deserialize, asyncHandler(async (req, res) => {
+  .get(...authUser, asyncHandler(async (req, res) => {
     res.json(req.user);
   }));
 
+// accounts
 router.route('/user/:userNameOrId')
   .get(user.exists, user.get);
-
 router.route('/account')
-  .post(user.deserialize, user.authenticate, ...editAccountDetails);
+  .post(...authUser, ...editAccount);
 
+// communities
 router.route('/communities')
   .get(community.getAll)
-  .post(user.deserialize, user.authenticate, ...createCommunity);
-
+  .post(...authUser, ...createCommunity);
 router.route('/community/:communityNameOrId')
   .get(user.deserialize, community.exists, community.get)
-  .put(user.deserialize, community.exists, community.isModOrAdminOf, ...editCommunity);
+  .put(...authUser, ...areYouMod, ...editCommunity);
+// router.route('/community/:communityNameOrId/promote')
+//   .post(...authUser, ...areYouAdmin, community.promote);
+// router.route('/community/:communityNameOrId/demote')
+//   .post(...authUser, ...areYouAdmin, community.demote);
+// router.route('/community/:communityNameOrId/wiki')
+//   .get(community.exists, community.getWiki)
+//   .post(...authUser, ...areYouMod, community.editWiki)
+// router.route('/community/:communityNameOrId/freeze')
+//   .post(...authUser, ...areYouAdmin, community.freeze)
 
 export default router;
