@@ -3,7 +3,7 @@ import prisma from '../prisma';
 
 beforeAll(async () => {
   await helpers.wipeTables(['user', 'community']);
-  await helpers.createUsers(['demo-1', 'demo-2', 'demo-3']);
+  await helpers.createUsers(['demo-1', 'demo-2', 'demo-3', 'demo-4']);
 });
 
 afterAll(async () => {
@@ -166,9 +166,9 @@ describe('community administration and moderation', () => {
         urlName: 'comm',
         canonicalName: 'Community',
         description: 'This is an ordinary community.',
-        adminId: 2,
+        adminId: 2, // demo-1
         moderators: {
-          connect: { id: 3 },
+          connect: { id: 3 }, // demo-2
         },
       },
     });
@@ -186,7 +186,7 @@ describe('community administration and moderation', () => {
     const wrongInputArray = [
       { username: '' },
       { username: 'demo-1' },
-      { username: 'demo-2' },
+      { username: 'demo-2' }, // intended error: is already a mod
       { username: 'owo' },
     ];
 
@@ -209,6 +209,41 @@ describe('community administration and moderation', () => {
       include: { moderators: true },
     });
     expect(thisCommunity?.moderators.map((c) => c.username)).toEqual(['demo-2', 'demo-3']);
+  });
+
+  test('POST /community/:communityNameOrId/demote - 403 if not admin of community', async () => {
+    const user = await helpers.getUser('demo-4', 'password');
+    const response = await helpers.req('POST', '/community/comm/demote', { username: 'demo-3' }, user.token);
+    expect(response.status).toBe(403);
+  });
+
+  test('POST /community/:communityNameOrId/demote - 400 if errors', async () => {
+    const wrongInputArray = [
+      { username: '' },
+      { username: 'demo-1' },
+      { username: 'demo-4' }, // intended error: is not a mod
+      { username: 'owo' },
+    ];
+
+    const user = await helpers.getUser('demo-1', 'password');
+    await Promise.all(wrongInputArray.map(async (wrongInput) => {
+      const response = await helpers.req('POST', '/community/comm/demote', wrongInput, user.token);
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('errors');
+      expect(response.body.errors.length).toEqual(1);
+    }));
+  });
+
+  test('POST /community/:communityNameOrId/demote - 200 and removes user from community moderators', async () => {
+    const user = await helpers.getUser('demo-1', 'password');
+    const response = await helpers.req('POST', '/community/comm/demote', { username: 'demo-3' }, user.token);
+    expect(response.status).toBe(200);
+
+    const thisCommunity = await prisma.community.findUnique({
+      where: { urlName: 'comm' },
+      include: { moderators: true },
+    });
+    expect(thisCommunity?.moderators.map((c) => c.username)).toEqual(['demo-2']);
   });
 });
 

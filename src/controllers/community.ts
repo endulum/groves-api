@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import asyncHandler from 'express-async-handler';
 import { body, type ValidationChain } from 'express-validator';
-import { type Community } from '@prisma/client';
+import { User, type Community } from '@prisma/client';
 
 import prisma from '../prisma';
 
@@ -16,8 +16,8 @@ const controller: {
   edit: RequestHandler,
   validatePromotion: ValidationChain,
   promote: RequestHandler,
-  // validateDemotion: ValidationChain,
-  // demote: RequestHandler
+  validateDemotion: ValidationChain,
+  demote: RequestHandler
 } = {
   getAll: asyncHandler(async (_req, res) => {
     // todo: use query params to filter results
@@ -71,6 +71,7 @@ const controller: {
     } else {
       res.json(req.thisCommunity);
     }
+    // todo: also show whether you're a mod or not
   }),
 
   validate: [
@@ -166,6 +167,40 @@ const controller: {
       data: {
         moderators: {
           connect: { id: req.thisUser.id },
+        },
+      },
+    });
+    res.sendStatus(200);
+  }),
+
+  validateDemotion: body('username')
+    .trim()
+    .notEmpty().withMessage('Please enter a username.')
+    .bail()
+    .custom(async (value, { req }) => {
+      const existingUser = await prisma.user.findUnique({
+        where: { username: value },
+        include: { moderatorOf: true, adminOf: true },
+      });
+      if (!existingUser) { throw new Error('No user exists with this username.'); }
+      if (existingUser.adminOf.map((c) => c.id).includes(req.thisCommunity.id)) {
+        throw new Error('You cannot demote yourself.');
+      }
+      if (!existingUser.moderatorOf.map((c) => c.id).includes(req.thisCommunity.id)) {
+        throw new Error('This user is not a moderator of this community.');
+      }
+      req.thisUser = existingUser;
+    })
+    .escape(),
+
+  demote: asyncHandler(async (req, res) => {
+    await prisma.community.update({
+      where: { id: req.thisCommunity.id },
+      data: {
+        moderators: {
+          set: req.thisCommunity.moderators.filter(
+            (mod: User) => mod.id !== req.thisUser.id,
+          ),
         },
       },
     });

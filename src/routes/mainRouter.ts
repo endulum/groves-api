@@ -24,6 +24,9 @@ const areYouAdmin = [community.exists, community.isAdmin];
 const promoteUser = [
   community.validatePromotion, handleValidationErrors, community.promote,
 ];
+const demoteUser = [
+  community.validateDemotion, handleValidationErrors, community.demote,
+];
 // const editCommunityWiki = [
 //   community.validateWiki, handleValidationErrors, community.editWiki
 // ]
@@ -49,8 +52,8 @@ router.route('/community/:communityNameOrId')
   .put(...authUser, ...areYouMod, ...editCommunity);
 router.route('/community/:communityNameOrId/promote')
   .post(...authUser, ...areYouAdmin, ...promoteUser);
-// router.route('/community/:communityNameOrId/demote')
-//   .post(...authUser, ...areYouAdmin, community.demote);
+router.route('/community/:communityNameOrId/demote')
+  .post(...authUser, ...areYouAdmin, ...demoteUser);
 // router.route('/community/:communityNameOrId/wiki')
 //   .get(community.exists, community.getWiki)
 //   .post(...authUser, ...areYouMod, community.editWiki)
