@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["omitApi"]
 }
 
 datasource db {
@@ -26,11 +27,13 @@ model User {
 model Community {
   id Int @id @default(autoincrement())
 
-  urlName       String  @unique
+  urlName       String   @unique
   canonicalName String
   description   String
   wiki          String?
-  status        Status  @default(ACTIVE)
+  status        Status   @default(ACTIVE)
+  created       DateTime @default(now())
+  lastActivity  DateTime @default(now())
 
   followers  User[]    @relation("communityFollowers")
   admin      User      @relation("communityAdmin", fields: [adminId], references: [id])

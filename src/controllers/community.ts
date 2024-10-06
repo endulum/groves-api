@@ -19,30 +19,51 @@ const controller: {
   validateDemotion: ValidationChain,
   demote: RequestHandler
 } = {
-  getAll: asyncHandler(async (_req, res) => {
+  getAll: asyncHandler(async (req, res) => {
     // todo: use query params to filter results
     const communities = await prisma.community.findMany({
       where: { status: 'ACTIVE' },
+      include: {
+        _count: {
+          select: {
+            followers: true,
+            posts: true,
+          },
+        },
+      },
+      omit: {
+        id: true,
+        adminId: true,
+        created: true,
+        wiki: true,
+      },
     });
-    res.json(communities);
+    res.json({
+      communities,
+      areYouSignedIn: !!req.user,
+    });
   }),
 
   exists: asyncHandler(async (req, res, next) => {
     let community: Community | null = null;
-    const include = {
-      followers: true,
-      admin: true,
-      moderators: true,
-      posts: true,
+    const findClause = {
+      include: {
+        admin: { select: { id: true, username: true } },
+        moderators: { select: { id: true, username: true } },
+        followers: { select: { id: true, username: true } },
+      },
+      omit: { adminId: true },
     };
 
     const id = parseInt(req.params.communityNameOrId, 10);
     if (id % 1 !== 0) {
       community = await prisma.community.findUnique({
-        where: { urlName: req.params.communityNameOrId }, include,
+        ...findClause, where: { urlName: req.params.communityNameOrId },
       });
     } else {
-      community = await prisma.community.findUnique({ where: { id }, include });
+      community = await prisma.community.findUnique({
+        ...findClause, where: { id },
+      });
     }
     if (community) {
       req.thisCommunity = community;
@@ -53,14 +74,16 @@ const controller: {
   }),
 
   isAdmin: asyncHandler(async (req, res, next) => {
-    if (req.thisCommunity.adminId !== req.user.id) res.sendStatus(403);
+    if (req.thisCommunity.admin.id !== req.user.id) res.sendStatus(403);
     else next();
   }),
 
   isMod: asyncHandler(async (req, res, next) => {
     if (
-      !req.thisCommunity.moderators.includes(req.user.id)
-      && req.thisCommunity.adminId !== req.user.id
+      !req.thisCommunity.moderators.find(
+        (mod: { id: number, username: string }) => mod.id === req.user.id,
+      )
+      && req.thisCommunity.admin.id !== req.user.id
     ) res.sendStatus(403);
     else next();
   }),
@@ -69,9 +92,15 @@ const controller: {
     if (req.thisCommunity.status === 'HIDDEN' && (!req.user || !(req.user.role === 'ADMIN'))) {
       res.sendStatus(404);
     } else {
-      res.json(req.thisCommunity);
+      res.json({
+        ...req.thisCommunity,
+        areYouSignedIn: !!req.user,
+        areYouMod: !!req.user && req.thisCommunity.moderators.find(
+          (mod: { id: number, username: string }) => mod.id === req.user.id,
+        ),
+        areYouAdmin: !!req.user && req.thisCommunity.admin.id === req.user.id,
+      });
     }
-    // todo: also show whether you're a mod or not
   }),
 
   validate: [
@@ -88,11 +117,12 @@ const controller: {
       .custom(async (value, { req }) => {
         const existingCommunity = await prisma.community.findUnique({
           where: { urlName: value },
+          select: { id: true },
         });
         if (
-          existingCommunity
+          existingCommunity // a community exists
           && !('thisCommunity' in req
-            && existingCommunity.id === req.thisCommunity.id)
+            && existingCommunity.id === req.thisCommunity.id) // the existing community is NOT this community
         ) {
           throw new Error('A community with this URL name already exists. Community URLs must be unique.');
         }

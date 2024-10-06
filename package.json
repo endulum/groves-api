@@ -14,7 +14,8 @@
     "clean": "rm -r ./dist",
     "generate": "npx dotenv -e .env.development -- npx prisma generate",
     "migrate": "npx dotenv -e .env.development -- npx prisma migrate dev",
-    "resetdb": "npx dotenv -e .env.development -- nodemon prisma/reset.ts"
+    "resetdb": "npx dotenv -e .env.development -- nodemon prisma/reset.ts",
+    "play": "npx dotenv -e .env.development -- nodemon playground.ts"
   },
   "keywords": [],
   "author": "",

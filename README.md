@@ -16,7 +16,7 @@ Groves is an arboreal clone of Reddit.
 - [x] `PUT /community/:communityNameOrId`: accepts fields `urlName`, `canonicalName`, and `description` and edits the Community object with this information
 - [x] `POST /community/:communityNameOrId/promote`: accepts field `username` and appoints a User as "moderator" for this Community (admins also have mod powers)
 - [x] `POST /community/:communityNameOrId/demote`: accepts field `username` and removes a "moderator" of this Community from their position
-- [ ] `POST /community/:communityNameOrId/freeze`: accepts fields `password` and `communityUrlName` and sets the status of this Community to "FROZEN"
+<!-- - [ ] `POST /community/:communityNameOrId/freeze`: accepts fields `password` and `communityUrlName` and sets the status of this Community to "FROZEN" -->
 <!-- ### Posts
 - [ ] `GET /community/:communityNameOrId/posts`: shows all existing unhidden posts under this Community, filters using query params `name` and `sort` (Community moderators can see hidden posts)
 - [ ] `POST /community/:communityNameOrId/posts`: accepts field `title` and `content` and creates a Post object under this Community with this information
