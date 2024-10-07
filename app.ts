@@ -13,14 +13,20 @@ dotenv.config({ path: `.env.${process.env.ENV}` });
 
 const app = express();
 
-if (process.env.ENV === 'development') app.use(logger('dev'));
-
 app.use(cors({
   origin: '*',
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+if (process.env.ENV === 'development') {
+  app.use(logger('dev'));
+  app.use(asyncHandler(async (req, _res, next) => {
+    console.dir(req.body, { depth: null });
+    next();
+  }));
+}
 
 app.use(authRouter);
 app.use(mainRouter);

@@ -28,16 +28,11 @@ const controller: {
         if (req.body.password !== '' && value !== req.body.password) throw new Error('Both passwords do not match.');
       })
       .escape(),
-
-    body('deleteAfter')
-      .trim()
-      .isBoolean()
-      .escape(),
   ],
 
   submit: asyncHandler(async (req, res) => {
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASS as string, salt);
+    const hashedPassword = await bcrypt.hash(req.body.password as string, salt);
     await prisma.user.create({
       data: {
         username: req.body.username as string,
