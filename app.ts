@@ -1,6 +1,8 @@
 import dotenv from 'dotenv';
 import express from 'express';
 import asyncHandler from 'express-async-handler';
+import cors from 'cors';
+import logger from 'morgan';
 
 import errorHandler from './src/middleware/errorHandler';
 import authRouter from './src/routes/authRouter';
@@ -10,6 +12,13 @@ dotenv.config({ path: '.env' });
 dotenv.config({ path: `.env.${process.env.ENV}` });
 
 const app = express();
+
+if (process.env.ENV === 'development') app.use(logger('dev'));
+
+app.use(cors({
+  origin: '*',
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
