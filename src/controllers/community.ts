@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import asyncHandler from 'express-async-handler';
 import { body, type ValidationChain } from 'express-validator';
-import { User, type Community } from '@prisma/client';
+import { type User, type Community } from '@prisma/client';
 
 import prisma from '../prisma';
 
@@ -14,6 +14,8 @@ const controller: {
   validate: ValidationChain[],
   create: RequestHandler,
   edit: RequestHandler,
+  validateFollow: ValidationChain,
+  follow: RequestHandler
   validatePromotion: ValidationChain,
   promote: RequestHandler,
   validateDemotion: ValidationChain,
@@ -65,6 +67,7 @@ const controller: {
         ...findClause, where: { id },
       });
     }
+
     if (community) {
       req.thisCommunity = community;
       next();
@@ -168,6 +171,32 @@ const controller: {
         description: req.body.description,
       },
     });
+    res.sendStatus(200);
+  }),
+
+  validateFollow: body('follow')
+    .trim()
+    .isBoolean()
+    .escape(),
+
+  follow: asyncHandler(async (req, res) => {
+    const { followers } = req.thisCommunity;
+    if (req.body.follow === 'true') {
+      if (!followers.find((follower: User) => follower.id === req.user.id)) {
+        await prisma.community.update({
+          where: { id: req.thisCommunity.id },
+          data: { followers: { connect: { id: req.user.id } } },
+        });
+      }
+    }
+    if (req.body.follow === 'false') {
+      if (followers.find((follower: User) => follower.id === req.user.id)) {
+        await prisma.community.update({
+          where: { id: req.thisCommunity.id },
+          data: { followers: { disconnect: { id: req.user.id } } },
+        });
+      }
+    }
     res.sendStatus(200);
   }),
 

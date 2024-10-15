@@ -158,6 +158,43 @@ describe('see communities', () => {
   });
 });
 
+describe('follow communities', () => {
+  beforeAll(async () => {
+    await prisma.community.create({
+      data: {
+        urlName: 'bestofgroves',
+        canonicalName: 'Best of Groves',
+        description: 'The funniest and most memorable happenings.',
+        adminId: 1,
+      },
+    });
+  });
+
+  afterAll(async () => { await helpers.wipeTables(['community']); });
+
+  test('POST /community/:communityNameOrId/follow - 200 and follows', async () => {
+    const { token } = await helpers.getUser('admin', 'password');
+    const response = await helpers.req('POST', '/community/bestofgroves/follow', { follow: true }, token);
+    expect(response.status).toBe(200);
+    const community = await prisma.community.findUnique({
+      where: { urlName: 'bestofgroves' },
+      include: { followers: true },
+    });
+    expect(community?.followers.length).toBe(1);
+  });
+
+  test('POST /community/:communityNameOrId/follow - 200 and unfollows', async () => {
+    const { token } = await helpers.getUser('admin', 'password');
+    const response = await helpers.req('POST', '/community/bestofgroves/follow', { follow: false }, token);
+    expect(response.status).toBe(200);
+    const community = await prisma.community.findUnique({
+      where: { urlName: 'bestofgroves' },
+      include: { followers: true },
+    });
+    expect(community?.followers.length).toBe(0);
+  });
+});
+
 describe('community administration and moderation', () => {
   beforeAll(async () => {
     await prisma.community.create({

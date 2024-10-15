@@ -31,6 +31,9 @@ const createCommunity = [
 const editCommunity = [
   community.validate, handleValidationErrors, community.edit,
 ];
+const followCommunity = [
+  community.validateFollow, handleValidationErrors, community.follow,
+];
 const areYouMod = [community.exists, community.isMod];
 const areYouAdmin = [community.exists, community.isAdmin];
 const promoteUser = [
@@ -46,6 +49,8 @@ router.route('/communities')
 router.route('/community/:communityNameOrId')
   .get(user.deserialize, community.exists, community.get)
   .put(...authUser, ...areYouMod, ...editCommunity);
+router.route('/community/:communityNameOrId/follow')
+  .post(...authUser, community.exists, ...followCommunity);
 router.route('/community/:communityNameOrId/promote')
   .post(...authUser, ...areYouAdmin, ...promoteUser);
 router.route('/community/:communityNameOrId/demote')

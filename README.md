@@ -11,8 +11,8 @@ The units of interaction in Groves are Communities (likened to "groves"), Posts 
 - [x] `POST /login`: accepts fields `username` and `password` and returns a token
 - [x] `POST /signup`: accepts fields `username`, `password`, and `confirmPassword` and creates a User object with this information
 ### User
-- [ ] `GET /me`: returns the identity of the authenticated user
-- [ ] `POST /me`: edits the identity of the authenticated user with information provided in the request body
+- [x] `GET /me`: returns the identity of the authenticated user
+- [x] `POST /me`: edits the identity of the authenticated user with information provided in the request body
 - [x] `GET /user/:userNameOrId`: returns the identity of the target user, if it exists
 ### Communities
 - [ ] `GET /communities`: returns all existing active communities
@@ -21,7 +21,7 @@ The units of interaction in Groves are Communities (likened to "groves"), Posts 
 - [x] `POST /communities`: creates a Community object with information provided in the request body
 - [x] `GET /community/:communityNameOrId`: returns the details of the target Community
 - [x] `PUT /community/:communityNameOrId`: edits the target Community with information provided in the request body
-- [ ] `POST /community/:communityNameOrId/follow`: based on `follow` being `true` or `false`, the authenticated user follows or unfollows the target Community
+- [x] `POST /community/:communityNameOrId/follow`: based on `follow` being `true` or `false`, the authenticated user follows or unfollows the target Community
 - [x] `POST /community/:communityNameOrId/promote`: if the authenticated user is admin of the target Community, a user with the provided `username` is appointed to a moderator of this Community
 - [x] `POST /community/:communityNameOrId/demote`: if the authenticated user is admin of the target Community, a moderator with the provided `username` is removed from the moderator position of this Community
 - [ ] `POST /community/:communityNameOrId/freeze`: if the authenticated user is admin of the target Community, this community will have its `status` set to "FROZEN"
