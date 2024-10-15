@@ -1,4 +1,4 @@
-import * as helpers from './helpers/helpers';
+import * as helpers from '../test_helpers/helpers';
 import prisma from '../prisma';
 
 beforeAll(async () => {

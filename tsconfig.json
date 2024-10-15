@@ -11,9 +11,7 @@
   "include": [
     "./playground.ts",
     "./src/tests/*.ts",
-    "./src/tests/helpers/app.ts",
-    "./src/tests/helpers/helpers.ts",
-    "./src/tests/helpers/helpers.test.ts",
+    "./src/test_helpers/*.ts"
   ],
   "exclude": [
     "node_modules"

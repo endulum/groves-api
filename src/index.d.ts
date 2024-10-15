@@ -4,11 +4,11 @@ declare global {
   namespace Express {
     type User = Prisma.UserGetPayload<{
       include: {
-        communitiesFollowed: true,
-        adminOf: true,
-        moderatorOf: true,
+        communitiesFollowing: true,
+        communitiesAdminOf: true,
+        communitiesModeratorOf: true,
         posts: true,
-        comments: true
+        replies: true
       }
     }>;
 
@@ -18,7 +18,7 @@ declare global {
         admin: true,
         moderators: true,
         posts: true,
-        comments: true
+        replies: true
       }
     }>;
 

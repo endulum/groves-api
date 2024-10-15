@@ -1,5 +1,5 @@
 import * as helpers from './helpers';
-import prisma from '../../prisma';
+import prisma from '../prisma';
 
 async function clear() {
   await prisma.community.deleteMany({});

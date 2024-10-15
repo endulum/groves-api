@@ -2,7 +2,7 @@ import request, { Response } from 'supertest';
 import bcrypt from 'bcryptjs';
 
 import app from './app';
-import prisma from '../../prisma';
+import prisma from '../prisma';
 
 export async function req(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',

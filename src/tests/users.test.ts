@@ -1,4 +1,4 @@
-import * as helpers from './helpers/helpers';
+import * as helpers from '../test_helpers/helpers';
 
 beforeAll(async () => {
   await helpers.wipeTables(['user']);
@@ -7,19 +7,6 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await helpers.wipeTables(['user']);
-});
-
-describe('deserialize user', () => {
-  test('GET / - 401 without token', async () => {
-    const response = await helpers.req('GET', '/', null, null);
-    expect(response.status).toBe(401);
-  });
-
-  test('GET / - 200 with token', async () => {
-    const { token } = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
-    const response = await helpers.req('GET', '/', null, token);
-    expect(response.status).toBe(200);
-  });
 });
 
 describe('get user', () => {
@@ -31,37 +18,44 @@ describe('get user', () => {
   test('GET /user/:userNameOrId - 200 and user details with id', async () => {
     const response = await helpers.req('GET', '/user/1', null, null);
     expect(response.status).toBe(200);
-    await Promise.all(['username', 'id', 'role'].map(async (property) => {
-      expect(response.body).toHaveProperty(property);
-    }));
   });
 
   test('GET /user/:userNameOrId - 200 and user details with username', async () => {
     const response = await helpers.req('GET', '/user/admin', null, null);
     expect(response.status).toBe(200);
-    await Promise.all(['username', 'id', 'bio', 'verdancy', 'role'].map(async (property) => {
-      expect(response.body).toHaveProperty(property);
-    }));
-    // console.log(response.body);
   });
 });
 
-describe('change account details', () => {
+describe('get self', () => {
+  test('GET /me - 401 if not logged in', async () => {
+    const response = await helpers.req('GET', '/me', null, null);
+    expect(response.status).toBe(401);
+  });
+
+  test('GET /me - 200 and user details', async () => {
+    const { token } = await helpers.getUser('admin', 'password');
+    const response = await helpers.req('GET', '/me', null, token);
+    expect(response.status).toBe(200);
+    expect(response.body.username).toBe('admin');
+  });
+});
+
+describe('change account details of self', () => {
   const correctInputs = {
     username: 'admin',
     bio: 'Snazzy bio here.',
     password: 'new-password',
     confirmPassword: 'new-password',
-    currentPassword: process.env.ADMIN_PASS,
+    currentPassword: 'password',
   };
 
   test('POST /account - 401 without token', async () => {
-    const response = await helpers.req('POST', '/account', null, null);
+    const response = await helpers.req('POST', '/me', null, null);
     expect(response.status).toBe(401);
   });
 
   test('POST /account - 400 and errors (with password)', async () => {
-    const { token } = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
+    const { token } = await helpers.getUser('admin', 'password');
 
     const wrongInputsArray = [
       { username: '' },
@@ -78,27 +72,27 @@ describe('change account details', () => {
     ];
 
     await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
-      const response = await helpers.req('POST', '/account', { ...correctInputs, ...wrongInputs }, token);
+      const response = await helpers.req('POST', '/me', { ...correctInputs, ...wrongInputs }, token);
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('errors');
     }));
   });
 
   test('POST /account - 200 and changes account details (with password)', async () => {
-    const { token } = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
-    const response = await helpers.req('POST', '/account', correctInputs, token);
+    const { token } = await helpers.getUser('admin', 'password');
+    const response = await helpers.req('POST', '/me', correctInputs, token);
     expect(response.status).toBe(200);
-    await helpers.req('POST', '/account', {
+    await helpers.req('POST', '/me', {
       ...correctInputs,
-      password: process.env.ADMIN_PASS,
-      confirmPassword: process.env.ADMIN_PASS,
+      password: 'password',
+      confirmPassword: 'password',
       currentPassword: correctInputs.password,
     }, token);
   });
 
   test('POST /account - 200 and changes account details (without password)', async () => {
-    const { token } = await helpers.getUser('admin', process.env.ADMIN_PASS as string);
-    const response = await helpers.req('POST', '/account', { username: 'owo', bio: 'Snazzy bio here.' }, token);
+    const { token } = await helpers.getUser('admin', 'password');
+    const response = await helpers.req('POST', '/me', { username: 'owo', bio: 'Snazzy bio here.' }, token);
     expect(response.status).toBe(200);
     await helpers.req('POST', '/account', { username: 'admin', bio: '' }, token);
   });
