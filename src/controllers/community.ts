@@ -178,13 +178,19 @@ const controller: {
     .custom(async (value, { req }) => {
       const existingUser = await prisma.user.findUnique({
         where: { username: value },
-        include: { moderatorOf: true, adminOf: true },
+        include: { communitiesModeratorOf: true, communitiesAdminOf: true },
       });
       if (!existingUser) { throw new Error('No user exists with this username.'); }
-      if (existingUser.adminOf.map((c) => c.id).includes(req.thisCommunity.id)) {
+      if (
+        existingUser.communitiesAdminOf
+          .map((c) => c.id).includes(req.thisCommunity.id)
+      ) {
         throw new Error('You cannot promote yourself.');
       }
-      if (existingUser.moderatorOf.map((c) => c.id).includes(req.thisCommunity.id)) {
+      if (
+        existingUser.communitiesModeratorOf
+          .map((c) => c.id).includes(req.thisCommunity.id)
+      ) {
         throw new Error('This user is already a moderator of this community.');
       }
       req.thisUser = existingUser;
@@ -210,13 +216,19 @@ const controller: {
     .custom(async (value, { req }) => {
       const existingUser = await prisma.user.findUnique({
         where: { username: value },
-        include: { moderatorOf: true, adminOf: true },
+        include: { communitiesModeratorOf: true, communitiesAdminOf: true },
       });
       if (!existingUser) { throw new Error('No user exists with this username.'); }
-      if (existingUser.adminOf.map((c) => c.id).includes(req.thisCommunity.id)) {
+      if (
+        existingUser.communitiesAdminOf
+          .map((c) => c.id).includes(req.thisCommunity.id)
+      ) {
         throw new Error('You cannot demote yourself.');
       }
-      if (!existingUser.moderatorOf.map((c) => c.id).includes(req.thisCommunity.id)) {
+      if (
+        !existingUser.communitiesModeratorOf
+          .map((c) => c.id).includes(req.thisCommunity.id)
+      ) {
         throw new Error('This user is not a moderator of this community.');
       }
       req.thisUser = existingUser;

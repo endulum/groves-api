@@ -11,7 +11,7 @@ async function clear() {
 beforeAll(async () => { await clear(); });
 afterAll(async () => { await clear(); });
 
-describe('wipeDatabase helper', () => {
+describe('wipeTables helper', () => {
   test('it works', async () => {
     await helpers.wipeTables(['user']);
     const users = await prisma.user.findMany({});
