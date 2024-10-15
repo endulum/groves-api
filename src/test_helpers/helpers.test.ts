@@ -50,3 +50,19 @@ describe('req helper', () => {
     expect(resWithAuth.status).toBe(200);
   });
 });
+
+describe('dummy generators', () => {
+  beforeAll(async () => { await clear(); });
+
+  test('generate users - it works', async () => {
+    const users = await helpers.generateDummyUsers(5);
+    expect(users.length).toBe(5);
+    expect(users.every((user) => user.username)).toBeTruthy();
+  });
+
+  test('generate communities - it works', async () => {
+    const communities = await helpers.generateDummyCommunities(5);
+    expect(communities.length).toBe(5);
+    expect(communities.every((community) => community.urlName)).toBeTruthy();
+  });
+});

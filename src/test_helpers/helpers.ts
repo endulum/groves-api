@@ -1,4 +1,5 @@
 import request, { Response } from 'supertest';
+import { faker } from '@faker-js/faker';
 import bcrypt from 'bcryptjs';
 
 import app from './app';
@@ -70,4 +71,49 @@ export async function wipeTables(tables: Array<'user' | 'session' | 'community'>
     await prisma.user.deleteMany();
     await prisma.$queryRaw`ALTER SEQUENCE "User_id_seq" RESTART WITH 1;`;
   }
+}
+
+const generateUsername = () => (faker.color.human().split(' ').join('-'))
+  .concat('-')
+  .concat(faker.animal.type().split(' ').join('-'));
+
+export async function generateDummyUsers(amount: number)
+  : Promise<Array<{ username: string, id: number }>> {
+  const usernames: string[] = [];
+  while (usernames.length < amount) {
+    const username = generateUsername();
+    if (!usernames.includes(username)) usernames.push(username);
+  }
+  return usernames.map((username, index) => ({ username, id: index }));
+}
+
+const generateCommunityName = (): { canonicalName: string, urlName: string } => {
+  const canonicalName = faker.food.dish();
+  const urlName = (
+    canonicalName.toLocaleLowerCase().split(' ').join('').match(/[a-z0-9]+/g) || []
+  ).join('');
+
+  return {
+    canonicalName,
+    urlName,
+  };
+};
+
+export async function generateDummyCommunities(amount: number)
+  : Promise<Array<{ urlName: string, canonicalName: string }>> {
+  const communities: Array<{ canonicalName: string, urlName: string }> = [];
+
+  while (communities.length < amount) {
+    const community = generateCommunityName();
+    if (
+      community.canonicalName.length <= 64
+        && community.urlName.length <= 32
+        && !communities.find(
+          (c) => c.urlName === community.urlName,
+        )
+    ) {
+      communities.push(community);
+    }
+  }
+  return communities;
 }

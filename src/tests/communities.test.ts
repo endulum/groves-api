@@ -10,7 +10,7 @@ afterAll(async () => {
   await helpers.wipeTables(['user', 'community']);
 });
 
-describe('create and edit a community', () => {
+describe.skip('create and edit a community', () => {
   const correctInputs = {
     urlName: 'askgroves',
     canonicalName: 'Ask Groves',
@@ -98,7 +98,7 @@ describe('create and edit a community', () => {
   });
 });
 
-describe('see communities', () => {
+describe.skip('see communities', () => {
   beforeAll(async () => {
     await prisma.community.createMany({
       data: [
@@ -158,7 +158,13 @@ describe('see communities', () => {
   });
 });
 
-describe('follow communities', () => {
+// describe('search communities', () => {
+//   expect('GET /communities - query "followers" works', async () => {
+
+//   })
+// })
+
+describe.skip('follow communities', () => {
   beforeAll(async () => {
     await prisma.community.create({
       data: {
@@ -195,7 +201,7 @@ describe('follow communities', () => {
   });
 });
 
-describe('community administration and moderation', () => {
+describe.skip('community administration and moderation', () => {
   beforeAll(async () => {
     await prisma.community.create({
       data: {

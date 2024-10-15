@@ -25,20 +25,6 @@ const controller: {
     // todo: use query params to filter results
     const communities = await prisma.community.findMany({
       where: { status: 'ACTIVE' },
-      include: {
-        _count: {
-          select: {
-            followers: true,
-            posts: true,
-          },
-        },
-      },
-      omit: {
-        id: true,
-        adminId: true,
-        created: true,
-        wiki: true,
-      },
     });
     res.json({
       communities,
