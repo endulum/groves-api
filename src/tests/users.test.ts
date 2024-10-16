@@ -49,12 +49,12 @@ describe('change account details of self', () => {
     currentPassword: 'password',
   };
 
-  test('POST /account - 401 without token', async () => {
+  test('POST /me - 401 without token', async () => {
     const response = await helpers.req('POST', '/me', null, null);
     expect(response.status).toBe(401);
   });
 
-  test('POST /account - 400 and errors (with password)', async () => {
+  test('POST /me - 400 and errors (with password)', async () => {
     const { token } = await helpers.getUser('admin', 'password');
 
     const wrongInputsArray = [
@@ -78,7 +78,7 @@ describe('change account details of self', () => {
     }));
   });
 
-  test('POST /account - 200 and changes account details (with password)', async () => {
+  test('POST /me - 200 and changes account details (with password)', async () => {
     const { token } = await helpers.getUser('admin', 'password');
     const response = await helpers.req('POST', '/me', correctInputs, token);
     expect(response.status).toBe(200);
@@ -90,7 +90,7 @@ describe('change account details of self', () => {
     }, token);
   });
 
-  test('POST /account - 200 and changes account details (without password)', async () => {
+  test('POST /me - 200 and changes account details (without password)', async () => {
     const { token } = await helpers.getUser('admin', 'password');
     const response = await helpers.req('POST', '/me', { username: 'owo', bio: 'Snazzy bio here.' }, token);
     expect(response.status).toBe(200);

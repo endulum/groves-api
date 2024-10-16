@@ -4,7 +4,7 @@ Groves is an arboreal clone of Reddit.
 The units of interaction in Groves are Communities (likened to "groves"), Posts (likened to "trees" in a grove), and Replies (likened to "leaves" of a tree). Users can form Communities, create Posts in Communities, and write Replies to Posts, with Replies being nestable within other Replies. A user can "vote" positively or negatively on a Post or Reply. A user's "verdancy" (likened to "greenness") is a cumulation of positive votes, countered by negative votes, their content has gotten in total.
 
 ## Todo
-- Reformat current tests, routers, and controllers to comply with modified route draft
+- ...
 
 ## Rough draft of routes
 ### Auth
