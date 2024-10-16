@@ -130,6 +130,7 @@ describe('see communities', () => {
   test('GET /communities - show only "active" communities', async () => {
     const response = await helpers.req('GET', '/communities', null, null);
     expect(response.status).toBe(200);
+    expect(response.body.communities.length).toBe(1);
     response.body.communities.forEach((community: { status: string }) => {
       expect(community.status).toEqual('ACTIVE');
     });
@@ -207,13 +208,45 @@ describe('search communities', () => {
     return { users, communities };
   }
 
+  test('GET /communities - query "page"=<any pos int> works', async () => {
+    await generateContent(1, 100, 0);
+
+    let response = await helpers.req('GET', '/communities', null, null); // automatically first page
+    expect(response.status).toBe(200);
+    expect(response.body.page).toBe(1);
+    expect(response.body.pages).toBe(5);
+    expect(response.body.communities.length).toBe(20);
+
+    const defaultCommunities = response.body.communities;
+
+    response = await helpers.req('GET', '/communities?page=2', null, null); // second page
+    expect(response.status).toBe(200);
+    expect(response.body.page).toBe(2);
+    expect(response.body.pages).toBe(5);
+    expect(response.body.communities.length).toBe(20);
+    expect(response.body.communities.every(
+      (
+        comm: { urlName: string },
+        i: number,
+      ) => comm.urlName !== defaultCommunities[i].urlName,
+    )).toBeTruthy();
+
+    response = await helpers.req('GET', '/communities?page=20', null, null); // out of bounds page
+    expect(response.status).toBe(200);
+    expect(response.body.page).toBe(20);
+    expect(response.body.pages).toBe(5);
+    expect(response.body.communities.length).toBe(0);
+  });
+
   test('GET /communities - query "name"=<any string> works', async () => {
     await generateContent(1, 100, 0);
 
     const response = await helpers.req('GET', '/communities?name=soup', null, null);
     expect(response.status).toBe(200);
     expect(response.body.communities.filter(
-      (comm: { urlName: string, canonicalName: string }) => comm.urlName.includes('soup') || comm.canonicalName.toLocaleLowerCase().includes('soup'),
+      (
+        comm: { urlName: string, canonicalName: string },
+      ) => comm.urlName.includes('soup') || comm.canonicalName.toLocaleLowerCase().includes('soup'),
     )).toEqual(response.body.communities);
   });
 
@@ -293,6 +326,13 @@ describe('search communities', () => {
       ) => Date.parse(comm_b.lastActivity) - Date.parse(comm_a.lastActivity),
     )).toEqual(response.body.communities);
   });
+
+  // test('GET /communities - query "page"=<any number> works', async () => {
+  //   await generateContent(1, 100, 0);
+  //   const response = await helpers.req('GET', '/communities?page=2', null, null);
+  //   expect(response.status).toBe(200);
+  //   expect(response.body.communities.length).toBe(20);
+  // });
 });
 
 describe('follow communities', () => {

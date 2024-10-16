@@ -15,8 +15,8 @@ The units of interaction in Groves are Communities (likened to "groves"), Posts 
 - [x] `POST /me`: edits the identity of the authenticated user with information provided in the request body
 - [x] `GET /user/:userNameOrId`: returns the identity of the target user, if it exists
 ### Communities
-- [ ] `GET /communities`: returns all existing active communities
-  - Accept query params `sort` (`name`, `activity`, or `followers`) and `name` (any string)
+- [x] `GET /communities`: returns all existing active communities
+  - Accept query params `sort` (`posts`, `activity`, or `followers`) and `name` (any string)
   - Paginated by 20 results per "page"
 - [x] `POST /communities`: creates a Community object with information provided in the request body
 - [x] `GET /community/:communityNameOrId`: returns the details of the target Community

@@ -22,9 +22,12 @@ const controller: {
   demote: RequestHandler
 } = {
   getAll: asyncHandler(async (req, res) => {
-    const { sort, name } = req.query;
+    const { sort, name, page } = req.query;
 
     let orderBy;
+    const pageNumber = parseInt(page as string, 10) % 1 === 0
+      ? parseInt(page as string, 10)
+      : 1;
 
     if (sort === 'followers') orderBy = { followers: { _count: 'desc' } };
     if (sort === 'posts') orderBy = { posts: { _count: 'desc' } };
@@ -34,8 +37,8 @@ const controller: {
       where: {
         status: 'ACTIVE',
         OR: [
-          { canonicalName: { contains: name as string } },
-          { urlName: { contains: name as string } },
+          { canonicalName: { contains: name as string ?? '' } },
+          { urlName: { contains: name as string ?? '' } },
         ],
       },
       include: {
@@ -53,9 +56,13 @@ const controller: {
       // @ts-expect-error this still works despite the type error.
       // + conditionally defining this as an object prior to the query is a lot cleaner than nesting ternaries here
       orderBy,
+      skip: (pageNumber - 1) * 20,
+      take: 20,
     });
     res.json({
       communities,
+      page: pageNumber,
+      pages: Math.floor(await prisma.community.count() / 20),
       areYouSignedIn: !!req.user,
     });
   }),
