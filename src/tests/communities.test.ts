@@ -10,7 +10,7 @@ afterAll(async () => {
   await helpers.wipeTables(['user', 'community']);
 });
 
-describe.skip('create and edit a community', () => {
+describe('create and edit a community', () => {
   const correctInputs = {
     urlName: 'askgroves',
     canonicalName: 'Ask Groves',
@@ -41,7 +41,7 @@ describe.skip('create and edit a community', () => {
     });
   });
 
-  afterAll(async () => { await helpers.wipeTables(['community']); });
+  // afterAll(async () => { await helpers.wipeTables(['community']); });
 
   test('POST /communities - 401 if not logged in', async () => {
     const response = await helpers.req('POST', '/communities', correctInputs, null);
@@ -98,8 +98,9 @@ describe.skip('create and edit a community', () => {
   });
 });
 
-describe.skip('see communities', () => {
+describe('see communities', () => {
   beforeAll(async () => {
+    await helpers.wipeTables(['community']);
     await prisma.community.createMany({
       data: [
         {
@@ -124,7 +125,7 @@ describe.skip('see communities', () => {
     });
   });
 
-  afterAll(async () => { await helpers.wipeTables(['community']); });
+  // afterAll(async () => { await helpers.wipeTables(['community']); });
 
   test('GET /communities - show only "active" communities', async () => {
     const response = await helpers.req('GET', '/communities', null, null);
@@ -158,14 +159,131 @@ describe.skip('see communities', () => {
   });
 });
 
-// describe('search communities', () => {
-//   expect('GET /communities - query "followers" works', async () => {
-
-//   })
-// })
-
-describe.skip('follow communities', () => {
+describe('search communities', () => {
   beforeAll(async () => {
+    await helpers.wipeTables(['community']);
+  });
+
+  afterEach(async () => {
+    await helpers.wipeTables(['community', 'user', 'post']);
+  });
+
+  async function generateContent() {
+    const users = await helpers.generateDummyUsers(100);
+    await prisma.user.createMany({
+      data: users.map((user) => ({
+        username: user.username,
+        password: 'password',
+      })),
+    });
+    const communities = await helpers.generateDummyCommunities(20);
+    await prisma.community.createMany({
+      data: communities.map((community) => ({
+        urlName: community.urlName,
+        canonicalName: community.canonicalName,
+        description: `For fans of ${community.canonicalName}`,
+        adminId: 1,
+      })),
+    });
+
+    return { users, communities };
+  }
+
+  test('GET /communities - query "sort=followers" works', async () => {
+    const { users, communities } = await generateContent();
+
+    await Promise.all(communities.map(async (community) => {
+      const followerCount = Math.ceil(Math.random() * 100);
+      await prisma.community.update({
+        where: { urlName: community.urlName },
+        data: {
+          followers: {
+            connect: [...users]
+              .sort(() => 0.5 - Math.random())
+              .slice(0, followerCount)
+              .map((user) => ({ id: user.id })),
+          },
+        },
+      });
+    }));
+
+    const response = await helpers.req('GET', '/communities?sort=followers', null, null);
+    expect(response.status).toBe(200);
+    expect([...response.body.communities].sort(
+      (
+        comm_a: { _count: { followers: number } },
+        comm_b: { _count: { followers: number } },
+      ) => comm_b._count.followers - comm_a._count.followers,
+    )).toEqual(response.body.communities);
+  });
+
+  test('GET /communities - query "sort=posts" works', async () => {
+    await generateContent();
+
+    const posts = await helpers.generateDummyPosts(1000);
+
+    await prisma.post.createMany({
+      data: posts.map((post) => ({
+        title: post.title,
+        content: post.content,
+        authorId: Math.ceil(Math.random() * 100),
+        communityId: Math.ceil(Math.random() * 20),
+      })),
+    });
+
+    const response = await helpers.req('GET', '/communities?sort=posts', null, null);
+    expect(response.status).toBe(200);
+    expect([...response.body.communities].sort(
+      (
+        comm_a: { _count: { posts: number } },
+        comm_b: { _count: { posts: number } },
+      ) => comm_b._count.posts - comm_a._count.posts,
+    )).toEqual(response.body.communities);
+  });
+
+  test('GET /communities - query "sort=activity" works', async () => {
+    await prisma.user.create({
+      data: { id: 1, username: 'owo', password: 'password' },
+    });
+
+    const communities = [
+      { urlName: 'comm-a', canonicalName: 'Comm A' },
+      { urlName: 'comm-b', canonicalName: 'Comm B' },
+      { urlName: 'comm-c', canonicalName: 'Comm C' },
+      { urlName: 'comm-D', canonicalName: 'Comm D' },
+    ].sort(() => 0.5 - Math.random());
+
+    function yesterday(days: number): Date {
+      const date = new Date();
+      date.setDate(date.getDate() - days);
+      return date;
+    }
+
+    await prisma.community.createMany({
+      data: communities.map((comm, index) => ({
+        urlName: comm.urlName,
+        canonicalName: comm.canonicalName,
+        description: 'owo',
+        adminId: 1,
+        lastActivity: yesterday(index),
+      })),
+    });
+
+    const response = await helpers.req('GET', '/communities?sort=activity', null, null);
+    expect(response.status).toBe(200);
+    expect([...response.body.communities].sort(
+      (
+        comm_a: { lastActivity: string },
+        comm_b: { lastActivity: string },
+      ) => Date.parse(comm_b.lastActivity) - Date.parse(comm_a.lastActivity),
+    )).toEqual(response.body.communities);
+  });
+});
+
+describe('follow communities', () => {
+  beforeAll(async () => {
+    await helpers.wipeTables(['post', 'community', 'user']);
+    await helpers.createUsers(['demo-1', 'demo-2', 'demo-3', 'demo-4']);
     await prisma.community.create({
       data: {
         urlName: 'bestofgroves',
@@ -176,7 +294,7 @@ describe.skip('follow communities', () => {
     });
   });
 
-  afterAll(async () => { await helpers.wipeTables(['community']); });
+  // afterAll(async () => { await helpers.wipeTables(['community']); });
 
   test('POST /community/:communityNameOrId/follow - 200 and follows', async () => {
     const { token } = await helpers.getUser('admin', 'password');
@@ -201,8 +319,9 @@ describe.skip('follow communities', () => {
   });
 });
 
-describe.skip('community administration and moderation', () => {
+describe('community administration and moderation', () => {
   beforeAll(async () => {
+    await helpers.wipeTables(['community']);
     await prisma.community.create({
       data: {
         urlName: 'comm',
@@ -216,7 +335,7 @@ describe.skip('community administration and moderation', () => {
     });
   });
 
-  afterAll(async () => { await helpers.wipeTables(['community']); });
+  // afterAll(async () => { await helpers.wipeTables(['community']); });
 
   test('POST /community/:communityNameOrId/promote - 403 if not admin of community', async () => {
     const user = await helpers.getUser('demo-3', 'password');

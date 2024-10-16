@@ -62,7 +62,10 @@ export async function createUsers(usernames: string[]) {
   });
 }
 
-export async function wipeTables(tables: Array<'user' | 'session' | 'community'>) {
+export async function wipeTables(tables: Array<'user' | 'session' | 'community' | 'post'>) {
+  if (tables.includes('post')) {
+    await prisma.post.deleteMany();
+  }
   if (tables.includes('community')) {
     await prisma.community.deleteMany();
     await prisma.$queryRaw`ALTER SEQUENCE "Community_id_seq" RESTART WITH 1;`;
@@ -121,10 +124,10 @@ export async function generateDummyCommunities(amount: number)
 export async function generateDummyPosts(amount: number)
   : Promise<Array<{ title: string, content: string }>> {
   const posts: Array<{ title: string, content: string }> = [];
-  const title = faker.lorem.words(Math.ceil(Math.random() * 8));
-  const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
   while (posts.length < amount) {
-    posts.push({ title, content });
+    const title = faker.lorem.words(Math.ceil(Math.random() * 8));
+    const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
+    if (title.length <= 62) posts.push({ title, content });
   }
   return posts;
 }

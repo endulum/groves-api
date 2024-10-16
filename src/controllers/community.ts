@@ -22,9 +22,30 @@ const controller: {
   demote: RequestHandler
 } = {
   getAll: asyncHandler(async (req, res) => {
-    // todo: use query params to filter results
+    const { sort } = req.query;
+
+    let orderBy;
+    if (sort === 'followers') orderBy = { followers: { _count: 'desc' } };
+    if (sort === 'posts') orderBy = { posts: { _count: 'desc' } };
+    if (sort === 'activity') orderBy = { lastActivity: 'desc' };
+
     const communities = await prisma.community.findMany({
       where: { status: 'ACTIVE' },
+      include: {
+        _count: {
+          select: {
+            followers: true,
+            posts: true,
+          },
+        },
+      },
+      omit: {
+        adminId: true,
+        wiki: true,
+      },
+      // @ts-expect-error this still works despite the type error.
+      // + conditionally defining this as an object prior to the query is a lot cleaner than nesting ternaries here
+      orderBy,
     });
     res.json({
       communities,
