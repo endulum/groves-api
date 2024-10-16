@@ -161,36 +161,64 @@ describe('see communities', () => {
 
 describe('search communities', () => {
   beforeAll(async () => {
-    await helpers.wipeTables(['community']);
+    await helpers.wipeTables(['community', 'user']);
   });
 
   afterEach(async () => {
     await helpers.wipeTables(['community', 'user', 'post']);
   });
 
-  async function generateContent() {
-    const users = await helpers.generateDummyUsers(100);
-    await prisma.user.createMany({
-      data: users.map((user) => ({
-        username: user.username,
-        password: 'password',
-      })),
-    });
-    const communities = await helpers.generateDummyCommunities(20);
-    await prisma.community.createMany({
-      data: communities.map((community) => ({
-        urlName: community.urlName,
-        canonicalName: community.canonicalName,
-        description: `For fans of ${community.canonicalName}`,
-        adminId: 1,
-      })),
-    });
-
+  async function generateContent(
+    userCount: number,
+    commCount: number,
+    postCount: number,
+  ) {
+    const users = await helpers.generateDummyUsers(userCount);
+    if (users.length > 0) {
+      await prisma.user.createMany({
+        data: users.map((user) => ({
+          username: user.username,
+          password: 'password',
+        })),
+      });
+    }
+    const communities = await helpers.generateDummyCommunities(commCount);
+    if (communities.length > 0) {
+      await prisma.community.createMany({
+        data: communities.map((community) => ({
+          urlName: community.urlName,
+          canonicalName: community.canonicalName,
+          description: `For fans of ${community.canonicalName}`,
+          adminId: 1,
+        })),
+      });
+    }
+    const posts = await helpers.generateDummyPosts(postCount);
+    if (posts.length > 0) {
+      await prisma.post.createMany({
+        data: posts.map((post) => ({
+          title: post.title,
+          content: post.content,
+          authorId: Math.ceil(Math.random() * 100),
+          communityId: Math.ceil(Math.random() * 20),
+        })),
+      });
+    }
     return { users, communities };
   }
 
+  test('GET /communities - query "name"=<any string> works', async () => {
+    await generateContent(1, 100, 0);
+
+    const response = await helpers.req('GET', '/communities?name=soup', null, null);
+    expect(response.status).toBe(200);
+    expect(response.body.communities.filter(
+      (comm: { urlName: string, canonicalName: string }) => comm.urlName.includes('soup') || comm.canonicalName.toLocaleLowerCase().includes('soup'),
+    )).toEqual(response.body.communities);
+  });
+
   test('GET /communities - query "sort=followers" works', async () => {
-    const { users, communities } = await generateContent();
+    const { users, communities } = await generateContent(100, 20, 0);
 
     await Promise.all(communities.map(async (community) => {
       const followerCount = Math.ceil(Math.random() * 100);
@@ -218,18 +246,7 @@ describe('search communities', () => {
   });
 
   test('GET /communities - query "sort=posts" works', async () => {
-    await generateContent();
-
-    const posts = await helpers.generateDummyPosts(1000);
-
-    await prisma.post.createMany({
-      data: posts.map((post) => ({
-        title: post.title,
-        content: post.content,
-        authorId: Math.ceil(Math.random() * 100),
-        communityId: Math.ceil(Math.random() * 20),
-      })),
-    });
+    await generateContent(100, 20, 0);
 
     const response = await helpers.req('GET', '/communities?sort=posts', null, null);
     expect(response.status).toBe(200);
@@ -242,9 +259,7 @@ describe('search communities', () => {
   });
 
   test('GET /communities - query "sort=activity" works', async () => {
-    await prisma.user.create({
-      data: { id: 1, username: 'owo', password: 'password' },
-    });
+    await generateContent(1, 0, 0);
 
     const communities = [
       { urlName: 'comm-a', canonicalName: 'Comm A' },

@@ -22,15 +22,22 @@ const controller: {
   demote: RequestHandler
 } = {
   getAll: asyncHandler(async (req, res) => {
-    const { sort } = req.query;
+    const { sort, name } = req.query;
 
     let orderBy;
+
     if (sort === 'followers') orderBy = { followers: { _count: 'desc' } };
     if (sort === 'posts') orderBy = { posts: { _count: 'desc' } };
     if (sort === 'activity') orderBy = { lastActivity: 'desc' };
 
     const communities = await prisma.community.findMany({
-      where: { status: 'ACTIVE' },
+      where: {
+        status: 'ACTIVE',
+        OR: [
+          { canonicalName: { contains: name as string } },
+          { urlName: { contains: name as string } },
+        ],
+      },
       include: {
         _count: {
           select: {
