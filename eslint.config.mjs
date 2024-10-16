@@ -62,5 +62,6 @@ export default [...compat.extends(
         ignoreStrings: true,
       },
     ],
+    'no-underscore-dangle': 'off',
   },
 }];

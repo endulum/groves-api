@@ -65,4 +65,10 @@ describe('dummy generators', () => {
     expect(communities.length).toBe(5);
     expect(communities.every((community) => community.urlName)).toBeTruthy();
   });
+
+  test('generate posts - it works', async () => {
+    const posts = await helpers.generateDummyPosts(5);
+    expect(posts.length).toBe(5);
+    expect(posts.every((post) => post.title)).toBeTruthy();
+  });
 });

@@ -84,7 +84,7 @@ export async function generateDummyUsers(amount: number)
     const username = generateUsername();
     if (!usernames.includes(username)) usernames.push(username);
   }
-  return usernames.map((username, index) => ({ username, id: index }));
+  return usernames.map((username, index) => ({ username, id: index + 1 }));
 }
 
 const generateCommunityName = (): { canonicalName: string, urlName: string } => {
@@ -116,4 +116,15 @@ export async function generateDummyCommunities(amount: number)
     }
   }
   return communities;
+}
+
+export async function generateDummyPosts(amount: number)
+  : Promise<Array<{ title: string, content: string }>> {
+  const posts: Array<{ title: string, content: string }> = [];
+  const title = faker.lorem.words(Math.ceil(Math.random() * 8));
+  const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
+  while (posts.length < amount) {
+    posts.push({ title, content });
+  }
+  return posts;
 }

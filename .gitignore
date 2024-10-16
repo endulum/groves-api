@@ -1,6 +1,8 @@
 node_modules/
 dist/
 
+playground.ts
+
 .env
 .env.test
 .env.production
