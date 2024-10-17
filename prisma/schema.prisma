@@ -97,7 +97,7 @@ model Reply {
 }
 
 model Action {
-  id String @id @default(cuid())
+  id Int @id @default(autoincrement())
   // an Action is a string that reflects something done in a Community. Communities maintain public action logs.
   // examples: 
   // - Admin `(username)` appointed user `(username)` to Moderator.

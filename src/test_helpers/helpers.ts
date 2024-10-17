@@ -67,6 +67,8 @@ export async function wipeTables(tables: Array<'user' | 'session' | 'community' 
     await prisma.post.deleteMany();
   }
   if (tables.includes('community')) {
+    await prisma.action.deleteMany();
+    await prisma.$queryRaw`ALTER SEQUENCE "Action_id_seq" RESTART WITH 1;`;
     await prisma.community.deleteMany();
     await prisma.$queryRaw`ALTER SEQUENCE "Community_id_seq" RESTART WITH 1;`;
   }

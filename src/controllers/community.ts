@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import asyncHandler from 'express-async-handler';
 import { body, type ValidationChain } from 'express-validator';
-import { type User, type Community } from '@prisma/client';
+import { type User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 import prisma from '../prisma';
@@ -13,6 +13,8 @@ const controller: {
   isAdmin: RequestHandler,
   isMod: RequestHandler,
   get: RequestHandler,
+  getActions: RequestHandler,
+
   validate: ValidationChain[],
   create: RequestHandler,
   edit: RequestHandler,
@@ -78,26 +80,22 @@ const controller: {
   }),
 
   exists: asyncHandler(async (req, res, next) => {
-    let community: Community | null = null;
-    const findClause = {
+    const id = parseInt(req.params.communityNameOrId, 10);
+    const where = (id % 1 !== 0)
+      ? { urlName: req.params.communityNameOrId }
+      : { id };
+
+    // const { actionName } = req.query;
+
+    const community = await prisma.community.findFirst({
+      where,
       include: {
         admin: { select: { id: true, username: true } },
         moderators: { select: { id: true, username: true } },
         followers: { select: { id: true, username: true } },
       },
       omit: { adminId: true },
-    };
-
-    const id = parseInt(req.params.communityNameOrId, 10);
-    if (id % 1 !== 0) {
-      community = await prisma.community.findUnique({
-        ...findClause, where: { urlName: req.params.communityNameOrId },
-      });
-    } else {
-      community = await prisma.community.findUnique({
-        ...findClause, where: { id },
-      });
-    }
+    });
 
     if (community) {
       req.thisCommunity = community;
@@ -144,6 +142,40 @@ const controller: {
     }
   }),
 
+  getActions: asyncHandler(async (req, res) => {
+    if (req.thisCommunity.status === 'HIDDEN' && (!req.user || !(req.user.role === 'ADMIN'))) {
+      res.sendStatus(404);
+    } else {
+      const { text, before, after } = req.query;
+
+      const dateClause = [];
+      if (Number(Date.parse(before as string))) {
+        dateClause.push({
+          date: { lte: new Date(Date.parse(before as string)).toISOString() },
+        });
+      }
+
+      if (Number(Date.parse(after as string))) {
+        dateClause.push({
+          date: { gte: new Date(Date.parse(after as string)).toISOString() },
+        });
+      }
+
+      const actions = await prisma.action.findMany({
+        where: {
+          communityId: req.thisCommunity.id,
+          activity: { contains: text as string ?? '' },
+          AND: dateClause,
+        },
+        orderBy: {
+          date: 'desc',
+        },
+      });
+
+      res.json(actions);
+    }
+  }),
+
   validate: [
     body('urlName')
       .trim()
@@ -186,7 +218,7 @@ const controller: {
   ],
 
   create: asyncHandler(async (req, res) => {
-    await prisma.community.create({
+    const newCommunity = await prisma.community.create({
       data: {
         adminId: req.user.id,
         urlName: req.body.urlName,
@@ -195,6 +227,14 @@ const controller: {
         status: 'ACTIVE',
       },
     });
+
+    await prisma.action.create({
+      data: {
+        activity: `User #${req.user.id} created this community.`,
+        communityId: newCommunity.id,
+      },
+    });
+
     res.sendStatus(200);
   }),
 
@@ -209,6 +249,14 @@ const controller: {
         description: req.body.description,
       },
     });
+
+    await prisma.action.create({
+      data: {
+        activity: `User #${req.user.id} edited this community's details.`,
+        communityId: req.thisCommunity.id,
+      },
+    });
+
     res.sendStatus(200);
   }),
 
@@ -273,6 +321,14 @@ const controller: {
         },
       },
     });
+
+    await prisma.action.create({
+      data: {
+        activity: `User #${req.user.id} promoted User #${req.thisUser.id} to Moderator.`,
+        communityId: req.thisCommunity.id,
+      },
+    });
+
     res.sendStatus(200);
   }),
 
@@ -313,6 +369,14 @@ const controller: {
         },
       },
     });
+
+    await prisma.action.create({
+      data: {
+        activity: `User #${req.user.id} demoted User #${req.thisUser.id} from Moderator.`,
+        communityId: req.thisCommunity.id,
+      },
+    });
+
     res.sendStatus(200);
   }),
 
@@ -324,6 +388,13 @@ const controller: {
     await prisma.community.update({
       where: { id: req.thisCommunity.id },
       data: { wiki: req.body.wiki ?? '' },
+    });
+
+    await prisma.action.create({
+      data: {
+        activity: `User #${req.user.id} made changes to this community's Wiki.`,
+        communityId: req.thisCommunity.id,
+      },
     });
     res.sendStatus(200);
   }),
@@ -342,6 +413,14 @@ const controller: {
       where: { id: req.thisCommunity.id },
       data: { status: isFrozen ? 'ACTIVE' : 'FROZEN' },
     });
+
+    await prisma.action.create({
+      data: {
+        activity: `User #${req.user.id} ${isFrozen ? 'thawed' : 'froze'} this community.`,
+        communityId: req.thisCommunity.id,
+      },
+    });
+
     res.sendStatus(200);
   }),
 };

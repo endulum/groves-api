@@ -1,14 +1,14 @@
 import express from 'express';
-import asyncHandler from 'express-async-handler';
+// import asyncHandler from 'express-async-handler';
 import handleValidationErrors from '../middleware/handleValidationErrors';
 
 import user from '../controllers/user';
 import community from '../controllers/community';
 
-const checkIfHit = () => asyncHandler(async (req, res, next) => {
-  console.log('hi');
-  return next();
-});
+// const checkIfHit = () => asyncHandler(async (req, res, next) => {
+//   console.log('hi');
+//   return next();
+// });
 
 const router = express.Router();
 
@@ -73,5 +73,7 @@ router.route('/community/:communityNameOrId/wiki')
   .put(...authUser, ...communityIsActive, ...areYouMod, ...editWiki);
 router.route('/community/:communityNameOrId/freeze')
   .post(...authUser, ...areYouAdmin, ...freezeOrThaw);
+router.route('/community/:communityNameOrId/actions')
+  .get(user.deserialize, community.exists, community.getActions);
 
 export default router;

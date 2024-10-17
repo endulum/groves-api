@@ -326,13 +326,6 @@ describe('search communities', () => {
       ) => Date.parse(comm_b.lastActivity) - Date.parse(comm_a.lastActivity),
     )).toEqual(response.body.communities);
   });
-
-  // test('GET /communities - query "page"=<any number> works', async () => {
-  //   await generateContent(1, 100, 0);
-  //   const response = await helpers.req('GET', '/communities?page=2', null, null);
-  //   expect(response.status).toBe(200);
-  //   expect(response.body.communities.length).toBe(20);
-  // });
 });
 
 describe('follow communities', () => {
@@ -569,6 +562,102 @@ describe('freezing and thawing a community', () => {
       where: { status: 'FROZEN' },
     });
     expect(comm).toBeNull();
+  });
+});
+
+describe('community actions are recorded as actions', () => {
+  beforeAll(async () => {
+    await helpers.wipeTables(['community']);
+    await prisma.community.create({
+      data: {
+        urlName: 'comm',
+        canonicalName: 'Community',
+        description: 'This is an ordinary community.',
+        adminId: 1,
+        moderators: {
+          connect: { id: 2 }, // demo-1
+        },
+      },
+    });
+  });
+
+  test('it works', async () => {
+    const { token } = await helpers.getUser('admin', 'password');
+    const activities
+    : Array<{ method: 'PUT' | 'POST', url: string, body: Record<string, unknown> | null }> = [
+      { // editing community detail
+        method: 'PUT',
+        url: '/community/comm',
+        body: {
+          urlName: 'comm', canonicalName: 'Community', description: 'I am different from the previous description.',
+        },
+      }, { // promoting mod
+        method: 'POST',
+        url: '/community/comm/promote',
+        body: { username: 'demo-2' },
+      }, { // demoting mod
+        method: 'POST',
+        url: '/community/comm/demote',
+        body: { username: 'demo-1' },
+      }, { // editing wiki
+        method: 'PUT',
+        url: '/community/comm/wiki',
+        body: { wiki: 'Some wiki text.' },
+      },
+    ];
+
+    await Promise.all(activities.map(async (activity) => {
+      const activityResponse = await helpers.req(
+        activity.method,
+        activity.url,
+        activity.body,
+        token,
+      );
+      expect(activityResponse.status).toBe(200);
+    }));
+
+    const actions = await prisma.action.findMany({
+      where: { communityId: 1 },
+    });
+    expect(actions.length).toBe(activities.length);
+  });
+
+  test('GET /community/:communityNameOrId/actions - 200 and list of actions in date order', async () => {
+    const response = await helpers.req('GET', '/community/comm/actions', null, null);
+    expect(response.status).toBe(200);
+    expect([...response.body].sort(
+      (
+        act_a: { date: string },
+        act_b: { date: string },
+      ) => Date.parse(act_b.date) - Date.parse(act_a.date),
+    )).toEqual(response.body);
+  });
+
+  test('GET /community/:communityNameOrId/actions - query "text=<any string>" works', async () => {
+    const response = await helpers.req('GET', '/community/comm/actions?text=moderator', null, null);
+    expect(response.status).toBe(200);
+
+    expect(response.body.filter(
+      (act: { activity: string }) => act.activity.toLocaleLowerCase().includes('moderator'),
+    )).toEqual(response.body);
+  });
+
+  test('GET /community/:communityNameOrId/actions - query "text=<any string>" works', async () => {
+    const response = await helpers.req('GET', '/community/comm/actions?text=moderator', null, null);
+    expect(response.status).toBe(200);
+
+    expect(response.body.filter(
+      (act: { activity: string }) => act.activity.toLocaleLowerCase().includes('moderator'),
+    )).toEqual(response.body);
+  });
+
+  test('GET /community/:communityNameOrId/actions - query "after=<any datestring>" works', async () => {
+    const response = await helpers.req('GET', '/community/comm/actions?after=2024-01-01', null, null);
+    expect(response.status).toBe(200);
+
+    expect(response.body.filter(
+      (act: { date: string }) => Date.parse(act.date) >= Date.parse('2024-01-01'),
+    )).toEqual(response.body);
   });
 });
 

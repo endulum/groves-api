@@ -13,7 +13,7 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todo
 
-- ...
+- Consider paginating Actions
 
 ## Endpoint Overview
 
@@ -38,7 +38,7 @@ Creates a new user in the database.
 
 Returns the identity of the authenticated user.
 
-```json
+```js
 {
     id: 1,
     username: "demo-user",
@@ -76,7 +76,7 @@ Similarly to `GET /me`, returns the identity of the user identified by the param
 
 Returns a list of communities, paginated by 20 entries per page.
 
-```json
+```js
 {
     page: 1,
     pages: 10,
@@ -166,3 +166,25 @@ Toggles the `status` of the identified community between `ACTIVE` and `FROZEN`. 
 > - Demoting or promoting moderators
 > - Editing community details or the wiki
 > - Following the community
+
+> `GET /community/:communityNameOrId/actions`
+
+Returns a list of actions done in the identified community.
+
+```js
+[
+    {
+        activity: "User #1 promoted User #3 to Moderator.",
+        date: "2024-10-17T20:36:28.391Z"
+    },
+    // ...
+]
+```
+
+- `activity`: a string describing the action. User `id`s identify the users involved.
+- `date`: the creation date of this record.
+
+This endpoint accepts query parameters:
+
+- `actionName`: filters for any actions whose `activity` text contains the provided string.
+- `before` and `after`: filters for any actions whose `date` lies in between the provided values. The string must be in ISO format, e.g. `2024-01-01`.

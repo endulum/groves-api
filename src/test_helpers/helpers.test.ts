@@ -2,6 +2,8 @@ import * as helpers from './helpers';
 import prisma from '../prisma';
 
 async function clear() {
+  await prisma.action.deleteMany();
+  await prisma.$queryRaw`ALTER SEQUENCE "Action_id_seq" RESTART WITH 1;`;
   await prisma.community.deleteMany({});
   await prisma.$queryRaw`ALTER SEQUENCE "Community_id_seq" RESTART WITH 1;`;
   await prisma.user.deleteMany({});
