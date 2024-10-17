@@ -14,12 +14,18 @@ const controller: {
   validate: ValidationChain[],
   create: RequestHandler,
   edit: RequestHandler,
+
   validateFollow: ValidationChain,
   follow: RequestHandler
+
   validatePromotion: ValidationChain,
   promote: RequestHandler,
+
   validateDemotion: ValidationChain,
-  demote: RequestHandler
+  demote: RequestHandler,
+
+  validateWiki: ValidationChain,
+  editWiki: RequestHandler
 } = {
   getAll: asyncHandler(async (req, res) => {
     const { sort, name, page } = req.query;
@@ -293,6 +299,18 @@ const controller: {
           ),
         },
       },
+    });
+    res.sendStatus(200);
+  }),
+
+  validateWiki: body('wiki')
+    .trim()
+    .escape(),
+
+  editWiki: asyncHandler(async (req, res) => {
+    await prisma.community.update({
+      where: { id: req.thisCommunity.id },
+      data: { wiki: req.body.wiki ?? '' },
     });
     res.sendStatus(200);
   }),

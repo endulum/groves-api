@@ -118,7 +118,7 @@ async function generateContent() {
 
 async function main() {
   await clearDatabase();
-  await generateContent();
+  // await generateContent();
 }
 
 main()

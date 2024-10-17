@@ -31,7 +31,7 @@ model Community {
   urlName       String    @unique @db.VarChar(32) // to have the community accessible by url
   canonicalName String    @db.VarChar(64) // less formal/restricted version of the community name, for show
   description   String    @db.VarChar(256) // short description of community's purpose
-  wiki          String? // markdown string representing a "document" of info about the community
+  wiki          String    @default("") // markdown string representing a "document" of info about the community
   status        Status    @default(ACTIVE)
   // "ACTIVE": anyone can post and reply, the community is visible on global search and profiles
   // "FROZEN": "read-only" mode, no posting/replying/voting, not visible on global search, only admin can edit comm details

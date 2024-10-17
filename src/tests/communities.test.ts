@@ -134,7 +134,7 @@ describe('see communities', () => {
     response.body.communities.forEach((community: { status: string }) => {
       expect(community.status).toEqual('ACTIVE');
     });
-    console.dir(response.body, { depth: null });
+    // console.dir(response.body, { depth: null });
   });
 
   test('GET /community/:communityNameOrId - 404 if community not found', async () => {
@@ -460,6 +460,40 @@ describe('community administration and moderation', () => {
       include: { moderators: true },
     });
     expect(thisCommunity?.moderators.map((c) => c.username)).toEqual(['demo-2']);
+  });
+});
+
+describe('community wiki', () => {
+  beforeAll(async () => {
+    await helpers.wipeTables(['community']);
+    await prisma.community.create({
+      data: {
+        urlName: 'comm',
+        canonicalName: 'Community',
+        description: 'This is an ordinary community.',
+        adminId: 1,
+        moderators: {
+          connect: { id: 2 },
+        },
+      },
+    });
+  });
+
+  test('PUT /community/:communityId/wiki - 403 if not mod or admin', async () => {
+    const { token } = await helpers.getUser('demo-3', 'password');
+    const response = await helpers.req('PUT', '/community/comm/wiki', { wiki: 'Hi there!' }, token);
+    expect(response.status).toBe(403);
+  });
+
+  test('PUT /community/:communityId/wiki - 200 and edits wiki', async () => {
+    const { token } = await helpers.getUser('demo-1', 'password');
+    const response = await helpers.req('PUT', '/community/comm/wiki', { wiki: 'Hi there!' }, token);
+    expect(response.status).toBe(200);
+
+    const comm = await prisma.community.findFirst({
+      where: { wiki: 'Hi there!' },
+    });
+    expect(comm).toBeDefined();
   });
 });
 

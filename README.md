@@ -13,7 +13,6 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todo
 
-- `PUT /community/:communityNameOrId/wiki` - edits the community wiki, if auth user is mod or admin
 - `POST /community/:communityNameOrId/freeze` - toggles community status between frozen and active, if auth user is admin
 
 ## Endpoint Overview
@@ -148,3 +147,9 @@ Grants a user moderator privileges of the identified community. The authenticate
 Removes moderator privileges of the identified community from a user. The authenticated user must have admin privileges over the community.
 
 - `username`: Required. There must exist a user in the database with the provided `username` who has moderator privileges over this community.
+
+> `PUT /community/:communityNameOrId/wiki` <sub>protected</sub> 
+
+Edits the community wiki. The authenticated user must have moderator privileges over this community.
+
+- `wiki`: Required, but can be an empty string.
