@@ -2,12 +2,14 @@ import { RequestHandler } from 'express';
 import asyncHandler from 'express-async-handler';
 import { body, type ValidationChain } from 'express-validator';
 import { type User, type Community } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 import prisma from '../prisma';
 
 const controller: {
   getAll: RequestHandler,
   exists: RequestHandler,
+  isActive: RequestHandler,
   isAdmin: RequestHandler,
   isMod: RequestHandler,
   get: RequestHandler,
@@ -25,7 +27,10 @@ const controller: {
   demote: RequestHandler,
 
   validateWiki: ValidationChain,
-  editWiki: RequestHandler
+  editWiki: RequestHandler,
+
+  validateFreeze: ValidationChain,
+  freezeOrThaw: RequestHandler
 } = {
   getAll: asyncHandler(async (req, res) => {
     const { sort, name, page } = req.query;
@@ -100,6 +105,14 @@ const controller: {
     } else {
       res.sendStatus(404);
     }
+  }),
+
+  isActive: asyncHandler(async (req, res, next) => {
+    if (req.thisCommunity.status === 'FROZEN') {
+      res.sendStatus(403);
+      return;
+    }
+    next();
   }),
 
   isAdmin: asyncHandler(async (req, res, next) => {
@@ -311,6 +324,23 @@ const controller: {
     await prisma.community.update({
       where: { id: req.thisCommunity.id },
       data: { wiki: req.body.wiki ?? '' },
+    });
+    res.sendStatus(200);
+  }),
+
+  validateFreeze: body('password')
+    .notEmpty().withMessage('Please enter your password.').bail()
+    .custom(async (value, { req }) => {
+      const match = await bcrypt.compare(value, req.user.password);
+      if (!match) throw new Error('Incorrect username or password.');
+    })
+    .escape(),
+
+  freezeOrThaw: asyncHandler(async (req, res) => {
+    const isFrozen = req.thisCommunity.status === 'FROZEN';
+    await prisma.community.update({
+      where: { id: req.thisCommunity.id },
+      data: { status: isFrozen ? 'ACTIVE' : 'FROZEN' },
     });
     res.sendStatus(200);
   }),

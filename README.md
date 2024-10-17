@@ -13,7 +13,7 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todo
 
-- `POST /community/:communityNameOrId/freeze` - toggles community status between frozen and active, if auth user is admin
+- ...
 
 ## Endpoint Overview
 
@@ -153,3 +153,16 @@ Removes moderator privileges of the identified community from a user. The authen
 Edits the community wiki. The authenticated user must have moderator privileges over this community.
 
 - `wiki`: Required, but can be an empty string.
+
+> `POST /community/:communityNameOrId/freeze` <sub>protected</sub> 
+
+Toggles the `status` of the identified community between `ACTIVE` and `FROZEN`. The authenticated user must have admin privileges over this community.
+
+- `password`: Required. Must match the user record's own password.
+
+> When a community is `FROZEN`, it is in "readonly" mode. No further activity can be conducted on this community until it is thawed. This includes:
+>
+> - Creating, editing, freezing, hiding, or pinning Posts or Replies
+> - Demoting or promoting moderators
+> - Editing community details or the wiki
+> - Following the community

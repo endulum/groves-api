@@ -497,4 +497,79 @@ describe('community wiki', () => {
   });
 });
 
+describe('freezing and thawing a community', () => {
+  beforeAll(async () => {
+    await helpers.wipeTables(['community']);
+    await prisma.community.create({
+      data: {
+        urlName: 'comm',
+        canonicalName: 'Community',
+        description: 'This is an ordinary community.',
+        adminId: 1,
+      },
+    });
+  });
+
+  test('POST /community/:communityId/freeze - 403 if not admin', async () => {
+    const { token } = await helpers.getUser('demo-3', 'password');
+    const response = await helpers.req('POST', '/community/comm/freeze', null, token);
+    expect(response.status).toBe(403);
+  });
+
+  test('POST /community/:communityId/freeze - 401 and errors', async () => {
+    const wrongInputArray = [
+      { password: '' },
+      { password: 'wrongPassword' },
+    ];
+    const { token } = await helpers.getUser('admin', 'password');
+    await Promise.all(wrongInputArray.map(async (wrongInput) => {
+      const response = await helpers.req('POST', '/community/comm/freeze', wrongInput, token);
+      expect(response.status).toBe(400);
+      expect(response.body).toHaveProperty('errors');
+      expect(response.body.errors.length).toEqual(1);
+    }));
+  });
+
+  test('POST /community/:communityId/freeze - 200 and freezes and unfreezes community', async () => {
+    const { token } = await helpers.getUser('admin', 'password');
+    let response = await helpers.req('POST', '/community/comm/freeze', { password: 'password' }, token);
+    expect(response.status).toBe(200);
+
+    let comm = await prisma.community.findFirst({
+      where: { status: 'FROZEN' },
+    });
+    expect(comm).toBeDefined();
+
+    // cannot do any comm activities
+
+    const activities: Array<{ method: 'PUT' | 'POST', url: string }> = [
+      { method: 'PUT', url: '/community/comm' }, // editing community detail
+      { method: 'POST', url: '/community/comm/follow' }, // following comm
+      { method: 'POST', url: '/community/comm/promote' }, // promoting mod
+      { method: 'POST', url: '/community/comm/demote' }, // demoting mod
+      { method: 'PUT', url: '/community/comm/wiki' }, // editing wiki
+    ];
+
+    await Promise.all(activities.map(async (activity) => {
+      const activityResponse = await helpers.req(
+        activity.method,
+        activity.url,
+        null,
+        token,
+      );
+      expect(activityResponse.status).toBe(403);
+    }));
+
+    // thaw
+
+    response = await helpers.req('POST', '/community/comm/freeze', { password: 'password' }, token);
+    expect(response.status).toBe(200);
+
+    comm = await prisma.community.findFirst({
+      where: { status: 'FROZEN' },
+    });
+    expect(comm).toBeNull();
+  });
+});
+
 // todo: prevent passwords from showing up...

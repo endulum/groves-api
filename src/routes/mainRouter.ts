@@ -1,9 +1,14 @@
 import express from 'express';
-// import asyncHandler from 'express-async-handler';
+import asyncHandler from 'express-async-handler';
 import handleValidationErrors from '../middleware/handleValidationErrors';
 
 import user from '../controllers/user';
 import community from '../controllers/community';
+
+const checkIfHit = () => asyncHandler(async (req, res, next) => {
+  console.log('hi');
+  return next();
+});
 
 const router = express.Router();
 
@@ -45,20 +50,28 @@ const demoteUser = [
 const editWiki = [
   community.validateWiki, handleValidationErrors, community.editWiki,
 ];
+const freezeOrThaw = [
+  community.validateFreeze, handleValidationErrors, community.freezeOrThaw,
+];
+const communityIsActive = [
+  community.exists, community.isActive,
+];
 
 router.route('/communities')
   .get(community.getAll)
   .post(...authUser, ...createCommunity);
 router.route('/community/:communityNameOrId')
   .get(user.deserialize, community.exists, community.get)
-  .put(...authUser, ...areYouAdmin, ...editCommunity);
+  .put(...authUser, ...communityIsActive, ...areYouAdmin, ...editCommunity);
 router.route('/community/:communityNameOrId/follow')
-  .post(...authUser, community.exists, ...followCommunity);
+  .post(...authUser, ...communityIsActive, ...followCommunity);
 router.route('/community/:communityNameOrId/promote')
-  .post(...authUser, ...areYouAdmin, ...promoteUser);
+  .post(...authUser, ...communityIsActive, ...areYouAdmin, ...promoteUser);
 router.route('/community/:communityNameOrId/demote')
-  .post(...authUser, ...areYouAdmin, ...demoteUser);
+  .post(...authUser, ...communityIsActive, ...areYouAdmin, ...demoteUser);
 router.route('/community/:communityNameOrId/wiki')
-  .put(...authUser, ...areYouMod, ...editWiki);
+  .put(...authUser, ...communityIsActive, ...areYouMod, ...editWiki);
+router.route('/community/:communityNameOrId/freeze')
+  .post(...authUser, ...areYouAdmin, ...freezeOrThaw);
 
 export default router;
