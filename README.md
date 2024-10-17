@@ -7,7 +7,7 @@ The units of interaction in Groves are Communities (likened to "groves"), Posts 
 
 - A user can "vote" positively or negatively on a Post or Reply. A user's "verdancy" (likened to "greenness") is a cumulation of positive votes, countered by negative votes, their content has gotten in total.
 - Communities are managed by singular Admins with a variable team of Moderators. Both Admins and Moderators can freeze or hide Posts and Replies, pin Posts, silence users, and edit the community wiki. Admins can appoint or remove Moderators, and change basic details of the Community.
-- Communities have a public Action log wherein certain Community activites are recorded, such as new Posts and Replies, moderator demotions and additions, and editions to Community details.
+- Communities have a public Action log wherein certain Community activites are recorded into Actions, such as new Posts and Replies, moderator demotions and additions, and editions to Community details.
 
 Groves uses JSON Web Tokens to authenticate users for protected routes. When making requests to protected routes, the JWT must be passed into the `Authorization` header, preceded with `Bearer` and a space.
 
@@ -123,9 +123,9 @@ Creates a new community in the database, with the authenticated user automatical
 - `canonicalName`: Required. Must be between 2 and 32 characters in length.
 - `description`: Required. Cannot exceed 200 characters in length.
 
-> `GET /community/:communityNameOrId`  <sub>protected</sub> 
+> `GET /community/:communityNameOrId`
 
-Similarly to an individual item in the list provided in `GET /communities`, returns the identity of the community identified by `:communityNameOrId`, if a community exists with an `id` or `urlName` matching the value of this parameter.
+Similarly to an individual item in the list provided in `GET /communities`, returns the identity of the community identified by `:communityNameOrId`, if a community exists with an `id` or `urlName` matching the value of this parameter. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges
 
 > `PUT /community/:communityNameOrId`  <sub>protected</sub> 
 
