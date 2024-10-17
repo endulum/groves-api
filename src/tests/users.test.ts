@@ -49,12 +49,12 @@ describe('change account details of self', () => {
     currentPassword: 'password',
   };
 
-  test('POST /me - 401 without token', async () => {
-    const response = await helpers.req('POST', '/me', null, null);
+  test('PUT /me - 401 without token', async () => {
+    const response = await helpers.req('PUT', '/me', null, null);
     expect(response.status).toBe(401);
   });
 
-  test('POST /me - 400 and errors (with password)', async () => {
+  test('PUT /me - 400 and errors (with password)', async () => {
     const { token } = await helpers.getUser('admin', 'password');
 
     const wrongInputsArray = [
@@ -72,17 +72,17 @@ describe('change account details of self', () => {
     ];
 
     await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
-      const response = await helpers.req('POST', '/me', { ...correctInputs, ...wrongInputs }, token);
+      const response = await helpers.req('PUT', '/me', { ...correctInputs, ...wrongInputs }, token);
       expect(response.status).toBe(400);
       expect(response.body).toHaveProperty('errors');
     }));
   });
 
-  test('POST /me - 200 and changes account details (with password)', async () => {
+  test('PUT /me - 200 and changes account details (with password)', async () => {
     const { token } = await helpers.getUser('admin', 'password');
-    const response = await helpers.req('POST', '/me', correctInputs, token);
+    const response = await helpers.req('PUT', '/me', correctInputs, token);
     expect(response.status).toBe(200);
-    await helpers.req('POST', '/me', {
+    await helpers.req('PUT', '/me', {
       ...correctInputs,
       password: 'password',
       confirmPassword: 'password',
@@ -90,9 +90,9 @@ describe('change account details of self', () => {
     }, token);
   });
 
-  test('POST /me - 200 and changes account details (without password)', async () => {
+  test('PUT /me - 200 and changes account details (without password)', async () => {
     const { token } = await helpers.getUser('admin', 'password');
-    const response = await helpers.req('POST', '/me', { username: 'owo', bio: 'Snazzy bio here.' }, token);
+    const response = await helpers.req('PUT', '/me', { username: 'owo', bio: 'Snazzy bio here.' }, token);
     expect(response.status).toBe(200);
     await helpers.req('POST', '/account', { username: 'admin', bio: '' }, token);
   });

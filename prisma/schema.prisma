@@ -34,8 +34,8 @@ model Community {
   wiki          String? // markdown string representing a "document" of info about the community
   status        Status    @default(ACTIVE)
   // "ACTIVE": anyone can post and reply, the community is visible on global search and profiles
-  // "FROZEN": only moderation can post or reply, the community is not visible on global search
-  // "HIDDEN": no posts or replies can be made, the community is not visible on global search or profiles, only admin can view 
+  // "FROZEN": "read-only" mode, no posting/replying/voting, not visible on global search, only admin can edit comm details
+  // "HIDDEN": same as above, but only admin can see comm
   created       DateTime  @default(now())
   lastActivity  DateTime? // updates to current date whenever a post or reply is made
 

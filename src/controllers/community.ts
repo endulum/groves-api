@@ -62,8 +62,7 @@ const controller: {
     res.json({
       communities,
       page: pageNumber,
-      pages: Math.floor(await prisma.community.count() / 20),
-      areYouSignedIn: !!req.user,
+      pages: Math.max(Math.floor(await prisma.community.count() / 20), 1),
     });
   }),
 
@@ -118,7 +117,6 @@ const controller: {
     } else {
       res.json({
         ...req.thisCommunity,
-        areYouSignedIn: !!req.user,
         areYouMod: !!req.user && req.thisCommunity.moderators.find(
           (mod: { id: number, username: string }) => mod.id === req.user.id,
         ),

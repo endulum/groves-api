@@ -134,7 +134,7 @@ describe('see communities', () => {
     response.body.communities.forEach((community: { status: string }) => {
       expect(community.status).toEqual('ACTIVE');
     });
-    // console.dir(response.body, { depth: null });
+    console.dir(response.body, { depth: null });
   });
 
   test('GET /community/:communityNameOrId - 404 if community not found', async () => {

@@ -19,7 +19,7 @@ const editAccount = [
 
 router.route('/me')
   .get(...authUser, user.getMe)
-  .post(...authUser, ...editAccount);
+  .put(...authUser, ...editAccount);
 router.route('/user/:userNameOrId')
   .get(user.exists, user.get);
 
@@ -34,7 +34,7 @@ const editCommunity = [
 const followCommunity = [
   community.validateFollow, handleValidationErrors, community.follow,
 ];
-const areYouMod = [community.exists, community.isMod];
+// const areYouMod = [community.exists, community.isMod];
 const areYouAdmin = [community.exists, community.isAdmin];
 const promoteUser = [
   community.validatePromotion, handleValidationErrors, community.promote,
@@ -48,7 +48,7 @@ router.route('/communities')
   .post(...authUser, ...createCommunity);
 router.route('/community/:communityNameOrId')
   .get(user.deserialize, community.exists, community.get)
-  .put(...authUser, ...areYouMod, ...editCommunity);
+  .put(...authUser, ...areYouAdmin, ...editCommunity);
 router.route('/community/:communityNameOrId/follow')
   .post(...authUser, community.exists, ...followCommunity);
 router.route('/community/:communityNameOrId/promote')
