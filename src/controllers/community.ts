@@ -146,7 +146,13 @@ const controller: {
     if (req.thisCommunity.status === 'HIDDEN' && (!req.user || !(req.user.role === 'ADMIN'))) {
       res.sendStatus(404);
     } else {
-      const { text, before, after } = req.query;
+      const {
+        text, before, after, page,
+      } = req.query;
+
+      const pageNumber = parseInt(page as string, 10) % 1 === 0
+        ? parseInt(page as string, 10)
+        : 1;
 
       const dateClause = [];
       if (Number(Date.parse(before as string))) {
@@ -170,9 +176,16 @@ const controller: {
         orderBy: {
           date: 'desc',
         },
+        skip: (pageNumber - 1) * 50,
+        take: 50,
       });
 
-      res.json(actions);
+      res.json({
+        actions,
+        page: pageNumber,
+        pages: Math.max(Math.floor(await prisma.action.count() / 50), 1),
+        // FIX LATER: this calculates from ALL existing actions, NOT from the ones fitting the query!
+      });
     }
   }),
 

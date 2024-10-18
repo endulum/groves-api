@@ -2,7 +2,7 @@ import * as helpers from '../test_helpers/helpers';
 import prisma from '../prisma';
 
 beforeAll(async () => {
-  await helpers.wipeTables(['user', 'community']);
+  await helpers.wipeTables(['user', 'community', 'action']);
   await helpers.createUsers(['demo-1', 'demo-2', 'demo-3', 'demo-4']);
 });
 
@@ -625,39 +625,60 @@ describe('community actions are recorded as actions', () => {
   test('GET /community/:communityNameOrId/actions - 200 and list of actions in date order', async () => {
     const response = await helpers.req('GET', '/community/comm/actions', null, null);
     expect(response.status).toBe(200);
-    expect([...response.body].sort(
+    expect([...response.body.actions].sort(
       (
         act_a: { date: string },
         act_b: { date: string },
       ) => Date.parse(act_b.date) - Date.parse(act_a.date),
-    )).toEqual(response.body);
+    )).toEqual(response.body.actions);
   });
 
   test('GET /community/:communityNameOrId/actions - query "text=<any string>" works', async () => {
     const response = await helpers.req('GET', '/community/comm/actions?text=moderator', null, null);
     expect(response.status).toBe(200);
 
-    expect(response.body.filter(
+    expect(response.body.actions.filter(
       (act: { activity: string }) => act.activity.toLocaleLowerCase().includes('moderator'),
-    )).toEqual(response.body);
-  });
-
-  test('GET /community/:communityNameOrId/actions - query "text=<any string>" works', async () => {
-    const response = await helpers.req('GET', '/community/comm/actions?text=moderator', null, null);
-    expect(response.status).toBe(200);
-
-    expect(response.body.filter(
-      (act: { activity: string }) => act.activity.toLocaleLowerCase().includes('moderator'),
-    )).toEqual(response.body);
+    )).toEqual(response.body.actions);
   });
 
   test('GET /community/:communityNameOrId/actions - query "after=<any datestring>" works', async () => {
     const response = await helpers.req('GET', '/community/comm/actions?after=2024-01-01', null, null);
     expect(response.status).toBe(200);
 
-    expect(response.body.filter(
+    expect(response.body.actions.filter(
       (act: { date: string }) => Date.parse(act.date) >= Date.parse('2024-01-01'),
-    )).toEqual(response.body);
+    )).toEqual(response.body.actions);
+  });
+
+  test('GET /community/:communityNameOrId/actions - query "page=<any int>" works', async () => {
+    await prisma.action.deleteMany({});
+    await prisma.action.createMany({
+      data: [...Array(100)].map(() => ({
+        activity: 'some activity text',
+        communityId: 1,
+      })),
+    });
+
+    let response = await helpers.req('GET', '/community/comm/actions', null, null);
+    expect(response.status).toBe(200);
+    expect(response.body.page).toBe(1);
+    expect(response.body.pages).toBe(2);
+    expect(response.body.actions.length).toBe(50);
+
+    const defaultActions = response.body.actions;
+
+    response = await helpers.req('GET', '/community/comm/actions?page=2', null, null);
+    expect(response.status).toBe(200);
+    expect(response.body.page).toBe(2);
+    expect(response.body.pages).toBe(2);
+    expect(response.body.actions.length).toBe(50);
+    expect(response.body.actions.every(
+      (
+        act: { id: string },
+        i: number,
+      ) => act.id !== defaultActions[i].id,
+    )).toBeTruthy();
   });
 });
 

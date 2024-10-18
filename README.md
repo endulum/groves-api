@@ -13,7 +13,7 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todo
 
-- Consider paginating Actions
+- ...
 
 ## Endpoint Overview
 
@@ -169,7 +169,7 @@ Toggles the `status` of the identified community between `ACTIVE` and `FROZEN`. 
 
 > `GET /community/:communityNameOrId/actions`
 
-Returns a list of actions done in the identified community.
+Returns a list of actions done in the identified community, paginated by 50 entries per page.
 
 ```js
 [
@@ -188,3 +188,4 @@ This endpoint accepts query parameters:
 
 - `actionName`: filters for any actions whose `activity` text contains the provided string.
 - `before` and `after`: filters for any actions whose `date` lies in between the provided values. The string must be in ISO format, e.g. `2024-01-01`.
+- `page`: fetches the page represented by the provided integer.

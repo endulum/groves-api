@@ -62,7 +62,7 @@ export async function createUsers(usernames: string[]) {
   });
 }
 
-export async function wipeTables(tables: Array<'user' | 'session' | 'community' | 'post'>) {
+export async function wipeTables(tables: Array<'action' | 'user' | 'session' | 'community' | 'post'>) {
   if (tables.includes('post')) {
     await prisma.post.deleteMany();
   }
