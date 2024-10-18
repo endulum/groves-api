@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import asyncHandler from 'express-async-handler';
 import { body, type ValidationChain } from 'express-validator';
-import { type User } from '@prisma/client';
+import { Prisma, type Status, type User } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
 import prisma from '../prisma';
@@ -37,23 +37,31 @@ const controller: {
   getAll: asyncHandler(async (req, res) => {
     const { sort, name, page } = req.query;
 
-    let orderBy;
+    let order;
     const pageNumber = parseInt(page as string, 10) % 1 === 0
       ? parseInt(page as string, 10)
       : 1;
 
-    if (sort === 'followers') orderBy = { followers: { _count: 'desc' } };
-    if (sort === 'posts') orderBy = { posts: { _count: 'desc' } };
-    if (sort === 'activity') orderBy = { lastActivity: 'desc' };
+    if (sort === 'followers') order = { followers: { _count: 'desc' } };
+    if (sort === 'posts') order = { posts: { _count: 'desc' } };
+    if (sort === 'activity') order = { lastActivity: 'desc' };
 
-    const communities = await prisma.community.findMany({
+    const orderBy = Prisma.validator<Prisma.CommunityOrderByWithRelationInput>()({
+      ...order,
+    });
+
+    const query = {
       where: {
-        status: 'ACTIVE',
+        status: 'ACTIVE' as Status,
         OR: [
           { canonicalName: { contains: name as string ?? '' } },
           { urlName: { contains: name as string ?? '' } },
         ],
       },
+    };
+
+    const queryForSearching = Prisma.validator<Prisma.CommunityFindManyArgs>()({
+      ...query,
       include: {
         _count: {
           select: {
@@ -66,16 +74,23 @@ const controller: {
         adminId: true,
         wiki: true,
       },
-      // @ts-expect-error this still works despite the type error.
-      // + conditionally defining this as an object prior to the query is a lot cleaner than nesting ternaries here
       orderBy,
+    });
+    const queryForCounting = Prisma.validator<Prisma.CommunityCountArgs>()(query);
+
+    const communitiesFound = await prisma.community.findMany({
+      ...queryForSearching,
       skip: (pageNumber - 1) * 20,
       take: 20,
     });
+    const totalCommunities = await prisma.community.count({
+      ...queryForCounting,
+    });
+
     res.json({
-      communities,
+      communities: communitiesFound,
       page: pageNumber,
-      pages: Math.max(Math.floor(await prisma.community.count() / 20), 1),
+      pages: Math.max(Math.floor(totalCommunities / 20), 1),
     });
   }),
 
@@ -167,12 +182,19 @@ const controller: {
         });
       }
 
-      const actions = await prisma.action.findMany({
+      const query = {
         where: {
           communityId: req.thisCommunity.id,
           activity: { contains: text as string ?? '' },
           AND: dateClause,
         },
+      };
+
+      const queryForSearching = Prisma.validator<Prisma.ActionFindManyArgs>()(query);
+      const queryForCounting = Prisma.validator<Prisma.ActionCountArgs>()(query);
+
+      const actionsFound = await prisma.action.findMany({
+        ...queryForSearching,
         orderBy: {
           date: 'desc',
         },
@@ -180,11 +202,14 @@ const controller: {
         take: 50,
       });
 
+      const totalActions = await prisma.action.count({
+        ...queryForCounting,
+      });
+
       res.json({
-        actions,
+        actions: actionsFound,
         page: pageNumber,
-        pages: Math.max(Math.floor(await prisma.action.count() / 50), 1),
-        // FIX LATER: this calculates from ALL existing actions, NOT from the ones fitting the query!
+        pages: Math.max(Math.floor(totalActions / 50), 1),
       });
     }
   }),

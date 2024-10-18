@@ -13,7 +13,7 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todo
 
-- ...
+- Modularize the pagination process
 
 ## Endpoint Overview
 
