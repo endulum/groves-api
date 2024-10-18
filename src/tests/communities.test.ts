@@ -2,7 +2,7 @@ import * as helpers from '../test_helpers/helpers';
 import prisma from '../prisma';
 
 beforeAll(async () => {
-  await helpers.wipeTables(['user', 'community', 'action']);
+  await helpers.wipeTables(['user', 'community']);
   await helpers.createUsers(['demo-1', 'demo-2', 'demo-3', 'demo-4']);
 });
 

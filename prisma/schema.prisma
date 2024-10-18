@@ -28,16 +28,16 @@ model Community {
   id Int @id @default(autoincrement())
   // a Community is a collection of posts.
 
-  urlName       String    @unique @db.VarChar(32) // to have the community accessible by url
-  canonicalName String    @db.VarChar(64) // less formal/restricted version of the community name, for show
-  description   String    @db.VarChar(256) // short description of community's purpose
-  wiki          String    @default("") // markdown string representing a "document" of info about the community
-  status        Status    @default(ACTIVE)
+  urlName       String   @unique @db.VarChar(32) // to have the community accessible by url
+  canonicalName String   @db.VarChar(64) // less formal/restricted version of the community name, for show
+  description   String   @db.VarChar(256) // short description of community's purpose
+  wiki          String   @default("") // markdown string representing a "document" of info about the community
+  status        Status   @default(ACTIVE)
   // "ACTIVE": anyone can post and reply, the community is visible on global search and profiles
   // "FROZEN": "read-only" mode, no posting/replying/editing/voting, not visible on global search
   // "HIDDEN": same as above, but only admin can see comm (do we need this?)
-  created       DateTime  @default(now())
-  lastActivity  DateTime? // updates to current date whenever a post or reply is made
+  created       DateTime @default(now())
+  lastActivity  DateTime @default(now())
 
   followers  User[]   @relation("communityFollowers")
   admin      User     @relation("communityAdmin", fields: [adminId], references: [id])
