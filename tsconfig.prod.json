@@ -1,0 +1,19 @@
+{
+  "ts-node": {
+    "files": true
+  },
+  "files": ["app.ts", "./src/index.d.ts"],
+  "compilerOptions": {
+    "allowJs": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "sourceMap": true,
+    "outDir": "dist",
+    "strict": true,
+    "lib": ["esnext"],
+    "esModuleInterop": true,
+    "typeRoots": ["./src/index.d.ts", "./node_modules/@types"],
+    "skipLibCheck": true
+  }
+}
+// https://stackoverflow.com/questions/58461649/how-to-exclude-specific-files-in-typescript-only-for-the-build/58461810#58461810
