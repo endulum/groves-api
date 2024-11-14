@@ -1,5 +1,0 @@
--- AlterTable
-ALTER TABLE "Post" ALTER COLUMN "status" SET DEFAULT 'ACTIVE';
-
--- AlterTable
-ALTER TABLE "Reply" ALTER COLUMN "status" SET DEFAULT 'ACTIVE';

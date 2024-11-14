@@ -1,31 +1,31 @@
-/*
-  Warnings:
+-- CreateEnum
+CREATE TYPE "Role" AS ENUM ('BASIC', 'ADMIN');
 
-  - You are about to alter the column `password` on the `User` table. The data in that column could be lost. The data in that column will be cast from `VarChar(255)` to `VarChar(64)`.
-  - You are about to drop the `Session` table. If the table is not empty, all the data it contains will be lost.
-  - Added the required column `bio` to the `User` table without a default value. This is not possible if the table is not empty.
-
-*/
 -- CreateEnum
 CREATE TYPE "Status" AS ENUM ('ACTIVE', 'FROZEN', 'HIDDEN');
 
--- AlterTable
-ALTER TABLE "User" ADD COLUMN     "bio" TEXT NOT NULL,
-ADD COLUMN     "joined" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ALTER COLUMN "password" SET DATA TYPE VARCHAR(64),
-ALTER COLUMN "role" DROP DEFAULT;
+-- CreateTable
+CREATE TABLE "User" (
+    "id" SERIAL NOT NULL,
+    "username" VARCHAR(32) NOT NULL,
+    "password" VARCHAR(64) NOT NULL,
+    "joined" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "bio" VARCHAR(256),
+    "role" "Role" NOT NULL DEFAULT 'BASIC',
 
--- DropTable
-DROP TABLE "Session";
+    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
+);
 
 -- CreateTable
 CREATE TABLE "Community" (
     "id" SERIAL NOT NULL,
-    "urlName" TEXT NOT NULL,
-    "canonicalName" TEXT NOT NULL,
-    "description" TEXT NOT NULL,
-    "wiki" TEXT NOT NULL,
-    "status" "Status" NOT NULL,
+    "urlName" VARCHAR(32) NOT NULL,
+    "canonicalName" VARCHAR(64) NOT NULL,
+    "description" VARCHAR(256),
+    "wiki" TEXT,
+    "status" "Status" NOT NULL DEFAULT 'ACTIVE',
+    "created" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "lastActivity" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "adminId" INTEGER NOT NULL,
 
     CONSTRAINT "Community_pkey" PRIMARY KEY ("id")
@@ -38,10 +38,10 @@ CREATE TABLE "Post" (
     "content" TEXT NOT NULL,
     "datePosted" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastEdited" TIMESTAMP(3),
-    "upvotes" INTEGER NOT NULL,
-    "downvotes" INTEGER NOT NULL,
-    "status" "Status" NOT NULL,
-    "pinned" BOOLEAN NOT NULL,
+    "upvotes" INTEGER NOT NULL DEFAULT 0,
+    "downvotes" INTEGER NOT NULL DEFAULT 0,
+    "status" "Status" NOT NULL DEFAULT 'ACTIVE',
+    "pinned" BOOLEAN NOT NULL DEFAULT false,
     "authorId" INTEGER NOT NULL,
     "communityId" INTEGER NOT NULL,
 
@@ -49,19 +49,30 @@ CREATE TABLE "Post" (
 );
 
 -- CreateTable
-CREATE TABLE "Comment" (
+CREATE TABLE "Reply" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "datePosted" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "upvotes" INTEGER NOT NULL,
     "downvotes" INTEGER NOT NULL,
-    "status" "Status" NOT NULL,
+    "status" "Status" NOT NULL DEFAULT 'ACTIVE',
+    "pinned" BOOLEAN NOT NULL DEFAULT false,
     "authorId" INTEGER NOT NULL,
-    "postId" TEXT NOT NULL,
     "communityId" INTEGER NOT NULL,
+    "postId" TEXT NOT NULL,
     "parentId" TEXT,
 
-    CONSTRAINT "Comment_pkey" PRIMARY KEY ("id")
+    CONSTRAINT "Reply_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Action" (
+    "id" SERIAL NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "activity" TEXT NOT NULL,
+    "communityId" INTEGER NOT NULL,
+
+    CONSTRAINT "Action_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -75,6 +86,12 @@ CREATE TABLE "_communityModerators" (
     "A" INTEGER NOT NULL,
     "B" INTEGER NOT NULL
 );
+
+-- CreateIndex
+CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Community_urlName_key" ON "Community"("urlName");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "_communityFollowers_AB_unique" ON "_communityFollowers"("A", "B");
@@ -98,16 +115,19 @@ ALTER TABLE "Post" ADD CONSTRAINT "Post_authorId_fkey" FOREIGN KEY ("authorId") 
 ALTER TABLE "Post" ADD CONSTRAINT "Post_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "Community"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Comment" ADD CONSTRAINT "Comment_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Reply" ADD CONSTRAINT "Reply_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Comment" ADD CONSTRAINT "Comment_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Reply" ADD CONSTRAINT "Reply_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "Community"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Comment" ADD CONSTRAINT "Comment_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "Community"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Reply" ADD CONSTRAINT "Reply_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Comment" ADD CONSTRAINT "Comment_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Comment"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE "Reply" ADD CONSTRAINT "Reply_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Reply"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Action" ADD CONSTRAINT "Action_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "Community"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "_communityFollowers" ADD CONSTRAINT "_communityFollowers_A_fkey" FOREIGN KEY ("A") REFERENCES "Community"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -120,3 +140,4 @@ ALTER TABLE "_communityModerators" ADD CONSTRAINT "_communityModerators_A_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "_communityModerators" ADD CONSTRAINT "_communityModerators_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
