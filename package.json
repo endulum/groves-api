@@ -10,7 +10,7 @@
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:db": "docker exec -it integration-tests-prisma psql -U prisma tests",
-    "test": "npm run docker:up && npx dotenv -e .env.test -- npx prisma migrate deploy && npx dotenv -e .env.test -- jest --bail --runInBand --watch",
+    "test": "npm run docker:up && npx dotenv -e .env.test -- npx prisma migrate deploy && npx dotenv -e .env.test -- vitest",
     "dev": "ENV=development nodemon --exec ts-node ./app.ts",
     "start": "ENV=production node ./dist/app.js",
     "build": "tsc && cp -r ./src/views ./dist/src/views",
@@ -43,7 +43,6 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
-    "@types/jest": "^29.5.13",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.5.0",
@@ -52,12 +51,11 @@
     "@typescript-eslint/parser": "^8.14.0",
     "dotenv-cli": "^7.4.2",
     "eslint": "^8.57.1",
-    "jest": "^29.7.0",
     "nodemon": "^3.1.4",
     "prettier": "^3.3.3",
     "prisma": "^5.19.0",
-    "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^2.1.5"
   }
 }

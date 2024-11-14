@@ -16,7 +16,6 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 - Rethink package.json commands and possibly get rid of reset file
 - Look into migration consolidation
-- Look into alternative linting and formatting choice
 - Remake Community controller
 
 ## Endpoint Overview
