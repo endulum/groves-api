@@ -6,21 +6,17 @@
   "scripts": {
     "lint": "npx eslint .",
     "fmt": "npx prettier --write .",
-
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:db": "docker exec -it integration-tests-prisma psql -U prisma tests",
     "docker:clean": "docker compose down --rmi all --volumes --remove-orphans",
     "test": "npm run docker:up && npx dotenv -e .env.test -- npx prisma migrate deploy && npx dotenv -e .env.test -- vitest",
-
     "build": "tsc -p tsconfig.prod.json",
     "build:start": "ENV=production node ./dist/app.js",
     "build:clean": "rm -r ./dist",
-
     "db:generate": "npx dotenv -e .env.development -- npx prisma generate",
     "db:migrate": "npx dotenv -e .env.development -- npx prisma migrate dev",
     "db:reset": "npx dotenv -e .env.development -- nodemon prisma/reset.ts",
-
     "dev": "ENV=development nodemon --exec ts-node ./app.ts",
     "play": "npx dotenv -e .env.development -- nodemon playground.ts"
   },
@@ -47,6 +43,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.14",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/morgan": "^1.9.9",
     "@types/node": "^22.5.0",
