@@ -21,7 +21,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // suppress favicon request
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/favicon.ico', (_req, res) => res.status(204).end());
 
 // log method and given values
 if (process.env.ENV === 'development') {

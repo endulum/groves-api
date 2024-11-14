@@ -6,8 +6,9 @@
     "**/*.ts"
   ],
   "exclude": [
-    "node_modules",
-    "trash/"
+    "node_modules/",
+    "trash/",
+    "playground.ts"
   ],
   "compilerOptions": {
     "allowJs": true,
