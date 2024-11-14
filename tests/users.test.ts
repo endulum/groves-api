@@ -1,12 +1,9 @@
-import * as helpers from '../test_helpers/helpers';
+import * as helpers from './helpers';
+import * as queries from '../prisma/queries';
 
 beforeAll(async () => {
-  await helpers.wipeTables(['user']);
-  await helpers.createUsers(['basic']);
-});
-
-afterAll(async () => {
-  await helpers.wipeTables(['user']);
+  await queries.truncateTable('User');
+  await queries.createAdmin();
 });
 
 describe('get user', () => {
@@ -18,11 +15,14 @@ describe('get user', () => {
   test('GET /user/:userNameOrId - 200 and user details with id', async () => {
     const response = await helpers.req('GET', '/user/1', null, null);
     expect(response.status).toBe(200);
+    expect(response.body).not.toHaveProperty('password');
   });
 
   test('GET /user/:userNameOrId - 200 and user details with username', async () => {
     const response = await helpers.req('GET', '/user/admin', null, null);
     expect(response.status).toBe(200);
+    expect(response.body).not.toHaveProperty('password');
+    // console.dir(response.body, { depth: null });
   });
 });
 
@@ -33,10 +33,11 @@ describe('get self', () => {
   });
 
   test('GET /me - 200 and user details', async () => {
-    const { token } = await helpers.getUser('admin', 'password');
+    const token = await helpers.getToken('admin');
     const response = await helpers.req('GET', '/me', null, token);
     expect(response.status).toBe(200);
     expect(response.body.username).toBe('admin');
+    expect(response.body).not.toHaveProperty('password');
   });
 });
 
@@ -49,13 +50,15 @@ describe('change account details of self', () => {
     currentPassword: 'password',
   };
 
+  beforeAll(async () => { await queries.createUser('basic', 'password'); });
+
   test('PUT /me - 401 without token', async () => {
     const response = await helpers.req('PUT', '/me', null, null);
     expect(response.status).toBe(401);
   });
 
   test('PUT /me - 400 and errors (with password)', async () => {
-    const { token } = await helpers.getUser('admin', 'password');
+    const token = await helpers.getToken('admin');
 
     const wrongInputsArray = [
       { username: '' },
@@ -78,8 +81,18 @@ describe('change account details of self', () => {
     }));
   });
 
+  test('PUT /me - 200 and changes account details (without password)', async () => {
+    const token = await helpers.getToken('admin');
+    let response = await helpers.req('PUT', '/me', { username: 'owo', bio: 'Snazzy bio here.' }, token);
+    expect(response.status).toBe(200);
+
+    // change it back
+    response = await helpers.req('PUT', '/me', { username: 'admin', bio: '' }, token);
+    expect(response.status).toBe(200);
+  });
+
   test('PUT /me - 200 and changes account details (with password)', async () => {
-    const { token } = await helpers.getUser('admin', 'password');
+    const token = await helpers.getToken('admin');
     const response = await helpers.req('PUT', '/me', correctInputs, token);
     expect(response.status).toBe(200);
     await helpers.req('PUT', '/me', {
@@ -88,12 +101,5 @@ describe('change account details of self', () => {
       confirmPassword: 'password',
       currentPassword: correctInputs.password,
     }, token);
-  });
-
-  test('PUT /me - 200 and changes account details (without password)', async () => {
-    const { token } = await helpers.getUser('admin', 'password');
-    const response = await helpers.req('PUT', '/me', { username: 'owo', bio: 'Snazzy bio here.' }, token);
-    expect(response.status).toBe(200);
-    await helpers.req('POST', '/account', { username: 'admin', bio: '' }, token);
   });
 });

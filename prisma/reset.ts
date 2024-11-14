@@ -2,7 +2,6 @@ import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import * as helpers from '../src/test_helpers/helpers';
-// import { faker } from '@faker-js/faker';
 
 dotenv.config({ path: `.env.${process.env.ENV}` });
 

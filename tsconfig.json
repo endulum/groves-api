@@ -2,19 +2,12 @@
   "ts-node": {
     "files": true
   },
-  "files": [
-    "app.ts",
-    "./prisma/reset.ts",
-    "./src/index.d.ts",
-    "eslint.config.mjs"
-  ],
   "include": [
-    "./playground.ts",
-    "./src/tests/*.ts",
-    "./src/test_helpers/*.ts"
+    "**/*.ts"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "trash/"
   ],
   "compilerOptions": {
     "allowJs": true,

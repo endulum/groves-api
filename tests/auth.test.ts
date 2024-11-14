@@ -1,12 +1,9 @@
-import * as helpers from '../test_helpers/helpers';
+import * as helpers from './helpers';
+import * as queries from '../prisma/queries';
 
 beforeAll(async () => {
-  await helpers.wipeTables(['user']);
-  await helpers.createUsers([]);
-});
-
-afterAll(async () => {
-  await helpers.wipeTables(['user']);
+  await queries.truncateTable('User');
+  await queries.createAdmin();
 });
 
 describe('logging in', () => {
@@ -66,10 +63,7 @@ describe('signing up', () => {
   test('POST /signup - 200 and new user details returned', async () => {
     const response = await helpers.req('POST', '/signup', correctInputs, null);
     expect(response.status).toBe(200);
-    const user = await helpers.getUser(
-      correctInputs.username,
-      correctInputs.password,
-    );
+    const user = await queries.findUser({ username: correctInputs.username });
     expect(user).toBeDefined();
   });
 });

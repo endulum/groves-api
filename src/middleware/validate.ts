@@ -1,7 +1,7 @@
 import asyncHandler from 'express-async-handler';
 import { validationResult } from 'express-validator';
 
-const handleValidationErrors = asyncHandler(async (req, res, next) => {
+export const validate = asyncHandler(async (req, res, next) => {
   const errorsArray = validationResult(req).array();
   if (errorsArray.length > 0) {
     res.status(400).json({
@@ -14,5 +14,3 @@ const handleValidationErrors = asyncHandler(async (req, res, next) => {
   }
   next();
 });
-
-export default handleValidationErrors;

@@ -13,11 +13,37 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todo
 
-- Modularize the pagination process
+- Rethink package.json commands and possibly get rid of reset file
+- Look into migration consolidation
+- Look into alternative linting and formatting choice
+- Remake Community controller
 
 ## Endpoint Overview
 
-### Account
+### Errors
+
+On routes requiring form input, if the input does not pass validation, the route returns a status of `400` as well as an `errors` object consisting of an array of the described errors.
+
+```js
+{
+    errors: [
+        {
+            path: 'username',
+            value: '',
+            msg: 'Please input a username.'
+        },
+        // ...
+    ]
+}
+```
+
+Each error is an object with properties:
+
+- `path`: the name of the field.
+- `value`: the given value of the field.
+- `msg`: a message describing why this value did not pass validation.
+
+### Account routes
 
 > `POST /login`
 
@@ -44,8 +70,7 @@ Returns the identity of the authenticated user.
     username: "demo-user",
     joined: '2024-10-17T03:06:39.758Z',
     bio: 'Demo user of Groves.'
-    verdancy: 0,
-    role: 'BASIC'
+    role: 'BASIC',
 }
 ```
 
@@ -53,12 +78,11 @@ Returns the identity of the authenticated user.
 - `username`: a unique, human-named string identifying this user across the site.
 - `joined`: the creation date of this user's record in the database.
 - `bio`: a human-customized string describing the user.
-- `verdancy`: a single integer total of positive votes from this user's content.
 - `role`: an enumerated string describing this user's site role. Most users are `BASIC`. Accounts belonging to site developers have the role `ADMIN`.
 
 > `PUT /me` <sub>protected</sub> 
 
-Edits the record of the authenticated user.
+Edits the identity of the authenticated user.
 
 - `username`: Required. Must be between 2 and 32 characters in length. Can only consist of lowercase letters, numbers, and hyphens. If the provided `username` does not match the user's current `username`, there must exist another user in the database with the provided `username`.
 - `bio`: Not required. Must not exceed 200 characters in length.
@@ -74,27 +98,27 @@ Similarly to `GET /me`, returns the identity of the user identified by the param
 
 > `GET /communities`
 
-Returns a list of communities, paginated by 20 entries per page.
+Returns a list of communities, paginated by 15 entries per page.
 
 ```js
 {
-    page: 1,
-    pages: 10,
-    communities: [
-    	{
-        	id: 1,
+    results: [
+        {
+            id: 1,
         	urlName: 'bestofgroves',
         	canonicalName: 'Best Of Groves',
         	description: 'The funniest and most memorable happenings on Groves.',
         	created: '2024-09-17T03:34:27.290Z',
         	lastActivity: '2024-10-17T03:34:27.290Z',
-        	_count: {
-            	followers: 100,
-            	posts: 1000,
-        	}
-    	},
-    	// ...
-	]
+            followerCount: 25,
+            postCount: 125
+        },
+        // ...
+    ],
+    links: {
+        nextPage: '/communities?after=12345',
+        previousPage: null
+    }
 }
 ```
 
@@ -106,13 +130,15 @@ Returns a list of communities, paginated by 20 entries per page.
 - `description`: a human-customized string describing the community.
 - `created`: the creation date of this community's record in the database.
 - `lastActivity`: the creation date of the latest post or reply written within this community.
-- `_count`: this community's content totals.
+- `followerCount`: this community's total followers.
+- `postCount`: this community's total posts.
 
 This endpoint accepts query parameters:
 
 - `sort`: sorts by follower count (`=followers`), post count (`=posts`), or latest activity (`=activity`) descending.
 - `name`: filters for any communities whose `urlName` or `canonicalName` includes the string provided.
-- `page`: fetches the page represented by the provided integer.
+
+This endpoint uses cursor-based pagination. A cursor "id" is passed into a `before` or `after` query parameter when visiting a previous or next page, respectively. Under `links`, this endpoint lists a "next" or "previous" page endpoint if present.
 
 > `POST /communities` <sub>protected</sub> 
 
