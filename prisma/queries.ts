@@ -160,13 +160,14 @@ export async function createAdmin() {
 
 export async function createBulkUsers(userData: Array<fakes.BulkUserData>) {
   const userIds: number[] = [];
+  const password = await testPassword();
   await Promise.all(
     userData.map(async (ud) => {
       const user = await client.user.create({
         data: {
           username: ud.username,
           bio: ud.bio ?? null,
-          password: await testPassword(),
+          password,
         },
       });
       userIds.push(user.id);
@@ -215,4 +216,28 @@ export async function createBulkPosts(
     }),
   );
   return postIds;
+}
+
+export async function distributeCommFollowers(
+  commId: number,
+  userIds: number[],
+) {
+  await client.community.update({
+    where: { id: commId },
+    data: {
+      followers: { connect: [...userIds].map((id) => ({ id })) },
+    },
+  });
+}
+
+export async function distributeCommModerators(
+  commId: number,
+  userIds: number[],
+) {
+  await client.community.update({
+    where: { id: commId },
+    data: {
+      moderators: { connect: [...userIds].map((id) => ({ id })) },
+    },
+  });
 }

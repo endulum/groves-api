@@ -46,9 +46,8 @@ export function bulkUsers(count: number): BulkUserData[] {
       .join('-')
       .concat('-')
       .concat(faker.animal.type().split(' ').join('-'));
-    if (!usernames.includes(username)) {
-      usernames.push(username);
-    }
+    if (usernames.includes(username) || username.length > 32) continue;
+    usernames.push(username);
   }
 
   const users: Array<{
@@ -63,26 +62,27 @@ export function bulkUsers(count: number): BulkUserData[] {
 }
 
 export function bulkCommunities(count: number): BulkCommunityData[] {
-  const communityNames: string[] = [];
-  while (communityNames.length < count) {
-    const communityName = faker.food.dish();
-    if (!communityNames.includes(communityName))
-      communityNames.push(communityName);
-  }
-
   const communities: Array<{
     urlName: string;
     canonicalName: string;
-  }> = communityNames.map((communityName) => ({
-    urlName: (
-      communityName
+  }> = [];
+  while (communities.length < count) {
+    const canonicalName = faker.food.dish();
+    if (
+      communities.find((c) => c.canonicalName === canonicalName) ||
+      canonicalName.length > 64
+    )
+      continue;
+    const urlName = (
+      canonicalName
         .toLocaleLowerCase()
         .split(' ')
         .join('')
         .match(/[a-z0-9]+/g) || []
-    ).join(''),
-    canonicalName: communityName,
-  }));
+    ).join('');
+    if (urlName.length > 32) continue;
+    communities.push({ urlName, canonicalName });
+  }
 
   return communities;
 }

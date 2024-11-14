@@ -12,10 +12,8 @@ The units of interaction in Groves are Communities (likened to "groves"), Posts 
 
 Groves uses JSON Web Tokens to authenticate users for protected routes. When making requests to protected routes, the JWT must be passed into the `Authorization` header, preceded with `Bearer` and a space.
 
-### Todo
+### Todos
 
-- Rethink package.json commands and possibly get rid of reset file
-- Look into migration consolidation
 - Remake Community controller
 
 ## Endpoint Overview
