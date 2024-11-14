@@ -19,12 +19,19 @@ describe('logging in', () => {
       { password: 'some wrong password' },
     ];
 
-    await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
-      const response = await helpers.req('POST', '/login', { ...correctInputs, ...wrongInputs }, null);
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('errors');
-      expect(response.body.errors.length).toEqual(1);
-    }));
+    await Promise.all(
+      wrongInputsArray.map(async (wrongInputs) => {
+        const response = await helpers.req(
+          'POST',
+          '/login',
+          { ...correctInputs, ...wrongInputs },
+          null,
+        );
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('errors');
+        expect(response.body.errors.length).toEqual(1);
+      }),
+    );
   });
 
   test('POST /login - 200 and token', async () => {
@@ -52,12 +59,19 @@ describe('signing up', () => {
       { confirmPassword: 'some mismatched password' },
     ];
 
-    await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
-      const response = await helpers.req('POST', '/signup', { ...correctInputs, ...wrongInputs }, null);
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('errors');
-      expect(response.body.errors.length).toEqual(1);
-    }));
+    await Promise.all(
+      wrongInputsArray.map(async (wrongInputs) => {
+        const response = await helpers.req(
+          'POST',
+          '/signup',
+          { ...correctInputs, ...wrongInputs },
+          null,
+        );
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('errors');
+        expect(response.body.errors.length).toEqual(1);
+      }),
+    );
   });
 
   test('POST /signup - 200 and new user details returned', async () => {

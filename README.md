@@ -1,9 +1,10 @@
 # Groves API
+
 Groves is an arboreal clone of Reddit.
 
 [Project Spec](https://www.theodinproject.com/lessons/node-path-nodejs-odin-book)
 
-The units of interaction in Groves are Communities (likened to "groves"), Posts (likened to "trees" in a grove), and Replies (likened to "leaves" of a tree). Users can form Communities, create Posts in Communities, and write Replies to Posts, with Replies being nestable within other Replies. 
+The units of interaction in Groves are Communities (likened to "groves"), Posts (likened to "trees" in a grove), and Replies (likened to "leaves" of a tree). Users can form Communities, create Posts in Communities, and write Replies to Posts, with Replies being nestable within other Replies.
 
 - A user can "vote" positively or negatively on a Post or Reply. A user's "verdancy" (likened to "greenness") is a cumulation of positive votes, countered by negative votes, their content has gotten in total.
 - Communities are managed by singular Admins with a variable team of Moderators. Both Admins and Moderators can freeze or hide Posts and Replies, pin Posts, silence users, and edit the community wiki. Admins can appoint or remove Moderators, and change basic details of the Community.
@@ -26,14 +27,14 @@ On routes requiring form input, if the input does not pass validation, the route
 
 ```js
 {
-    errors: [
-        {
-            path: 'username',
-            value: '',
-            msg: 'Please input a username.'
-        },
-        // ...
-    ]
+  errors: [
+    {
+      path: 'username',
+      value: '',
+      msg: 'Please input a username.',
+    },
+    // ...
+  ];
 }
 ```
 
@@ -80,7 +81,7 @@ Returns the identity of the authenticated user.
 - `bio`: a human-customized string describing the user.
 - `role`: an enumerated string describing this user's site role. Most users are `BASIC`. Accounts belonging to site developers have the role `ADMIN`.
 
-> `PUT /me` <sub>protected</sub> 
+> `PUT /me` <sub>protected</sub>
 
 Edits the identity of the authenticated user.
 
@@ -140,7 +141,7 @@ This endpoint accepts query parameters:
 
 This endpoint uses cursor-based pagination. A cursor "id" is passed into a `before` or `after` query parameter when visiting a previous or next page, respectively. Under `links`, this endpoint lists a "next" or "previous" page endpoint if present.
 
-> `POST /communities` <sub>protected</sub> 
+> `POST /communities` <sub>protected</sub>
 
 Creates a new community in the database, with the authenticated user automatically given admin privileges over the community.
 
@@ -152,35 +153,35 @@ Creates a new community in the database, with the authenticated user automatical
 
 Similarly to an individual item in the list provided in `GET /communities`, returns the identity of the community identified by `:communityNameOrId`, if a community exists with an `id` or `urlName` matching the value of this parameter. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges
 
-> `PUT /community/:communityNameOrId`  <sub>protected</sub> 
+> `PUT /community/:communityNameOrId` <sub>protected</sub>
 
 Edits the record of the identified community. Follows the same validation rules as `POST /communities`. The authenticated user must have admin privileges over the community.
 
-> `POST /community/:communityNameOrId/follow` <sub>protected</sub> 
+> `POST /community/:communityNameOrId/follow` <sub>protected</sub>
 
 Adds or removes the authenticated user to the "followers" list of the identified community.
 
 - `follow`: Required. Must be a boolean. `true` follows the community, `false` unfollows it.
 
-> `POST /community/:communityNameOrId/promote` <sub>protected</sub> 
+> `POST /community/:communityNameOrId/promote` <sub>protected</sub>
 
 Grants a user moderator privileges of the identified community. The authenticated user must have admin privileges over the community.
 
 - `username`: Required. There must exist a user in the database with the provided `username` who does not already have moderator privileges over this community.
 
-> `POST /community/:communityNameOrId/demote` <sub>protected</sub> 
+> `POST /community/:communityNameOrId/demote` <sub>protected</sub>
 
 Removes moderator privileges of the identified community from a user. The authenticated user must have admin privileges over the community.
 
 - `username`: Required. There must exist a user in the database with the provided `username` who has moderator privileges over this community.
 
-> `PUT /community/:communityNameOrId/wiki` <sub>protected</sub> 
+> `PUT /community/:communityNameOrId/wiki` <sub>protected</sub>
 
 Edits the community wiki. The authenticated user must have moderator privileges over this community.
 
 - `wiki`: Required, but can be an empty string.
 
-> `POST /community/:communityNameOrId/freeze` <sub>protected</sub> 
+> `POST /community/:communityNameOrId/freeze` <sub>protected</sub>
 
 Toggles the `status` of the identified community between `ACTIVE` and `FROZEN`. The authenticated user must have admin privileges over this community.
 
@@ -199,12 +200,12 @@ Returns a list of actions done in the identified community, paginated by 50 entr
 
 ```js
 [
-    {
-        activity: "User #1 promoted User #3 to Moderator.",
-        date: "2024-10-17T20:36:28.391Z"
-    },
-    // ...
-]
+  {
+    activity: 'User #1 promoted User #3 to Moderator.',
+    date: '2024-10-17T20:36:28.391Z',
+  },
+  // ...
+];
 ```
 
 - `activity`: a string describing the action. User `id`s identify the users involved.

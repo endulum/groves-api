@@ -41,16 +41,11 @@ export default [
       ],
       'max-len': [
         'warn',
-        { code: 90, ignoreComments: true, ignoreStrings: true },
+        { code: 80, ignoreComments: true, ignoreStrings: true },
       ],
-    }
+    },
   },
   {
-    ignores: [
-      'node_modules/*',
-      'trash/*',
-      'playground.ts',
-      '**/*js'
-    ],
-  }
-]
+    ignores: ['node_modules/*', 'trash/*', 'playground.ts', '**/*js'],
+  },
+];

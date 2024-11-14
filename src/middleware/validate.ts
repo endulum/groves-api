@@ -10,7 +10,8 @@ export const validate = asyncHandler(async (req, res, next) => {
         msg: error.msg,
         path: 'path' in error ? error.path : '',
       })),
-    }); return;
+    });
+    return;
   }
   next();
 });

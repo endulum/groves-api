@@ -36,25 +36,27 @@ async function generateContent() {
     })),
   });
 
-  await Promise.all(communities.map(async (community) => {
-    await prisma.community.update({
-      where: { urlName: community.urlName },
-      data: {
-        followers: {
-          connect: [...users]
-            .sort(() => 0.5 - Math.random())
-            .slice(0, Math.ceil(Math.random() * 500))
-            .map((user) => ({ id: user.id })),
+  await Promise.all(
+    communities.map(async (community) => {
+      await prisma.community.update({
+        where: { urlName: community.urlName },
+        data: {
+          followers: {
+            connect: [...users]
+              .sort(() => 0.5 - Math.random())
+              .slice(0, Math.ceil(Math.random() * 500))
+              .map((user) => ({ id: user.id })),
+          },
+          moderators: {
+            connect: [...users]
+              .sort(() => 0.5 - Math.random())
+              .slice(0, Math.ceil(Math.random() * 10))
+              .map((user) => ({ id: user.id })),
+          },
         },
-        moderators: {
-          connect: [...users]
-            .sort(() => 0.5 - Math.random())
-            .slice(0, Math.ceil(Math.random() * 10))
-            .map((user) => ({ id: user.id })),
-        },
-      },
-    });
-  }));
+      });
+    }),
+  );
 }
 
 async function main() {

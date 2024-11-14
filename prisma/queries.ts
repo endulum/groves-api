@@ -6,7 +6,7 @@ import * as fakes from './fakes';
 // finding a thing
 
 export async function findUser(
-  find: { username?: string, id?: number },
+  find: { username?: string; id?: number },
   attributes: Record<string, unknown> = {},
 ) {
   return client.user.findFirst({
@@ -21,7 +21,7 @@ export async function findUser(
 }
 
 export async function findCommunity(
-  find: { urlName?: string, id?: number },
+  find: { urlName?: string; id?: number },
   attributes: Record<string, unknown> = {},
 ) {
   return client.community.findFirst({
@@ -77,7 +77,7 @@ export async function comparePassword(
 
 // POST /me
 export async function updateUser(
-  find: { username?: string, id?: number },
+  find: { username?: string; id?: number },
   body: Record<string, string>,
 ) {
   const data: Record<string, string> = {
@@ -92,9 +92,7 @@ export async function updateUser(
   }
 
   await client.user.update({
-    where: find.username
-      ? { username: find.username }
-      : { id: find.id },
+    where: find.username ? { username: find.username } : { id: find.id },
     data,
   });
 }
@@ -120,10 +118,8 @@ export async function createAdmin() {
   });
 
   if (firstUser !== null) {
-    if (
-      firstUser.username === 'admin'
-      && firstUser.role === 'ADMIN'
-    ) return firstUser; // do nothing if an admin already exists
+    if (firstUser.username === 'admin' && firstUser.role === 'ADMIN')
+      return firstUser; // do nothing if an admin already exists
 
     await client.user.deleteMany({
       where: { OR: [{ username: 'admin' }, { role: 'ADMIN' }] },
@@ -135,10 +131,12 @@ export async function createAdmin() {
     });
 
     await client.$transaction([
-      ...usersToUpdate.map((row) => client.user.update({
-        where: { id: row.id },
-        data: { id: { increment: 1 } },
-      })),
+      ...usersToUpdate.map((row) =>
+        client.user.update({
+          where: { id: row.id },
+          data: { id: { increment: 1 } },
+        }),
+      ),
     ]);
   }
 
@@ -160,20 +158,20 @@ export async function createAdmin() {
   return admin;
 }
 
-export async function createBulkUsers(
-  userData: Array<fakes.BulkUserData>,
-) {
+export async function createBulkUsers(userData: Array<fakes.BulkUserData>) {
   const userIds: number[] = [];
-  await Promise.all(userData.map(async (ud) => {
-    const user = await client.user.create({
-      data: {
-        username: ud.username,
-        bio: ud.bio ?? null,
-        password: await testPassword(),
-      },
-    });
-    userIds.push(user.id);
-  }));
+  await Promise.all(
+    userData.map(async (ud) => {
+      const user = await client.user.create({
+        data: {
+          username: ud.username,
+          bio: ud.bio ?? null,
+          password: await testPassword(),
+        },
+      });
+      userIds.push(user.id);
+    }),
+  );
   return userIds;
 }
 
@@ -182,16 +180,18 @@ export async function createBulkCommunities(
   adminId: number,
 ) {
   const communityIds: number[] = [];
-  await Promise.all(communityData.map(async (cd) => {
-    const community = await client.community.create({
-      data: {
-        urlName: cd.urlName,
-        canonicalName: cd.canonicalName,
-        adminId,
-      },
-    });
-    communityIds.push(community.id);
-  }));
+  await Promise.all(
+    communityData.map(async (cd) => {
+      const community = await client.community.create({
+        data: {
+          urlName: cd.urlName,
+          canonicalName: cd.canonicalName,
+          adminId,
+        },
+      });
+      communityIds.push(community.id);
+    }),
+  );
   return communityIds;
 }
 
@@ -201,16 +201,18 @@ export async function createBulkPosts(
   authorId: number,
 ) {
   const postIds: string[] = [];
-  await Promise.all(postData.map(async (pd) => {
-    const post = await client.post.create({
-      data: {
-        title: pd.title,
-        content: pd.content,
-        communityId,
-        authorId,
-      },
-    });
-    postIds.push(post.id);
-  }));
+  await Promise.all(
+    postData.map(async (pd) => {
+      const post = await client.post.create({
+        data: {
+          title: pd.title,
+          content: pd.content,
+          communityId,
+          authorId,
+        },
+      });
+      postIds.push(post.id);
+    }),
+  );
   return postIds;
 }

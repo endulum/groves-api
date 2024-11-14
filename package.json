@@ -6,6 +6,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "npx eslint .",
+    "fmt": "npx prettier --write .",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:db": "docker exec -it integration-tests-prisma psql -U prisma tests",
@@ -53,6 +54,7 @@
     "eslint": "^8.57.1",
     "jest": "^29.7.0",
     "nodemon": "^3.1.4",
+    "prettier": "^3.3.3",
     "prisma": "^5.19.0",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",

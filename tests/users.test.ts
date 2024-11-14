@@ -50,7 +50,9 @@ describe('change account details of self', () => {
     currentPassword: 'password',
   };
 
-  beforeAll(async () => { await queries.createUser('basic', 'password'); });
+  beforeAll(async () => {
+    await queries.createUser('basic', 'password');
+  });
 
   test('PUT /me - 401 without token', async () => {
     const response = await helpers.req('PUT', '/me', null, null);
@@ -74,20 +76,37 @@ describe('change account details of self', () => {
       { currentPassword: 'some mismatched password' },
     ];
 
-    await Promise.all(wrongInputsArray.map(async (wrongInputs) => {
-      const response = await helpers.req('PUT', '/me', { ...correctInputs, ...wrongInputs }, token);
-      expect(response.status).toBe(400);
-      expect(response.body).toHaveProperty('errors');
-    }));
+    await Promise.all(
+      wrongInputsArray.map(async (wrongInputs) => {
+        const response = await helpers.req(
+          'PUT',
+          '/me',
+          { ...correctInputs, ...wrongInputs },
+          token,
+        );
+        expect(response.status).toBe(400);
+        expect(response.body).toHaveProperty('errors');
+      }),
+    );
   });
 
   test('PUT /me - 200 and changes account details (without password)', async () => {
     const token = await helpers.getToken('admin');
-    let response = await helpers.req('PUT', '/me', { username: 'owo', bio: 'Snazzy bio here.' }, token);
+    let response = await helpers.req(
+      'PUT',
+      '/me',
+      { username: 'owo', bio: 'Snazzy bio here.' },
+      token,
+    );
     expect(response.status).toBe(200);
 
     // change it back
-    response = await helpers.req('PUT', '/me', { username: 'admin', bio: '' }, token);
+    response = await helpers.req(
+      'PUT',
+      '/me',
+      { username: 'admin', bio: '' },
+      token,
+    );
     expect(response.status).toBe(200);
   });
 
@@ -95,11 +114,16 @@ describe('change account details of self', () => {
     const token = await helpers.getToken('admin');
     const response = await helpers.req('PUT', '/me', correctInputs, token);
     expect(response.status).toBe(200);
-    await helpers.req('PUT', '/me', {
-      ...correctInputs,
-      password: 'password',
-      confirmPassword: 'password',
-      currentPassword: correctInputs.password,
-    }, token);
+    await helpers.req(
+      'PUT',
+      '/me',
+      {
+        ...correctInputs,
+        password: 'password',
+        confirmPassword: 'password',
+        currentPassword: correctInputs.password,
+      },
+      token,
+    );
   });
 });

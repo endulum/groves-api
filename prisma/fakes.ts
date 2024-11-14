@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker';
 
 export type BulkUserData = {
-  username: string,
-  bio: string | null
+  username: string;
+  bio: string | null;
 };
 
 /* [
@@ -12,8 +12,8 @@ export type BulkUserData = {
   ] */
 
 export type BulkCommunityData = {
-  urlName: string,
-  canonicalName: string,
+  urlName: string;
+  canonicalName: string;
 };
 
 /* [
@@ -23,8 +23,8 @@ export type BulkCommunityData = {
   ] */
 
 export type BulkPostData = {
-  title: string,
-  content: string
+  title: string;
+  content: string;
 };
 
 /* [
@@ -66,7 +66,8 @@ export function bulkCommunities(count: number): BulkCommunityData[] {
   const communityNames: string[] = [];
   while (communityNames.length < count) {
     const communityName = faker.food.dish();
-    if (!communityNames.includes(communityName)) communityNames.push(communityName);
+    if (!communityNames.includes(communityName))
+      communityNames.push(communityName);
   }
 
   const communities: Array<{

@@ -13,9 +13,11 @@ dotenv.config({ path: `.env.${process.env.ENV}` });
 
 const app = express();
 
-app.use(cors({
-  origin: '*',
-}));
+app.use(
+  cors({
+    origin: '*',
+  }),
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -26,19 +28,28 @@ app.get('/favicon.ico', (_req, res) => res.status(204).end());
 // log method and given values
 if (process.env.ENV === 'development') {
   app.use(logger('dev'));
-  app.use(asyncHandler(async (req, _res, next) => {
-    if (['POST', 'PUT'].includes(req.method)) console.dir(req.body, { depth: null });
-    if (req.method === 'GET' && Object.keys(req.params).length > 1) console.dir(req.params, { depth: null });
-    next();
-  }));
+  app.use(
+    asyncHandler(async (req, _res, next) => {
+      if (['POST', 'PUT'].includes(req.method))
+        // eslint-disable-next-line no-console
+        console.dir(req.body, { depth: null });
+      if (req.method === 'GET' && Object.keys(req.params).length > 1)
+        // eslint-disable-next-line no-console
+        console.dir(req.params, { depth: null });
+      next();
+    }),
+  );
 }
 
 app.use(authRouter);
 app.use(indexRouter);
 
-app.use('*', asyncHandler(async (_req, res) => {
-  res.sendStatus(404);
-}));
+app.use(
+  '*',
+  asyncHandler(async (_req, res) => {
+    res.sendStatus(404);
+  }),
+);
 
 app.use(errorHandler);
 

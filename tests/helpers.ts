@@ -13,22 +13,26 @@ export async function req(
   // any way to have '.post()', '.put()', '.delete()' conditionally chained?
   // and without type errors?
   switch (method) {
-    case 'POST': return request(app)
-      .post(url)
-      .set({ Authorization: token !== null ? `Bearer ${token}` : '' })
-      .type('form')
-      .send(form ?? {});
-    case 'PUT': return request(app)
-      .put(url)
-      .set({ Authorization: token !== null ? `Bearer ${token}` : '' })
-      .type('form')
-      .send(form ?? {});
-    case 'DELETE': return request(app)
-      .delete(url)
-      .set({ Authorization: token !== null ? `Bearer ${token}` : '' });
-    default: return request(app)
-      .get(url)
-      .set({ Authorization: token !== null ? `Bearer ${token}` : '' });
+    case 'POST':
+      return request(app)
+        .post(url)
+        .set({ Authorization: token !== null ? `Bearer ${token}` : '' })
+        .type('form')
+        .send(form ?? {});
+    case 'PUT':
+      return request(app)
+        .put(url)
+        .set({ Authorization: token !== null ? `Bearer ${token}` : '' })
+        .type('form')
+        .send(form ?? {});
+    case 'DELETE':
+      return request(app)
+        .delete(url)
+        .set({ Authorization: token !== null ? `Bearer ${token}` : '' });
+    default:
+      return request(app)
+        .get(url)
+        .set({ Authorization: token !== null ? `Bearer ${token}` : '' });
   }
 }
 
@@ -43,12 +47,10 @@ export async function getToken(username: string): Promise<string> {
     throw new Error(`Given user ${username} does not exist.`);
   }
 
-  if (!process.env.TOKEN_SECRET) throw new Error('Token secret is not defined.');
+  if (!process.env.TOKEN_SECRET)
+    throw new Error('Token secret is not defined.');
 
-  const token = jwt.sign(
-    { username, id: user.id },
-    process.env.TOKEN_SECRET,
-  );
+  const token = jwt.sign({ username, id: user.id }, process.env.TOKEN_SECRET);
 
   return token;
 }
