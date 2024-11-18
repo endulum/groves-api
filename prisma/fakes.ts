@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 
 export type BulkUserData = {
   username: string;
-  bio: string | null;
+  bio?: string;
 };
 
 /* [
@@ -14,6 +14,9 @@ export type BulkUserData = {
 export type BulkCommunityData = {
   urlName: string;
   canonicalName: string;
+  description?: string;
+  status?: 'ACTIVE' | 'HIDDEN' | 'FROZEN';
+  date?: Date;
 };
 
 /* [
@@ -65,6 +68,7 @@ export function bulkCommunities(count: number): BulkCommunityData[] {
   const communities: Array<{
     urlName: string;
     canonicalName: string;
+    date: Date;
   }> = [];
   while (communities.length < count) {
     const canonicalName = faker.food.dish();
@@ -81,7 +85,8 @@ export function bulkCommunities(count: number): BulkCommunityData[] {
         .match(/[a-z0-9]+/g) || []
     ).join('');
     if (urlName.length > 32) continue;
-    communities.push({ urlName, canonicalName });
+    const date = faker.date.past({ years: 5 });
+    communities.push({ urlName, canonicalName, date });
   }
 
   return communities;

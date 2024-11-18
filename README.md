@@ -14,7 +14,7 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todos
 
-- Remake Community controller
+- Begin Post controller
 
 ## Endpoint Overview
 
@@ -41,7 +41,7 @@ Each error is an object with properties:
 - `value`: the given value of the field.
 - `msg`: a message describing why this value did not pass validation.
 
-### Account routes
+### Account
 
 > `POST /login`
 
@@ -96,20 +96,21 @@ Similarly to `GET /me`, returns the identity of the user identified by the param
 
 > `GET /communities`
 
-Returns a list of communities, paginated by 15 entries per page.
+Returns a paginated list of communities.
 
 ```js
 {
-    results: [
+    communities: [
         {
             id: 1,
         	urlName: 'bestofgroves',
         	canonicalName: 'Best Of Groves',
         	description: 'The funniest and most memorable happenings on Groves.',
-        	created: '2024-09-17T03:34:27.290Z',
         	lastActivity: '2024-10-17T03:34:27.290Z',
-            followerCount: 25,
-            postCount: 125
+            _count: {
+                followers: 25,
+                posts: 75
+            }
         },
         // ...
     ],
@@ -120,21 +121,19 @@ Returns a list of communities, paginated by 15 entries per page.
 }
 ```
 
-- `page`: an integer representing the current page.
-- `pages`: the total amount of pages in this query.
 - `id`: a unique integer identifying this community in the database.
-- `urlName`: a unique, human-names string identifying this community across the site.
-- `canonicalName`: an informal, human-customized name for this community.
-- `description`: a human-customized string describing the community.
-- `created`: the creation date of this community's record in the database.
-- `lastActivity`: the creation date of the latest post or reply written within this community.
-- `followerCount`: this community's total followers.
-- `postCount`: this community's total posts.
+- `urlName`: a unique string identifying this community across the site.
+- `canonicalName`: an informal, human-readable name for this community.
+- `description`: a string of text describing the community.
+- `lastActivity`: the creation date of the latest post or reply written within this community. If this community does not have any posts, by default this date is the community's creation date.
+- `followers`: this community's total followers.
+- `posts`: this community's total posts.
 
 This endpoint accepts query parameters:
 
 - `sort`: sorts by follower count (`=followers`), post count (`=posts`), or latest activity (`=activity`) descending.
 - `name`: filters for any communities whose `urlName` or `canonicalName` includes the string provided.
+- `take`: how many results to show at once. By default, 15 results are shown.
 
 This endpoint uses cursor-based pagination. A cursor "id" is passed into a `before` or `after` query parameter when visiting a previous or next page, respectively. Under `links`, this endpoint lists a "next" or "previous" page endpoint if present.
 
@@ -144,11 +143,34 @@ Creates a new community in the database, with the authenticated user automatical
 
 - `urlName`: Required. Must be between 2 and 32 characters in length. Can only consist of lowercase letters and numbers. There must not exist another community in the database with the provided `urlName`.
 - `canonicalName`: Required. Must be between 2 and 32 characters in length.
-- `description`: Required. Cannot exceed 200 characters in length.
+- `description`: Not required. Cannot exceed 200 characters in length.
 
 > `GET /community/:communityNameOrId`
 
-Similarly to an individual item in the list provided in `GET /communities`, returns the identity of the community identified by `:communityNameOrId`, if a community exists with an `id` or `urlName` matching the value of this parameter. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges
+Returns the identity of the community identified by `:communityNameOrId`, if a community exists with an `id` or `urlName` matching the value of this parameter. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges.
+
+```js
+{
+  id: 1,
+  urlName: 'bestofgroves',
+  canonicalName: 'Best Of Groves',
+  description: 'The funniest and most memorable happenings on Groves.',
+  status: 'ACTIVE',
+  created: '2024-11-18T06:41:53.162Z',
+  lastActivity: '2024-11-18T06:41:53.162Z',
+  admin: { id: 1, username: 'admin' },
+  moderators: [ { id: 2, username: 'demo-1' }, { id: 3, username: 'demo-2' } ]
+}
+```
+
+Properties here that were not described in the `/communities` endpoint:
+
+- `status`: the status of a community.
+  - `ACTIVE`: Normal activity can be done in this community.
+  - `FROZEN`: This community is in read-only mode. No activity, not even from moderation, can be conducted until the admin unfreezes this community. This also prevents this community from showing up in global community search, but can still be accessed by url.
+- `created`: the date this community was created on.
+- `admin`: the user information of the admin of this community.
+- `moderators`: an array of user information of users with moderator privileges over this community.
 
 > `PUT /community/:communityNameOrId` <sub>protected</sub>
 
@@ -172,11 +194,15 @@ Removes moderator privileges of the identified community from a user. The authen
 
 - `username`: Required. There must exist a user in the database with the provided `username` who has moderator privileges over this community.
 
+> `GET /community/:communityNameOrId/wiki`
+
+Returns a `content` string consisting of the community's wiki text.
+
 > `PUT /community/:communityNameOrId/wiki` <sub>protected</sub>
 
 Edits the community wiki. The authenticated user must have moderator privileges over this community.
 
-- `wiki`: Required, but can be an empty string.
+- `content`: Required, but can be an empty string to "clear" the wiki.
 
 > `POST /community/:communityNameOrId/freeze` <sub>protected</sub>
 
@@ -190,6 +216,8 @@ Toggles the `status` of the identified community between `ACTIVE` and `FROZEN`. 
 > - Demoting or promoting moderators
 > - Editing community details or the wiki
 > - Following the community
+
+### Actions
 
 > `GET /community/:communityNameOrId/actions`
 

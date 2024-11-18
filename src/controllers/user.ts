@@ -7,6 +7,7 @@ import { usernameValidation } from './auth';
 import { validate } from '../middleware/validate';
 
 // use the incoming jwt to define req.user
+// for routes where req.user may or may not exist
 export const deserialize = asyncHandler(async (req, _res, next) => {
   const bearerHeader = req.headers.authorization;
   const bearerToken = bearerHeader?.split(' ')[1];
@@ -27,6 +28,7 @@ export const deserialize = asyncHandler(async (req, _res, next) => {
 });
 
 // check if req.user is defined
+// for routes that require req.user to be defined
 export const authenticate = [
   deserialize,
   asyncHandler(async (req, res, next) => {

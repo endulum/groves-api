@@ -5,6 +5,7 @@ export async function populate(
   opts: {
     userCount: number;
     commCount: number;
+    postCount: number;
     maxMods: number;
     maxFollowers: number;
   },
@@ -17,6 +18,7 @@ export async function populate(
 
   const userIds: number[] = [];
   const commIds: number[] = [];
+  const postIds: string[] = [];
 
   log('truncating tables');
   await queries.truncateTable('User');
@@ -37,6 +39,19 @@ export async function populate(
       ...(await queries.createBulkCommunities(
         fakes.bulkCommunities(opts.commCount),
         1,
+      )),
+    );
+  }
+
+  if (opts.postCount > 0) {
+    log(
+      `creating ${opts.postCount} dummy posts and distributing them randomly`,
+    );
+    postIds.push(
+      ...(await queries.createBulkPosts(
+        fakes.bulkPosts(opts.postCount),
+        commIds,
+        userIds,
       )),
     );
   }

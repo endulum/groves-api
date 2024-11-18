@@ -1,14 +1,12 @@
-import bcrypt from 'bcryptjs';
 import { Prisma } from '@prisma/client';
+import bcrypt from 'bcryptjs';
+
 import { client } from './client';
 import * as fakes from './fakes';
 
 // finding a thing
 
-export async function findUser(
-  find: { username?: string; id?: number },
-  attributes: Record<string, unknown> = {},
-) {
+export async function findUser(find: { username?: string; id?: number }) {
   return client.user.findFirst({
     where: {
       OR: [
@@ -16,14 +14,10 @@ export async function findUser(
         { username: find.username ?? '' },
       ],
     },
-    ...attributes,
   });
 }
 
-export async function findCommunity(
-  find: { urlName?: string; id?: number },
-  attributes: Record<string, unknown> = {},
-) {
+export async function findCommunity(find: { urlName?: string; id?: number }) {
   return client.community.findFirst({
     where: {
       OR: [
@@ -31,32 +25,57 @@ export async function findCommunity(
         { urlName: find.urlName ?? '' },
       ],
     },
-    ...attributes,
+    include: { admin: true },
   });
 }
 
-export async function findPost(
-  id: string,
-  attributes: Record<string, unknown> = {},
-) {
+export async function findPost(id: string) {
   return client.post.findUnique({
     where: { id },
-    ...attributes,
+  });
+}
+
+// middleware-specific
+
+// community.isMod, community.promote, community.demote
+export async function findCommMods(commId: number) {
+  return client.user.findMany({
+    where: {
+      communitiesModeratorOf: { some: { id: commId } },
+    },
+    select: {
+      id: true,
+      username: true,
+    },
+  });
+}
+
+// community.follow
+export async function findCommFollowers(commId: number) {
+  return client.user.findMany({
+    where: {
+      communitiesFollowing: { some: { id: commId } },
+    },
+    select: {
+      id: true,
+      username: true,
+    },
   });
 }
 
 // route-specific
 
 // POST /signup
-export async function createUser(username: string, password: string) {
+export async function createUser(username: string, password?: string) {
   const salt = await bcrypt.genSalt(10);
-  const hashedPassword = await bcrypt.hash(password, salt);
-  await client.user.create({
+  const hashedPassword = await bcrypt.hash(password ?? 'password', salt);
+  const user = await client.user.create({
     data: {
       username,
       password: hashedPassword,
     },
   });
+  return user.id;
 }
 
 // POST /login
@@ -75,7 +94,7 @@ export async function comparePassword(
   return match;
 }
 
-// POST /me
+// PUT /me
 export async function updateUser(
   find: { username?: string; id?: number },
   body: Record<string, string>,
@@ -94,6 +113,188 @@ export async function updateUser(
   await client.user.update({
     where: find.username ? { username: find.username } : { id: find.id },
     data,
+  });
+}
+
+// GET /communities
+export async function searchCommunities(opts: {
+  before?: number; // cursor for paging backwards
+  after?: number; // cursor for paging forwards
+  take: number; // page size
+  name: string;
+  sort: string;
+}) {
+  const orderBy: Prisma.CommunityOrderByWithRelationInput[] = [{ id: 'desc' }];
+  switch (opts.sort) {
+    case 'followers':
+      orderBy.unshift({ followers: { _count: 'desc' } });
+      break;
+    case 'posts':
+      orderBy.unshift({ posts: { _count: 'desc' } });
+      break;
+    default:
+      orderBy.unshift({ lastActivity: 'desc' });
+  }
+
+  const cursor = opts.after ?? opts.before;
+  const direction = opts.after ? 'forward' : opts.before ? 'backward' : 'none';
+
+  const communities = await client.community.findMany({
+    where: {
+      status: 'ACTIVE',
+      OR: [
+        { canonicalName: { contains: opts.name ?? '' } },
+        { urlName: { contains: opts.name ?? '' } },
+      ],
+    },
+    orderBy,
+    select: {
+      id: true,
+      urlName: true,
+      canonicalName: true,
+      description: true,
+      lastActivity: true,
+      _count: {
+        select: { followers: true, posts: true },
+      },
+    },
+    cursor: cursor ? { id: cursor } : undefined,
+    skip: direction === 'none' ? undefined : 1,
+    take: (direction === 'backward' ? -1 : 1) * (opts.take + 1),
+  });
+
+  const results =
+    direction === 'backward'
+      ? communities.slice(-opts.take)
+      : communities.slice(0, opts.take);
+
+  const hasMore = communities.length > opts.take;
+
+  const nextCursor =
+    direction === 'backward' || hasMore ? results.at(-1)?.id : null;
+  const prevCursor =
+    direction === 'forward' || (direction === 'backward' && hasMore)
+      ? results.at(0)?.id
+      : null;
+
+  return { results, nextCursor, prevCursor };
+}
+
+// POST /communities
+export async function createCommunity({
+  urlName,
+  canonicalName,
+  description,
+  adminId,
+}: {
+  urlName: string;
+  canonicalName: string;
+  description?: string;
+  adminId: number;
+}) {
+  const { id } = await client.community.create({
+    data: {
+      urlName,
+      canonicalName,
+      description,
+      adminId,
+    },
+  });
+  // todo: record action
+  return id;
+}
+
+// PUT /community/:communityUrlOrId
+export async function editCommunity(
+  id: number,
+  {
+    urlName,
+    canonicalName,
+    description,
+  }: {
+    urlName: string;
+    canonicalName: string;
+    description?: string;
+  },
+) {
+  await client.community.update({
+    where: { id },
+    data: {
+      urlName,
+      canonicalName,
+      description,
+    },
+  });
+  // todo: record action
+}
+
+export async function editCommunityWiki(
+  commId: number,
+  content: string | null,
+) {
+  await client.community.update({
+    where: { id: commId },
+    data: { wiki: content },
+  });
+}
+
+// POST /community/:communityUrlOrId/promote
+export async function promoteModerator(commId: number, userId: number) {
+  await client.community.update({
+    where: { id: commId },
+    data: {
+      moderators: {
+        connect: { id: userId },
+      },
+    },
+  });
+  // todo: record action
+}
+
+// POST /community/:communityUrlOrId/demote
+export async function demoteModerator(commId: number, userId: number) {
+  await client.community.update({
+    where: { id: commId },
+    data: {
+      moderators: {
+        disconnect: { id: userId },
+      },
+    },
+  });
+  // todo: record action
+}
+
+// POST /community/:communityUrlOrId/follow
+export async function followCommunity(
+  commId: number,
+  userId: number,
+  follow: 'true' | 'false',
+) {
+  const followers = await findCommFollowers(commId);
+  if (follow === 'true' && !followers.find(({ id }) => id === userId)) {
+    await client.community.update({
+      where: { id: commId },
+      data: { followers: { connect: { id: userId } } },
+    });
+  }
+  if (follow === 'false' && followers.find(({ id }) => id === userId)) {
+    await client.community.update({
+      where: { id: commId },
+      data: { followers: { disconnect: { id: userId } } },
+    });
+  }
+}
+
+// POST /community/:communityUrlOrId/freeze
+export async function freezeCommunity(
+  commId: number,
+  commStatus: 'ACTIVE' | 'FROZEN',
+) {
+  await client.community.update({
+    where: { id: commId },
+    data: {
+      status: commStatus,
+    },
   });
 }
 
@@ -187,6 +388,10 @@ export async function createBulkCommunities(
         data: {
           urlName: cd.urlName,
           canonicalName: cd.canonicalName,
+          description: `For fans of ${cd.canonicalName}`,
+          status: cd.status,
+          created: cd.date ?? new Date(),
+          lastActivity: cd.date ?? new Date(),
           adminId,
         },
       });
@@ -198,8 +403,8 @@ export async function createBulkCommunities(
 
 export async function createBulkPosts(
   postData: Array<fakes.BulkPostData>,
-  communityId: number,
-  authorId: number,
+  communityId: number | number[],
+  authorId: number | number[],
 ) {
   const postIds: string[] = [];
   await Promise.all(
@@ -208,8 +413,14 @@ export async function createBulkPosts(
         data: {
           title: pd.title,
           content: pd.content,
-          communityId,
-          authorId,
+          communityId:
+            typeof communityId === 'number'
+              ? communityId
+              : communityId[Math.floor(Math.random() * communityId.length)],
+          authorId:
+            typeof authorId === 'number'
+              ? authorId
+              : authorId[Math.floor(Math.random() * authorId.length)],
         },
       });
       postIds.push(post.id);
