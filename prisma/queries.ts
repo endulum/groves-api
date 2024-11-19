@@ -613,3 +613,28 @@ export async function distributeCommModerators(
     },
   });
 }
+
+export async function distributeVotes(
+  postId: string,
+  upvoterIds: number[],
+  downvoterIds: number[],
+) {
+  // todo: upvoters and downvoters should have no overlap.
+  // test against this.
+  if (upvoterIds.length > 0) {
+    await client.post.update({
+      where: { id: postId },
+      data: {
+        upvotes: { connect: upvoterIds.map((id) => ({ id })) },
+      },
+    });
+  }
+  if (downvoterIds.length > 0) {
+    await client.post.update({
+      where: { id: postId },
+      data: {
+        downvotes: { connect: downvoterIds.map((id) => ({ id })) },
+      },
+    });
+  }
+}
