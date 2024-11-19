@@ -11,7 +11,7 @@ import { validate } from '../middleware/validate';
 export const deserialize = asyncHandler(async (req, _res, next) => {
   const bearerHeader = req.headers.authorization;
   const bearerToken = bearerHeader?.split(' ')[1];
-  if (bearerToken === undefined) return next();
+  if (bearerToken === undefined || bearerToken === 'undefined') return next();
 
   try {
     if (!process.env.TOKEN_SECRET) throw new Error('Secret is not defined.');

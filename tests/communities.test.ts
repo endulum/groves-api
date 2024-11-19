@@ -308,7 +308,7 @@ describe('moderator promotion and demotion', async () => {
     const response = await helpers.req('GET', '/community/comm', null, null);
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('moderators');
-    expect(response.body.moderators.length).toBe(2);
+    expect(response.body.moderators.length).toBe(3);
     // console.dir(response.body, { depth: null });
   });
 

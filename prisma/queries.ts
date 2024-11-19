@@ -32,6 +32,26 @@ export async function findCommunity(find: { urlName?: string; id?: number }) {
 export async function findPost(id: string) {
   return client.post.findUnique({
     where: { id },
+    include: {
+      author: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+      community: {
+        select: {
+          id: true,
+          urlName: true,
+          canonicalName: true,
+        },
+      },
+      replies: true,
+    },
+    omit: {
+      authorId: true,
+      communityId: true,
+    },
   });
 }
 
@@ -41,7 +61,10 @@ export async function findPost(id: string) {
 export async function findCommMods(commId: number) {
   return client.user.findMany({
     where: {
-      communitiesModeratorOf: { some: { id: commId } },
+      OR: [
+        { communitiesModeratorOf: { some: { id: commId } } },
+        { communitiesAdminOf: { some: { id: commId } } },
+      ],
     },
     select: {
       id: true,
@@ -296,7 +319,102 @@ export async function freezeCommunity(
       status: commStatus,
     },
   });
+  // todo: record action
 }
+
+// POST /community/:communityId/posts
+export async function createPost(
+  communityId: number,
+  authorId: number,
+  body: { title: string; content: string },
+) {
+  const post = await client.post.create({
+    data: {
+      ...body,
+      communityId,
+      authorId,
+    },
+    include: {
+      community: true,
+      author: true,
+    },
+  });
+  return post.id;
+  // todo: record action
+}
+
+// PUT /post/:postId
+export async function editPost(
+  postId: string,
+  body: { title: string; content: string },
+) {
+  await client.post.update({
+    where: { id: postId },
+    data: {
+      ...body,
+      lastEdited: new Date(),
+    },
+  });
+  // todo: record action
+}
+
+// POST /post/:postId/freeze
+export async function freezePost(
+  postId: string,
+  postStatus: string,
+  freeze: 'true' | 'false',
+) {
+  if (postStatus === 'ACTIVE' && freeze === 'true') {
+    await client.post.update({
+      where: { id: postId },
+      data: { status: 'FROZEN' },
+    });
+  } else if (postStatus === 'FROZEN' && freeze === 'false') {
+    await client.post.update({
+      where: { id: postId },
+      data: { status: 'ACTIVE' },
+    });
+  }
+  // todo: record action
+}
+
+export async function hidePost(
+  postId: string,
+  postStatus: string,
+  hide: 'true' | 'false',
+) {
+  if (postStatus === 'ACTIVE' && hide === 'true') {
+    await client.post.update({
+      where: { id: postId },
+      data: { status: 'HIDDEN' },
+    });
+  } else if (postStatus === 'HIDDEN' && hide === 'false') {
+    await client.post.update({
+      where: { id: postId },
+      data: { status: 'ACTIVE' },
+    });
+  }
+}
+
+/* export async function followCommunity(
+  commId: number,
+  userId: number,
+  follow: 'true' | 'false',
+) {
+  const followers = await findCommFollowers(commId);
+  if (follow === 'true' && !followers.find(({ id }) => id === userId)) {
+    await client.community.update({
+      where: { id: commId },
+      data: { followers: { connect: { id: userId } } },
+    });
+  }
+  if (follow === 'false' && followers.find(({ id }) => id === userId)) {
+    await client.community.update({
+      where: { id: commId },
+      data: { followers: { disconnect: { id: userId } } },
+    });
+  }
+} */
 
 // testing-specific
 

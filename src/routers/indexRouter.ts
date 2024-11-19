@@ -3,6 +3,7 @@ import asyncHandler from 'express-async-handler';
 
 import * as user from '../controllers/user';
 import * as community from '../controllers/community';
+import * as post from '../controllers/post';
 
 const router = express.Router();
 
@@ -51,5 +52,18 @@ router
 router
   .route('/community/:communityUrlOrId/freeze')
   .post(user.authenticate, community.freeze);
+
+router
+  .route('/community/:communityUrlOrId/posts')
+  .post(user.authenticate, post.newPost);
+
+router
+  .route('/post/:postId')
+  .get(user.deserialize, post.exists, post.get)
+  .put(user.authenticate, post.editPost);
+
+router.route('/post/:postId/freeze').post(user.authenticate, post.freezePost);
+
+router.route('/post/:postId/hide').post(user.authenticate, post.hidePost);
 
 export { router };

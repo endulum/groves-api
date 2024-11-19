@@ -1,6 +1,6 @@
 # Groves API
 
-Groves is an arboreal clone of Reddit.
+Groves is an arboreal semiclone of Reddit.
 
 [Project Spec](https://www.theodinproject.com/lessons/node-path-nodejs-odin-book)
 
@@ -14,7 +14,10 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todos
 
-- Begin Post controller
+- Go through this document and fix up missing features in the codebase
+- Pinning and unpinning Posts
+- Paginated search for Posts
+- Add voting to schema and manage voting
 
 ## Endpoint Overview
 
@@ -34,12 +37,6 @@ On routes requiring form input, if the input does not pass validation, the route
   ];
 }
 ```
-
-Each error is an object with properties:
-
-- `path`: the name of the field.
-- `value`: the given value of the field.
-- `msg`: a message describing why this value did not pass validation.
 
 ### Account
 
@@ -72,12 +69,6 @@ Returns the identity of the authenticated user.
 }
 ```
 
-- `id`: a unique integer identifying this user in the database.
-- `username`: a unique, human-named string identifying this user across the site.
-- `joined`: the creation date of this user's record in the database.
-- `bio`: a human-customized string describing the user.
-- `role`: an enumerated string describing this user's site role. Most users are `BASIC`. Accounts belonging to site developers have the role `ADMIN`.
-
 > `PUT /me` <sub>protected</sub>
 
 Edits the identity of the authenticated user.
@@ -96,7 +87,7 @@ Similarly to `GET /me`, returns the identity of the user identified by the param
 
 > `GET /communities`
 
-Returns a paginated list of communities.
+Returns a paginated list of communities. A community must have a status of `ACTIVE` to show up in this endpoint.
 
 ```js
 {
@@ -121,14 +112,6 @@ Returns a paginated list of communities.
 }
 ```
 
-- `id`: a unique integer identifying this community in the database.
-- `urlName`: a unique string identifying this community across the site.
-- `canonicalName`: an informal, human-readable name for this community.
-- `description`: a string of text describing the community.
-- `lastActivity`: the creation date of the latest post or reply written within this community. If this community does not have any posts, by default this date is the community's creation date.
-- `followers`: this community's total followers.
-- `posts`: this community's total posts.
-
 This endpoint accepts query parameters:
 
 - `sort`: sorts by follower count (`=followers`), post count (`=posts`), or latest activity (`=activity`) descending.
@@ -147,7 +130,7 @@ Creates a new community in the database, with the authenticated user automatical
 
 > `GET /community/:communityNameOrId`
 
-Returns the identity of the community identified by `:communityNameOrId`, if a community exists with an `id` or `urlName` matching the value of this parameter. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges.
+Returns the identity of the community identified by `:communityNameOrId`, if a community exists with an `id` or `urlName` matching the value of this parameter. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges over this community.
 
 ```js
 {
@@ -163,59 +146,95 @@ Returns the identity of the community identified by `:communityNameOrId`, if a c
 }
 ```
 
-Properties here that were not described in the `/communities` endpoint:
-
-- `status`: the status of a community.
-  - `ACTIVE`: Normal activity can be done in this community.
-  - `FROZEN`: This community is in read-only mode. No activity, not even from moderation, can be conducted until the admin unfreezes this community. This also prevents this community from showing up in global community search, but can still be accessed by url.
-- `created`: the date this community was created on.
-- `admin`: the user information of the admin of this community.
-- `moderators`: an array of user information of users with moderator privileges over this community.
-
 > `PUT /community/:communityNameOrId` <sub>protected</sub>
 
-Edits the record of the identified community. Follows the same validation rules as `POST /communities`. The authenticated user must have admin privileges over the community.
+Edits the record of the identified community. Follows the same validation rules as `POST /communities`. The community must be `ACTIVE` and the authenticated user must have admin privileges over the community.
 
 > `POST /community/:communityNameOrId/follow` <sub>protected</sub>
 
-Adds or removes the authenticated user to the "followers" list of the identified community.
+Adds or removes the authenticated user to the "followers" list of the identified community. The community must be `ACTIVE`.
 
 - `follow`: Required. Must be a boolean. `true` follows the community, `false` unfollows it.
 
 > `POST /community/:communityNameOrId/promote` <sub>protected</sub>
 
-Grants a user moderator privileges of the identified community. The authenticated user must have admin privileges over the community.
+Grants a user moderator privileges of the identified community. The community must be `ACTIVE` and the authenticated user must have admin privileges over the community.
 
 - `username`: Required. There must exist a user in the database with the provided `username` who does not already have moderator privileges over this community.
 
 > `POST /community/:communityNameOrId/demote` <sub>protected</sub>
 
-Removes moderator privileges of the identified community from a user. The authenticated user must have admin privileges over the community.
+Removes moderator privileges of the identified community from a user. The community must be `ACTIVE` and the authenticated user must have admin privileges over the community.
 
 - `username`: Required. There must exist a user in the database with the provided `username` who has moderator privileges over this community.
 
 > `GET /community/:communityNameOrId/wiki`
 
-Returns a `content` string consisting of the community's wiki text.
+Returns a `content` Markdown-supported string consisting of the community's wiki text. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges over this community.
 
 > `PUT /community/:communityNameOrId/wiki` <sub>protected</sub>
 
-Edits the community wiki. The authenticated user must have moderator privileges over this community.
+Edits the community wiki. The community must be `ACTIVE` and the authenticated user must have moderator privileges over this community.
 
-- `content`: Required, but can be an empty string to "clear" the wiki.
+- `content`: Not required. Can be an empty string to "clear" the wiki.
 
 > `POST /community/:communityNameOrId/freeze` <sub>protected</sub>
 
-Toggles the `status` of the identified community between `ACTIVE` and `FROZEN`. The authenticated user must have admin privileges over this community.
+Sets the `status` of the identified community to `ACTIVE` or `FROZEN`. The authenticated user must have admin privileges over this community.
 
-- `password`: Required. Must match the user record's own password.
+- `freeze`: Required. Must be a boolean. `true` freezes the community, `false` unfreezes it.
 
-> When a community is `FROZEN`, it is in "readonly" mode. No further activity can be conducted on this community until it is thawed. This includes:
->
-> - Creating, editing, freezing, hiding, or pinning Posts or Replies
-> - Demoting or promoting moderators
-> - Editing community details or the wiki
-> - Following the community
+### Posts
+
+> `GET /post/:postId`
+
+Returns the details of the post identified by `:postId`, if a post exists with an `id` matching the value of this parameter. If the identified post has a status of `HIDDEN`, there must be an authenticated user, and the user must have moderator privileges over the community this post was posted under.
+
+```js
+{
+  id: 'cm3nlsorx0001bw6jcoswmlvi',
+  title: 'Title of Post',
+  content: 'This is a post. Lorem ipsum dolor sit amet.',
+  datePosted: '2024-11-18T22:34:49.582Z',
+  lastEdited: null,
+  status: 'ACTIVE',
+  pinned: false,
+  author: { id: 1, username: 'admin' },
+  community: { id: 1, urlName: 'comm', canonicalName: 'Community' },
+  replies: [],
+  voting: {
+      upvotes: 0,
+      downvotes: 0,
+      voted: false
+  }
+}
+```
+
+- The `replies` property should host an array of reply trees.
+- The `voted` property under `voting` will be `null` if there is no authenticated user, and `true` or `false` depending on whether the authenticated user added a vote to this post.
+
+> `POST /community/:communityId/posts` <sub>protected</sub>
+
+Creates a new post in the database, with the root community identified through the `communityId` parameter. The root community must be `ACTIVE`.
+
+- `title`: Required. Must be no longer than 64 characters in length.
+- `content`: Required. Must be no longer than 10,000 characters in length. Supports markdown.
+
+> `PUT /post/:postId` <sub>protected</sub>
+
+Edits the identified post. Follows the same validation rules as `POST /community/:communityId/posts`. The root community must be `ACTIVE` and the authenticated user must be the original author of this post.
+
+> `POST /post/:postId/freeze` <sub>protected</sub>
+
+Sets the `status` of the identified post to `ACTIVE` or `FROZEN`. The authenticated user must either be the original author of this post, or have moderator privileges over the root community of this post. The root community of this post must be `ACTIVE`.
+
+- `freeze`: Required. Must be a boolean. `true` freezes the post `false` unfreezes it.
+
+> `POST /post/:postId/hide` <sub>protected</sub>
+
+Sets the `status` of the identified post to `ACTIVE` or `HIDDEN`. The authenticated user must either be the original author of this post, or have moderator privileges over the root community of this post. The root community of this post must be `ACTIVE`.
+
+- `freeze`: Required. Must be a boolean. `true` hides the post, `false` unhides it.
 
 ### Actions
 

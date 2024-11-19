@@ -7,8 +7,8 @@ import { client } from '../prisma/client';
 export async function req(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   url: string,
-  form: Record<string, unknown> | null,
-  token: string | null,
+  form?: Record<string, unknown> | null,
+  token?: string | null,
 ): Promise<Response> {
   // any way to have '.post()', '.put()', '.delete()' conditionally chained?
   // and without type errors?
@@ -36,21 +36,27 @@ export async function req(
   }
 }
 
-export async function getToken(username: string): Promise<string> {
-  const user = await client.user.findFirst({ where: { username } });
+export async function getToken(userInfo: string | number): Promise<string> {
+  const user = await client.user.findFirst({
+    where:
+      typeof userInfo === 'string' ? { username: userInfo } : { id: userInfo },
+  });
 
   if (!user) {
     console.error(
-      `Given user ${username} does not exist. Users that exist: `,
+      `Given user ${userInfo} does not exist. Users that exist: `,
       (await client.user.findMany()).map((u) => u.username),
     );
-    throw new Error(`Given user ${username} does not exist.`);
+    throw new Error(`Given user ${userInfo} does not exist.`);
   }
 
   if (!process.env.TOKEN_SECRET)
     throw new Error('Token secret is not defined.');
 
-  const token = jwt.sign({ username, id: user.id }, process.env.TOKEN_SECRET);
+  const token = jwt.sign(
+    { user: user.username, id: user.id },
+    process.env.TOKEN_SECRET,
+  );
 
   return token;
 }

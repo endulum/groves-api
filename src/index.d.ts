@@ -7,6 +7,7 @@ declare global {
       user: Prisma.User;
       thisUser: Prisma.User;
       thisCommunity: Prisma.Community;
+      thisPost: Prisma.Post;
     }
   }
 }
