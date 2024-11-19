@@ -624,42 +624,23 @@ describe('freeze and unfreeze a community', async () => {
     const response = await helpers.req(
       'POST',
       '/community/comm/freeze',
-      null,
+      { freeze: true },
       await helpers.getToken('basic'),
     );
     expect(response.status).toBe(403);
   });
 
-  test('POST /community/:communityId/freeze - 401 and errors', async () => {
-    const wrongInputArray = [{ password: '' }, { password: 'wrongPassword' }];
-    await Promise.all(
-      wrongInputArray.map(async (wrongInput) => {
-        const response = await helpers.req(
-          'POST',
-          '/community/comm/freeze',
-          wrongInput,
-          await helpers.getToken('admin'),
-        );
-        expect(response.status).toBe(400);
-        expect(response.body).toHaveProperty('errors');
-        expect(response.body.errors.length).toEqual(1);
-      }),
-    );
-  });
-
   test('POST /community/:communityId/freeze - 200 and freezes or unfreezes', async () => {
-    const adminToken = await helpers.getToken('admin');
-
-    let response = await helpers.req(
+    const response = await helpers.req(
       'POST',
       '/community/comm/freeze',
-      { password: 'password' },
-      adminToken,
+      { freeze: true },
+      await helpers.getToken('admin'),
     );
     expect(response.status).toBe(200);
 
-    let frozenCommunity = await queries.findCommunity({ id: 1 });
-    expect(frozenCommunity?.status).toBe('FROZEN');
+    const comm = await queries.findCommunity({ id: 1 });
+    expect(comm?.status).toBe('FROZEN');
 
     await Promise.all(
       (
@@ -676,21 +657,22 @@ describe('freeze and unfreeze a community', async () => {
           activity.method,
           activity.url,
           null,
-          adminToken,
+          await helpers.getToken('admin'),
         );
         expect(activityResponse.status).toBe(403);
       }),
     );
+  });
 
-    // unfreezing
-    response = await helpers.req(
+  test('POST /community/:communityId/freeze - 200 and unfreezes', async () => {
+    const response = await helpers.req(
       'POST',
       '/community/comm/freeze',
-      { password: 'password' },
-      adminToken,
+      { freeze: false },
+      await helpers.getToken('admin'),
     );
     expect(response.status).toBe(200);
-    frozenCommunity = await queries.findCommunity({ id: 1 });
-    expect(frozenCommunity?.status).not.toBe('FROZEN');
+    const comm = await queries.findCommunity({ id: 1 });
+    expect(comm?.status).not.toBe('FROZEN');
   });
 });

@@ -250,21 +250,14 @@ export const follow = [
 export const freeze = [
   exists,
   isAdmin,
-  body('password')
-    .notEmpty()
-    .withMessage('Please enter your password.')
-    .bail()
-    .custom(async (value, { req }) => {
-      const match = await queries.comparePassword(req.user, value);
-      if (!match) throw new Error('Incorrect username or password.');
-    })
-    .escape(),
+  body('freeze').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    if (req.thisCommunity.status === 'ACTIVE')
-      await queries.freezeCommunity(req.thisCommunity.id, 'FROZEN');
-    else if (req.thisCommunity.status === 'FROZEN')
-      await queries.freezeCommunity(req.thisCommunity.id, 'ACTIVE');
+    await queries.freezeCommunity(
+      req.thisCommunity.id,
+      req.thisCommunity.status,
+      req.body.freeze,
+    );
     res.sendStatus(200);
   }),
 ];

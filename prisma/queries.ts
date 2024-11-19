@@ -312,14 +312,21 @@ export async function followCommunity(
 export async function freezeCommunity(
   commId: number,
   commStatus: 'ACTIVE' | 'FROZEN',
+  freeze: 'true' | 'false',
 ) {
-  await client.community.update({
-    where: { id: commId },
-    data: {
-      status: commStatus,
-    },
-  });
-  // todo: record action
+  if (commStatus === 'ACTIVE' && freeze === 'true') {
+    await client.community.update({
+      where: { id: commId },
+      data: { status: 'FROZEN' },
+    });
+    // todo: record action
+  } else if (commStatus === 'FROZEN' && freeze === 'false') {
+    await client.community.update({
+      where: { id: commId },
+      data: { status: 'ACTIVE' },
+    });
+    // todo: record action
+  }
 }
 
 // POST /community/:communityId/posts
@@ -369,13 +376,14 @@ export async function freezePost(
       where: { id: postId },
       data: { status: 'FROZEN' },
     });
+    // todo: record action
   } else if (postStatus === 'FROZEN' && freeze === 'false') {
     await client.post.update({
       where: { id: postId },
       data: { status: 'ACTIVE' },
     });
+    // todo: record action
   }
-  // todo: record action
 }
 
 export async function hidePost(
@@ -388,33 +396,15 @@ export async function hidePost(
       where: { id: postId },
       data: { status: 'HIDDEN' },
     });
+    // todo: record action
   } else if (postStatus === 'HIDDEN' && hide === 'false') {
     await client.post.update({
       where: { id: postId },
       data: { status: 'ACTIVE' },
     });
+    // todo: record action
   }
 }
-
-/* export async function followCommunity(
-  commId: number,
-  userId: number,
-  follow: 'true' | 'false',
-) {
-  const followers = await findCommFollowers(commId);
-  if (follow === 'true' && !followers.find(({ id }) => id === userId)) {
-    await client.community.update({
-      where: { id: commId },
-      data: { followers: { connect: { id: userId } } },
-    });
-  }
-  if (follow === 'false' && followers.find(({ id }) => id === userId)) {
-    await client.community.update({
-      where: { id: commId },
-      data: { followers: { disconnect: { id: userId } } },
-    });
-  }
-} */
 
 // testing-specific
 
