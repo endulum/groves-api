@@ -139,3 +139,43 @@ export const hidePost = [
     res.sendStatus(200);
   }),
 ];
+
+export const upvote = [
+  exists,
+  isActive,
+  rootCommunityIsActive,
+  body('upvote').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    if (req.thisPost.author.id === req.user.id) res.sendStatus(403);
+    else {
+      await queries.votePost(
+        req.thisPost.id,
+        req.user.id,
+        'upvote',
+        req.body.upvote,
+      );
+      res.sendStatus(200);
+    }
+  }),
+];
+
+export const downvote = [
+  exists,
+  isActive,
+  rootCommunityIsActive,
+  body('downvote').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    if (req.thisPost.author.id === req.user.id) res.sendStatus(403);
+    else {
+      await queries.votePost(
+        req.thisPost.id,
+        req.user.id,
+        'downvote',
+        req.body.downvote,
+      );
+      res.sendStatus(200);
+    }
+  }),
+];

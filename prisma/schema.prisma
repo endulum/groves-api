@@ -21,6 +21,8 @@ model User {
   communitiesAdminOf     Community[] @relation("communityAdmin")
   communitiesModeratorOf Community[] @relation("communityModerators")
   posts                  Post[]
+  postsUpvoted           Post[]      @relation("postUpvotes")
+  postsDownvoted         Post[]      @relation("postDownvotes")
   replies                Reply[]     @relation("replyAuthor")
 }
 
@@ -56,8 +58,6 @@ model Post {
   content    String // string with markdown
   datePosted DateTime  @default(now())
   lastEdited DateTime?
-  upvotes    Int       @default(0)
-  downvotes  Int       @default(0)
   status     Status    @default(ACTIVE)
   // "ACTIVE": anyone can see and reply
   // "FROZEN": anyone can see, but replies and votes are locked
@@ -69,6 +69,8 @@ model Post {
   community   Community @relation("postCommunity", fields: [communityId], references: [id])
   communityId Int
   replies     Reply[]   @relation("replyPost")
+  upvotes     User[]    @relation("postUpvotes")
+  downvotes   User[]    @relation("postDownvotes")
 }
 
 model Reply {

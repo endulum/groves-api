@@ -47,6 +47,12 @@ export async function findPost(id: string) {
         },
       },
       replies: true,
+      _count: {
+        select: {
+          upvotes: true,
+          downvotes: true,
+        },
+      },
     },
     omit: {
       authorId: true,
@@ -403,6 +409,53 @@ export async function hidePost(
       data: { status: 'ACTIVE' },
     });
     // todo: record action
+  }
+}
+
+export async function votePost(
+  postId: string,
+  userId: number,
+  voteType: 'upvote' | 'downvote',
+  vote: 'true' | 'false',
+) {
+  if (voteType === 'upvote') {
+    const postUpvotes = await client.user.findMany({
+      where: { postsUpvoted: { some: { id: postId } } },
+    });
+    if (vote === 'false' && postUpvotes.find((u) => u.id === userId)) {
+      await client.post.update({
+        where: { id: postId },
+        data: {
+          upvotes: { disconnect: { id: userId } },
+        },
+      });
+    } else if (vote === 'true' && !postUpvotes.find((u) => u.id === userId)) {
+      await client.post.update({
+        where: { id: postId },
+        data: {
+          upvotes: { connect: { id: userId } },
+        },
+      });
+    }
+  } else if (voteType === 'downvote') {
+    const postDownvotes = await client.user.findMany({
+      where: { postsDownvoted: { some: { id: postId } } },
+    });
+    if (vote === 'false' && postDownvotes.find((u) => u.id === userId)) {
+      await client.post.update({
+        where: { id: postId },
+        data: {
+          downvotes: { disconnect: { id: userId } },
+        },
+      });
+    } else if (vote === 'true' && !postDownvotes.find((u) => u.id === userId)) {
+      await client.post.update({
+        where: { id: postId },
+        data: {
+          downvotes: { connect: { id: userId } },
+        },
+      });
+    }
   }
 }
 

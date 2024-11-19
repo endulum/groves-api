@@ -283,3 +283,111 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
     expect(post?.status).toBe('ACTIVE');
   });
 });
+
+describe('vote on posts', () => {
+  let postId: string = '';
+
+  beforeAll(async () => {
+    await queries.truncateTable('User');
+    await queries.createAdmin();
+    await queries.createUser('basic');
+    await queries.createCommunity({
+      urlName: 'comm',
+      canonicalName: 'Community',
+      description: 'This is an ordinary community.',
+      adminId: 1,
+    });
+    postId = await queries.createPost(1, 1, {
+      title: 'Post',
+      content: 'Vote on me.',
+    });
+  });
+
+  test('POST /post/:postId/upvote - 400 if own post', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/post/${postId}/upvote`,
+      { upvote: true },
+      await helpers.getToken('admin'),
+    );
+    expect(response.status).toBe(403);
+  });
+
+  test('POST /post/:postId/upvote - 200 and upvotes post', async () => {
+    let response = await helpers.req(
+      'POST',
+      `/post/${postId}/upvote`,
+      { upvote: true },
+      await helpers.getToken('basic'),
+    );
+    expect(response.status).toBe(200);
+    let post = await queries.findPost(postId);
+    expect(post?._count.upvotes).toBe(1);
+    // doesn't stack
+    response = await helpers.req(
+      'POST',
+      `/post/${postId}/upvote`,
+      { upvote: true },
+      await helpers.getToken('basic'),
+    );
+    expect(response.status).toBe(200);
+    post = await queries.findPost(postId);
+    expect(post?._count.upvotes).toBe(1);
+  });
+
+  test('POST /post/:postId/upvote - 200 and removes upvote from post', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/post/${postId}/upvote`,
+      { upvote: false },
+      await helpers.getToken('basic'),
+    );
+    expect(response.status).toBe(200);
+    const post = await queries.findPost(postId);
+    expect(post?._count.upvotes).toBe(0);
+  });
+
+  test('POST /post/:postId/downvote - 400 if own post', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/post/${postId}/downvote`,
+      { downvote: true },
+      await helpers.getToken('admin'),
+    );
+    expect(response.status).toBe(403);
+  });
+
+  test('POST /post/:postId/downvote - 200 and downvotes post', async () => {
+    let response = await helpers.req(
+      'POST',
+      `/post/${postId}/downvote`,
+      { downvote: true },
+      await helpers.getToken('basic'),
+    );
+    expect(response.status).toBe(200);
+    let post = await queries.findPost(postId);
+    expect(post?._count.downvotes).toBe(1);
+    // doesn't stack
+    response = await helpers.req(
+      'POST',
+      `/post/${postId}/downvote`,
+      { downvote: true },
+      await helpers.getToken('basic'),
+    );
+    expect(response.status).toBe(200);
+    post = await queries.findPost(postId);
+    expect(post?._count.downvotes).toBe(1);
+  });
+
+  test('POST /post/:postId/downvote - 200 and removes downvote from post', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/post/${postId}/downvote`,
+      { downvote: false },
+      await helpers.getToken('basic'),
+    );
+    expect(response.status).toBe(200);
+    const post = await queries.findPost(postId);
+    expect(post?._count.downvotes).toBe(0);
+  });
+});

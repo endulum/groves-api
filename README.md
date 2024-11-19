@@ -6,7 +6,7 @@ Groves is an arboreal semiclone of Reddit.
 
 The units of interaction in Groves are Communities (likened to "groves"), Posts (likened to "trees" in a grove), and Replies (likened to "leaves" of a tree). Users can form Communities, create Posts in Communities, and write Replies to Posts, with Replies being nestable within other Replies.
 
-- A user can "vote" positively or negatively on a Post or Reply. A user's "verdancy" (likened to "greenness") is a cumulation of positive votes, countered by negative votes, their content has gotten in total.
+- A user can "vote" positively or negatively on a Post or Reply. A user's "verdancy" is a cumulation of positive votes, countered by negative votes, their content has gotten in total.
 - Communities are managed by singular Admins with a variable team of Moderators. Both Admins and Moderators can freeze or hide Posts and Replies, pin Posts, silence users, and edit the community wiki. Admins can appoint or remove Moderators, and change basic details of the Community.
 - Communities have a public Action log wherein certain Community activites are recorded into Actions, such as new Posts and Replies, moderator demotions and additions, and editions to Community details.
 
@@ -14,7 +14,6 @@ Groves uses JSON Web Tokens to authenticate users for protected routes. When mak
 
 ### Todos
 
-- Go through this document and fix up missing features in the codebase
 - Pinning and unpinning Posts
 - Paginated search for Posts
 - Add voting to schema and manage voting
@@ -87,7 +86,7 @@ Similarly to `GET /me`, returns the identity of the user identified by the param
 
 > `GET /communities`
 
-Returns a paginated list of communities. A community must have a status of `ACTIVE` to show up in this endpoint.
+Returns a paginated list of communities. A community must have a status of `ACTIVE` to show up in this list.
 
 ```js
 {
@@ -170,7 +169,7 @@ Removes moderator privileges of the identified community from a user. The commun
 
 > `GET /community/:communityNameOrId/wiki`
 
-Returns a `content` Markdown-supported string consisting of the community's wiki text. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges over this community.
+Returns a `content` string consisting of the community's wiki text. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges over this community.
 
 > `PUT /community/:communityNameOrId/wiki` <sub>protected</sub>
 
@@ -218,11 +217,11 @@ Returns the details of the post identified by `:postId`, if a post exists with a
 Creates a new post in the database, with the root community identified through the `communityId` parameter. The root community must be `ACTIVE`.
 
 - `title`: Required. Must be no longer than 64 characters in length.
-- `content`: Required. Must be no longer than 10,000 characters in length. Supports markdown.
+- `content`: Required. Must be no longer than 10,000 characters in length.
 
 > `PUT /post/:postId` <sub>protected</sub>
 
-Edits the identified post. Follows the same validation rules as `POST /community/:communityId/posts`. The root community must be `ACTIVE` and the authenticated user must be the original author of this post.
+Edits the identified post. Follows the same validation rules as `POST /community/:communityId/posts`. The root community must be `ACTIVE`, the authenticated user must be the original author of this post, and this post must be `ACTIVE`.
 
 > `POST /post/:postId/freeze` <sub>protected</sub>
 
@@ -235,6 +234,18 @@ Sets the `status` of the identified post to `ACTIVE` or `FROZEN`. The authentica
 Sets the `status` of the identified post to `ACTIVE` or `HIDDEN`. The authenticated user must either be the original author of this post, or have moderator privileges over the root community of this post. The root community of this post must be `ACTIVE`.
 
 - `freeze`: Required. Must be a boolean. `true` hides the post, `false` unhides it.
+
+> `POST /post/:postId/upvote` <sub>protected</sub>
+
+Adds or removes the authenticated user to the upvotes of the identified post. The post and its root community must both be `ACTIVE`.
+
+- `upvote`: Required. Must be a boolean. `true` adds an upvote if the user has not already done so, `false` removes the upvote if the user has upvoted.
+
+> `POST /post/:postId/downvote` <sub>protected</sub>
+
+Adds or removes the authenticated user to the downvotes of the identified post. The post and its root community must both be `ACTIVE`.
+
+- `downvote`: Required. Must be a boolean. `true` adds a downvote if the user has not already done so, `false` removes the downvote if the user has downvoted.
 
 ### Actions
 

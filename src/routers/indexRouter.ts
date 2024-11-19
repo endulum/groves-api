@@ -66,4 +66,7 @@ router.route('/post/:postId/freeze').post(user.authenticate, post.freezePost);
 
 router.route('/post/:postId/hide').post(user.authenticate, post.hidePost);
 
+router.route('/post/:postId/upvote').post(user.authenticate, post.upvote);
+router.route('/post/:postId/downvote').post(user.authenticate, post.downvote);
+
 export { router };
