@@ -585,6 +585,38 @@ export async function createBulkPosts(
   return postIds;
 }
 
+export async function createBulkReplies(
+  replyData: Array<fakes.BulkReplyData>,
+  communityId: number | number[],
+  postId: string | string[],
+  authorId: number | number[],
+) {
+  const replyIds: string[] = [];
+  await Promise.all(
+    replyData.map(async (rd) => {
+      const reply = await client.reply.create({
+        data: {
+          content: rd.content,
+          communityId:
+            typeof communityId === 'number'
+              ? communityId
+              : communityId[Math.floor(Math.random() * communityId.length)],
+          postId:
+            typeof postId === 'string'
+              ? postId
+              : postId[Math.floor(Math.random() * postId.length)],
+          authorId:
+            typeof authorId === 'number'
+              ? authorId
+              : authorId[Math.floor(Math.random() * authorId.length)],
+        },
+      });
+      replyIds.push(reply.id);
+    }),
+  );
+  return replyIds;
+}
+
 export async function distributeCommFollowers(
   commId: number,
   userIds: number[],

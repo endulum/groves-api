@@ -40,6 +40,10 @@ export type BulkPostData = {
     // ...
   ] */
 
+export type BulkReplyData = {
+  content: string;
+};
+
 export function bulkUsers(count: number): BulkUserData[] {
   const usernames: string[] = [];
   while (usernames.length < count) {
@@ -98,8 +102,20 @@ export function bulkPosts(count: number): BulkPostData[] {
   while (posts.length < count) {
     const title = faker.lorem.words(Math.ceil(Math.random() * 8));
     const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
-    if (title.length <= 64) posts.push({ title, content });
+    if (title.length <= 64 && content.length <= 10000)
+      posts.push({ title, content });
   }
 
   return posts;
+}
+
+export function bulkReplies(count: number): BulkReplyData[] {
+  const replies: Array<{ content: string }> = [];
+
+  while (replies.length < count) {
+    const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
+    if (content.length <= 10000) replies.push({ content });
+  }
+
+  return replies;
 }

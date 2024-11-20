@@ -6,6 +6,8 @@ export async function populate(
     userCount: number;
     commCount: number;
     postCount: number;
+    maxRepliesPerPost: number;
+    // replyCount: number;
     maxMods: number;
     maxFollowers: number;
   },
@@ -19,6 +21,7 @@ export async function populate(
   const userIds: number[] = [];
   const commIds: number[] = [];
   const postIds: string[] = [];
+  const replyIds: string[] = [];
 
   log('truncating tables');
   await queries.truncateTable('User');
@@ -53,6 +56,24 @@ export async function populate(
         commIds,
         userIds,
       )),
+    );
+  }
+
+  if (opts.maxRepliesPerPost > 0) {
+    log(`creating dummy replies and distributing them randomly`);
+    await Promise.all(
+      postIds.map(async (postId) => {
+        replyIds.push(
+          ...(await queries.createBulkReplies(
+            fakes.bulkReplies(
+              Math.floor(Math.random() * opts.maxRepliesPerPost),
+            ),
+            commIds,
+            postId,
+            userIds,
+          )),
+        );
+      }),
     );
   }
 
