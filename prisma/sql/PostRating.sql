@@ -3,19 +3,17 @@ CREATE OR REPLACE VIEW "PostRating" AS SELECT
   upvotes,
   downvotes,
   (upvotes - downvotes) AS "topScore",
-	(CASE WHEN (downvotes = 0 OR upvotes = 0) THEN 0 ELSE (
+	(CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
   	TRUNC(((upvotes + 1.9208) / (upvotes + downvotes) - 1.96 * SQRT(
     	(upvotes * downvotes) / (upvotes + downvotes) + 0.9604
   	) / (upvotes + downvotes)) / (1 + 3.8416 / (upvotes + downvotes))::numeric, 3)
   ) END) AS "bestScore",
-  (CASE WHEN (downvotes = 0 OR upvotes = 0) THEN 0 ELSE (
-  	TRUNC((
-    	(CASE WHEN ((upvotes - downvotes) > 0) THEN 1 WHEN (upvotes - downvotes) < 0 THEN -1 ELSE 0 END) 
-    	* LOG(GREATEST(ABS((upvotes - downvotes)), 1)) 
-    	+ ((EXTRACT(EPOCH FROM NOW())) / 100000)
-  	)::numeric, 3)
-  ) END) AS "hotScore",
-  (CASE WHEN (downvotes = 0 OR upvotes = 0) THEN 0 ELSE (
+  TRUNC((
+    (CASE WHEN ((upvotes - downvotes) > 0) THEN 1 WHEN (upvotes - downvotes) < 0 THEN -1 ELSE 0 END) 
+    * LOG(GREATEST(ABS((upvotes - downvotes)), 1)) 
+    + ((EXTRACT(EPOCH FROM NOW())) / 100000)
+  )::numeric, 3) AS "hotScore",
+  (CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
   	TRUNC(POWER((upvotes + downvotes), (
     	CASE WHEN (upvotes > downvotes) 
     	THEN CAST(downvotes AS DECIMAL)/upvotes 
