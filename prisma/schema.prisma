@@ -1,6 +1,6 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["omitApi"]
+  previewFeatures = ["omitApi", "typedSql", "views"]
 }
 
 datasource db {
@@ -64,13 +64,23 @@ model Post {
   // "HIDDEN": same as above, but the author and content is rendered blank, and is excluded from author's content history
   pinned     Boolean   @default(false) // if true, goes to the top of the Community post listing on index view
 
-  author      User      @relation(fields: [authorId], references: [id])
+  author      User        @relation(fields: [authorId], references: [id])
   authorId    Int
-  community   Community @relation("postCommunity", fields: [communityId], references: [id])
+  community   Community   @relation("postCommunity", fields: [communityId], references: [id])
   communityId Int
-  replies     Reply[]   @relation("replyPost")
-  upvotes     User[]    @relation("postUpvotes")
-  downvotes   User[]    @relation("postDownvotes")
+  replies     Reply[]     @relation("replyPost")
+  upvotes     User[]      @relation("postUpvotes")
+  downvotes   User[]      @relation("postDownvotes")
+  rating      PostRating? @relation("postRating")
+}
+
+view PostRating {
+  post             Post   @relation("postRating", fields: [postId], references: [id])
+  postId           String @unique
+  topScore         Int
+  bestScore        Float
+  hotScore         Float
+  controversyScore Float
 }
 
 model Reply {
