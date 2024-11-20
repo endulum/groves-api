@@ -303,7 +303,9 @@ describe('vote on posts', () => {
     });
   });
 
-  test('POST /post/:postId/upvote - 400 if own post', async () => {
+  // this is not dry at all... we ball regardless.
+
+  test('POST /post/:postId/upvote - 403 if own post', async () => {
     const response = await helpers.req(
       'POST',
       `/post/${postId}/upvote`,
@@ -321,8 +323,6 @@ describe('vote on posts', () => {
       await helpers.getToken('basic'),
     );
     expect(response.status).toBe(200);
-    let post = await queries.findPost(postId);
-    expect(post?._count.upvotes).toBe(1);
     // doesn't stack
     response = await helpers.req(
       'POST',
@@ -330,9 +330,18 @@ describe('vote on posts', () => {
       { upvote: true },
       await helpers.getToken('basic'),
     );
-    expect(response.status).toBe(200);
-    post = await queries.findPost(postId);
+    expect(response.status).toBe(403);
+    // doesn't let you downvote
+    response = await helpers.req(
+      'POST',
+      `/post/${postId}/downvote`,
+      { downvote: true },
+      await helpers.getToken('admin'),
+    );
+    expect(response.status).toBe(403);
+    const post = await queries.findPost(postId);
     expect(post?._count.upvotes).toBe(1);
+    expect(post?._count.downvotes).toBe(0);
   });
 
   test('POST /post/:postId/upvote - 200 and removes upvote from post', async () => {
@@ -365,8 +374,6 @@ describe('vote on posts', () => {
       await helpers.getToken('basic'),
     );
     expect(response.status).toBe(200);
-    let post = await queries.findPost(postId);
-    expect(post?._count.downvotes).toBe(1);
     // doesn't stack
     response = await helpers.req(
       'POST',
@@ -374,8 +381,17 @@ describe('vote on posts', () => {
       { downvote: true },
       await helpers.getToken('basic'),
     );
-    expect(response.status).toBe(200);
-    post = await queries.findPost(postId);
+    expect(response.status).toBe(403);
+    // doesn't let you upvote
+    response = await helpers.req(
+      'POST',
+      `/post/${postId}/upvote`,
+      { upvote: true },
+      await helpers.getToken('admin'),
+    );
+    expect(response.status).toBe(403);
+    const post = await queries.findPost(postId);
+    expect(post?._count.upvotes).toBe(0);
     expect(post?._count.downvotes).toBe(1);
   });
 

@@ -412,6 +412,19 @@ export async function hidePost(
   }
 }
 
+export async function didUserVote(postId: string, userId: number) {
+  const user = await client.user.findUnique({
+    where: {
+      id: userId,
+      OR: [
+        { postsUpvoted: { some: { id: postId } } },
+        { postsDownvoted: { some: { id: postId } } },
+      ],
+    },
+  });
+  return user !== null;
+}
+
 export async function votePost(
   postId: string,
   userId: number,
@@ -419,43 +432,25 @@ export async function votePost(
   vote: 'true' | 'false',
 ) {
   if (voteType === 'upvote') {
-    const postUpvotes = await client.user.findMany({
-      where: { postsUpvoted: { some: { id: postId } } },
+    await client.post.update({
+      where: { id: postId },
+      data: {
+        upvotes:
+          vote === 'true'
+            ? { connect: { id: userId } }
+            : { disconnect: { id: userId } },
+      },
     });
-    if (vote === 'false' && postUpvotes.find((u) => u.id === userId)) {
-      await client.post.update({
-        where: { id: postId },
-        data: {
-          upvotes: { disconnect: { id: userId } },
-        },
-      });
-    } else if (vote === 'true' && !postUpvotes.find((u) => u.id === userId)) {
-      await client.post.update({
-        where: { id: postId },
-        data: {
-          upvotes: { connect: { id: userId } },
-        },
-      });
-    }
   } else if (voteType === 'downvote') {
-    const postDownvotes = await client.user.findMany({
-      where: { postsDownvoted: { some: { id: postId } } },
+    await client.post.update({
+      where: { id: postId },
+      data: {
+        downvotes:
+          vote === 'true'
+            ? { connect: { id: userId } }
+            : { disconnect: { id: userId } },
+      },
     });
-    if (vote === 'false' && postDownvotes.find((u) => u.id === userId)) {
-      await client.post.update({
-        where: { id: postId },
-        data: {
-          downvotes: { disconnect: { id: userId } },
-        },
-      });
-    } else if (vote === 'true' && !postDownvotes.find((u) => u.id === userId)) {
-      await client.post.update({
-        where: { id: postId },
-        data: {
-          downvotes: { connect: { id: userId } },
-        },
-      });
-    }
   }
 }
 

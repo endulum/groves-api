@@ -140,15 +140,28 @@ export const hidePost = [
   }),
 ];
 
+export const isNotOwnPost = asyncHandler(async (req, res, next) => {
+  if (req.thisPost.author.id !== req.user.id) next();
+  else res.sendStatus(403);
+});
+
 export const upvote = [
   exists,
   isActive,
   rootCommunityIsActive,
+  isNotOwnPost,
   body('upvote').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    if (req.thisPost.author.id === req.user.id) res.sendStatus(403);
-    else {
+    const voted = await queries.didUserVote(req.thisPost.id, req.user.id);
+    if (
+      // you voted and you want to vote again
+      (voted && req.body.upvote === 'true') ||
+      // you never voted and you want to remove your vote
+      (!voted && req.body.upvote === 'false')
+    ) {
+      res.sendStatus(403);
+    } else {
       await queries.votePost(
         req.thisPost.id,
         req.user.id,
@@ -164,11 +177,19 @@ export const downvote = [
   exists,
   isActive,
   rootCommunityIsActive,
+  isNotOwnPost,
   body('downvote').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    if (req.thisPost.author.id === req.user.id) res.sendStatus(403);
-    else {
+    const voted = await queries.didUserVote(req.thisPost.id, req.user.id);
+    if (
+      // you voted and you want to vote again
+      (voted && req.body.downvote === 'true') ||
+      // you never voted and you want to remove your vote
+      (!voted && req.body.downvote === 'false')
+    ) {
+      res.sendStatus(403);
+    } else {
       await queries.votePost(
         req.thisPost.id,
         req.user.id,
