@@ -1,9 +1,8 @@
 CREATE OR REPLACE VIEW "PostRating" AS SELECT
-	id as "postId",
-  upvotes,
-  downvotes,
-  (upvotes - downvotes) AS "topScore",
-	(CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
+  "votedPosts".id as "postId", 
+  "votedPosts".upvotes as upvotes, 
+  "votedPosts".downvotes as downvotes,
+  (CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
   	TRUNC(((upvotes + 1.9208) / (upvotes + downvotes) - 1.96 * SQRT(
     	(upvotes * downvotes) / (upvotes + downvotes) + 0.9604
   	) / (upvotes + downvotes)) / (1 + 3.8416 / (upvotes + downvotes))::numeric, 3)
@@ -36,7 +35,7 @@ FROM (
 		  JOIN "Post" ON "_postDownvotes"."A" = "Post"."id"
 		  GROUP BY "Post"."id"
     ) AS d ON d.id = "Post".id
-)
+) AS "votedPosts"
 WHERE status = 'ACTIVE';
  
 -- https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx

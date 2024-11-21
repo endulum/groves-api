@@ -8,7 +8,7 @@ CREATE TYPE "Status" AS ENUM ('ACTIVE', 'FROZEN', 'HIDDEN');
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
     "username" VARCHAR(32) NOT NULL,
-    "password" VARCHAR(64) NOT NULL,
+    "password" VARCHAR NOT NULL,
     "joined" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "bio" VARCHAR(256),
     "role" "Role" NOT NULL DEFAULT 'BASIC',
@@ -38,8 +38,6 @@ CREATE TABLE "Post" (
     "content" TEXT NOT NULL,
     "datePosted" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastEdited" TIMESTAMP(3),
-    "upvotes" INTEGER NOT NULL DEFAULT 0,
-    "downvotes" INTEGER NOT NULL DEFAULT 0,
     "status" "Status" NOT NULL DEFAULT 'ACTIVE',
     "pinned" BOOLEAN NOT NULL DEFAULT false,
     "authorId" INTEGER NOT NULL,
@@ -53,8 +51,6 @@ CREATE TABLE "Reply" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "datePosted" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "upvotes" INTEGER NOT NULL,
-    "downvotes" INTEGER NOT NULL,
     "status" "Status" NOT NULL DEFAULT 'ACTIVE',
     "pinned" BOOLEAN NOT NULL DEFAULT false,
     "authorId" INTEGER NOT NULL,
@@ -87,6 +83,30 @@ CREATE TABLE "_communityModerators" (
     "B" INTEGER NOT NULL
 );
 
+-- CreateTable
+CREATE TABLE "_postUpvotes" (
+    "A" TEXT NOT NULL,
+    "B" INTEGER NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "_postDownvotes" (
+    "A" TEXT NOT NULL,
+    "B" INTEGER NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "_replyUpvotes" (
+    "A" TEXT NOT NULL,
+    "B" INTEGER NOT NULL
+);
+
+-- CreateTable
+CREATE TABLE "_replyDownvotes" (
+    "A" TEXT NOT NULL,
+    "B" INTEGER NOT NULL
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_username_key" ON "User"("username");
 
@@ -104,6 +124,30 @@ CREATE UNIQUE INDEX "_communityModerators_AB_unique" ON "_communityModerators"("
 
 -- CreateIndex
 CREATE INDEX "_communityModerators_B_index" ON "_communityModerators"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_postUpvotes_AB_unique" ON "_postUpvotes"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_postUpvotes_B_index" ON "_postUpvotes"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_postDownvotes_AB_unique" ON "_postDownvotes"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_postDownvotes_B_index" ON "_postDownvotes"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_replyUpvotes_AB_unique" ON "_replyUpvotes"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_replyUpvotes_B_index" ON "_replyUpvotes"("B");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "_replyDownvotes_AB_unique" ON "_replyDownvotes"("A", "B");
+
+-- CreateIndex
+CREATE INDEX "_replyDownvotes_B_index" ON "_replyDownvotes"("B");
 
 -- AddForeignKey
 ALTER TABLE "Community" ADD CONSTRAINT "Community_adminId_fkey" FOREIGN KEY ("adminId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
@@ -141,3 +185,66 @@ ALTER TABLE "_communityModerators" ADD CONSTRAINT "_communityModerators_A_fkey" 
 -- AddForeignKey
 ALTER TABLE "_communityModerators" ADD CONSTRAINT "_communityModerators_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- AddForeignKey
+ALTER TABLE "_postUpvotes" ADD CONSTRAINT "_postUpvotes_A_fkey" FOREIGN KEY ("A") REFERENCES "Post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_postUpvotes" ADD CONSTRAINT "_postUpvotes_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_postDownvotes" ADD CONSTRAINT "_postDownvotes_A_fkey" FOREIGN KEY ("A") REFERENCES "Post"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_postDownvotes" ADD CONSTRAINT "_postDownvotes_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_replyUpvotes" ADD CONSTRAINT "_replyUpvotes_A_fkey" FOREIGN KEY ("A") REFERENCES "Reply"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_replyUpvotes" ADD CONSTRAINT "_replyUpvotes_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_replyDownvotes" ADD CONSTRAINT "_replyDownvotes_A_fkey" FOREIGN KEY ("A") REFERENCES "Reply"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "_replyDownvotes" ADD CONSTRAINT "_replyDownvotes_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+CREATE OR REPLACE VIEW "PostRating" AS SELECT
+  "votedPosts".id as "postId", 
+  "votedPosts".upvotes as upvotes, 
+  "votedPosts".downvotes as downvotes,
+  (CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
+  	TRUNC(((upvotes + 1.9208) / (upvotes + downvotes) - 1.96 * SQRT(
+    	(upvotes * downvotes) / (upvotes + downvotes) + 0.9604
+  	) / (upvotes + downvotes)) / (1 + 3.8416 / (upvotes + downvotes))::numeric, 3)
+  ) END) AS "bestScore",
+  TRUNC((
+    (CASE WHEN ((upvotes - downvotes) > 0) THEN 1 WHEN (upvotes - downvotes) < 0 THEN -1 ELSE 0 END) 
+    * LOG(GREATEST(ABS((upvotes - downvotes)), 1)) 
+    + ((EXTRACT(EPOCH FROM NOW())) / 100000)
+  )::numeric, 3) AS "hotScore",
+  (CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
+  	TRUNC(POWER((upvotes + downvotes), (
+    	CASE WHEN (upvotes > downvotes) 
+    	THEN CAST(downvotes AS DECIMAL)/upvotes 
+    	ELSE CAST(upvotes AS DECIMAL)/downvotes 
+    	END
+  	))::numeric, 3)
+  ) END) AS "controversyScore"
+FROM (
+  SELECT "Post".*, COALESCE(ups, 0) AS upvotes, COALESCE(downs, 0) AS downvotes
+  FROM "Post"
+    LEFT JOIN (
+      SELECT "Post"."id" AS "id", COUNT("_postUpvotes"."B") AS "ups"
+		  FROM "_postUpvotes" 
+		  JOIN "Post" ON "_postUpvotes"."A" = "Post"."id"
+		  GROUP BY "Post"."id"
+    ) AS u ON u.id = "Post".id
+    LEFT JOIN (
+      SELECT "Post"."id" AS "id", COUNT("_postDownvotes"."B") AS "downs"
+		  FROM "_postDownvotes" 
+		  JOIN "Post" ON "_postDownvotes"."A" = "Post"."id"
+		  GROUP BY "Post"."id"
+    ) AS d ON d.id = "Post".id
+) AS "votedPosts"
+WHERE status = 'ACTIVE';
