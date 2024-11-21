@@ -213,6 +213,7 @@ CREATE OR REPLACE VIEW "PostRating" AS SELECT
   "votedPosts".id as "postId", 
   "votedPosts".upvotes as upvotes, 
   "votedPosts".downvotes as downvotes,
+  (upvotes - downvotes) as "topScore",
   (CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
   	TRUNC(((upvotes + 1.9208) / (upvotes + downvotes) - 1.96 * SQRT(
     	(upvotes * downvotes) / (upvotes + downvotes) + 0.9604
