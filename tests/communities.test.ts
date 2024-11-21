@@ -406,10 +406,9 @@ describe('search communities', async () => {
       userCount: 250,
       commCount,
       postCount: 1000,
-      maxRepliesPerPost: 0,
-      maxVotesPerPost: 0,
-      maxMods: 5,
-      maxFollowers: 250,
+      followers: {
+        max: 250,
+      },
     });
   });
 

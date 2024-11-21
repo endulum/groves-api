@@ -437,10 +437,12 @@ describe('search posts', () => {
       userCount: 200,
       commCount: 1,
       postCount: 50,
-      maxRepliesPerPost: 50,
-      maxVotesPerPost: 200,
-      maxFollowers: 0,
-      maxMods: 0,
+      replies: {
+        max: 50,
+      },
+      votes: {
+        max: 250,
+      },
     });
   });
 
@@ -657,3 +659,8 @@ describe('search posts', () => {
     }
   });
 });
+
+// NEXT:
+// distribute replies to a post.
+// generate random trees of replies to a post.
+// have /post/:postId give you a tree of replies.

@@ -522,6 +522,18 @@ export async function votePost(
   }
 }
 
+export async function connectReply(
+  parentReplyId: string,
+  childReplyId: string,
+) {
+  await client.reply.update({
+    where: { id: parentReplyId },
+    data: {
+      children: { connect: { id: childReplyId } },
+    },
+  });
+}
+
 // testing-specific
 
 // truncating User also truncates Post, Community, and Action
