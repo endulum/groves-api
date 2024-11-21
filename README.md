@@ -193,6 +193,7 @@ Returns a paginated list of posts under the identified community. A post must ha
 {
 	posts: [
         {
+            id: 'cm3qc9dfs0004b1at6p5sdlqh',
             title: 'Lorem Ipsum',
             datePosted: '2024-10-17T03:34:27.290Z',
             author: {
@@ -227,7 +228,7 @@ This endpoint accepts query parameters:
 - `name`: filters for any posts whose `title` includes the string provided.
 - `take`: how many results to show at once. By default, 20 results are shown.
 
-The `hot` and `controversial` rankings are based off of [Reddit's own implementation of those rankings.](https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx) The `best` ranking uses the SQL implementation of the William score in [How Not To Sort By Average Rating.](https://www.evanmiller.org/how-not-to-sort-by-average-rating.html) `hot`, `best` and `controversial` sort will not show posts with zero upvotes and zero downvotes.
+The `hot` and `controversial` rankings are based off of [Reddit's own implementation of those rankings.](https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx) The `best` ranking uses the SQL implementation of the William score in [How Not To Sort By Average Rating.](https://www.evanmiller.org/how-not-to-sort-by-average-rating.html)
 
 This endpoint uses cursor-based pagination. A cursor "id" is passed into a `before` or `after` query parameter when visiting a previous or next page, respectively. Under `links`, this endpoint lists a "next" or "previous" page endpoint if present.
 

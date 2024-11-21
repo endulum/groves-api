@@ -7,7 +7,7 @@ export async function populate(
     commCount: number;
     postCount: number;
     maxRepliesPerPost: number;
-    // replyCount: number;
+    maxVotesPerPost: number;
     maxMods: number;
     maxFollowers: number;
   },
@@ -73,6 +73,28 @@ export async function populate(
             userIds,
           )),
         );
+      }),
+    );
+  }
+
+  if (opts.maxVotesPerPost > 0) {
+    log(`distributing votes randomly across posts`);
+    await Promise.all(
+      postIds.map(async (post, index) => {
+        if (index === 0) {
+          await queries.distributeVotes(post, [userIds[0]], []);
+        } else if (index === 1) {
+          await queries.distributeVotes(post, [], [userIds[0]]);
+        } else {
+          const votingUsers = userIds.slice(
+            0,
+            Math.floor(Math.random() * userIds.length),
+          );
+          const middle = Math.floor(Math.random() * votingUsers.length);
+          const upvoters = votingUsers.slice(0, middle);
+          const downvoters = votingUsers.slice(middle + 1, votingUsers.length);
+          await queries.distributeVotes(post, upvoters, downvoters);
+        }
       }),
     );
   }

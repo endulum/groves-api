@@ -55,6 +55,7 @@ router
 
 router
   .route('/community/:communityUrlOrId/posts')
+  .get(post.search)
   .post(user.authenticate, post.newPost);
 
 router

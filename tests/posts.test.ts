@@ -1,5 +1,7 @@
 import * as helpers from './helpers';
 import * as queries from '../prisma/queries';
+import { populate } from '../prisma/populate';
+import wilson from 'wilson-score-interval';
 
 let commId: number = 0;
 
@@ -405,5 +407,253 @@ describe('vote on posts', () => {
     expect(response.status).toBe(200);
     const post = await queries.findPost(postId);
     expect(post?._count.downvotes).toBe(0);
+  });
+});
+
+const hotness = (upvotes: number, downvotes: number) => {
+  const order = Math.log10(Math.max(Math.abs(upvotes - downvotes), 1));
+  const sign: number =
+    upvotes - downvotes > 0 ? 1 : upvotes - downvotes < 0 ? -1 : 0;
+  const seconds = Date.now();
+  return sign * order + seconds / 100000;
+};
+
+const top = (upvotes: number, downvotes: number) => upvotes - downvotes;
+
+const best = (upvotes: number, downvotes: number) => {
+  if (upvotes + downvotes === 0) return 0;
+  return wilson(upvotes, upvotes + downvotes);
+};
+
+const controversy = (upvotes: number, downvotes: number) => {
+  if (upvotes + downvotes === 0) return 0;
+  const power = upvotes > downvotes ? downvotes / upvotes : upvotes / downvotes;
+  return Math.pow(upvotes + downvotes, power);
+};
+
+describe('search posts', () => {
+  beforeAll(async () => {
+    await populate({
+      userCount: 200,
+      commCount: 1,
+      postCount: 50,
+      maxRepliesPerPost: 50,
+      maxVotesPerPost: 200,
+      maxFollowers: 0,
+      maxMods: 0,
+    });
+  });
+
+  test('GET /community/:communityId/posts - shows max 20 posts by hotness descending, by default', async () => {
+    const response = await helpers.req('GET', '/community/1/posts');
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('posts');
+    expect(response.body.posts.length).toBe(20);
+    expect(
+      [...response.body.posts].sort(
+        (
+          post_a: { _count: { upvotes: number; downvotes: number } },
+          post_b: { _count: { upvotes: number; downvotes: number } },
+        ) =>
+          hotness(post_b._count.upvotes, post_b._count.downvotes) -
+          hotness(post_a._count.upvotes, post_a._count.downvotes),
+      ),
+    ).toEqual(response.body.posts);
+    // console.dir(response.body, { depth: null });
+  });
+
+  test('GET /community/:communityId/posts - query "take" works', async () => {
+    const response = await helpers.req('GET', '/community/1/posts?take=30');
+    expect(response.status).toBe(200);
+    expect(response.body.posts.length).toBe(30);
+  });
+
+  test('GET /community/:communityId/posts - query "name" works', async () => {
+    const response = await helpers.req('GET', '/community/1/posts?title=um');
+    expect(response.status).toBe(200);
+    expect(
+      response.body.posts.filter((post: { title: string }) =>
+        post.title.includes('um'),
+      ),
+    ).toEqual(response.body.posts);
+  });
+
+  test('GET /community/:communityId/posts - query "sort" works (newest)', async () => {
+    const response = await helpers.req('GET', '/community/1/posts?sort=newest');
+    expect(response.status).toBe(200);
+    expect(
+      [...response.body.posts].sort(
+        (
+          post_a: { _count: { posts: number } },
+          post_b: { _count: { posts: number } },
+        ) => post_b._count.posts - post_a._count.posts,
+      ),
+    ).toEqual(response.body.posts);
+  });
+
+  test('GET /community/:communityId/posts - query "sort" works (replies)', async () => {
+    const response = await helpers.req(
+      'GET',
+      '/community/1/posts?sort=replies',
+    );
+    expect(response.status).toBe(200);
+    expect(
+      [...response.body.posts].sort(
+        (
+          post_a: { _count: { replies: number } },
+          post_b: { _count: { replies: number } },
+        ) => post_b._count.replies - post_a._count.replies,
+      ),
+    ).toEqual(response.body.posts);
+  });
+
+  test('GET /community/:communityId/posts - query "sort" works (top)', async () => {
+    const response = await helpers.req('GET', '/community/1/posts?sort=top');
+    expect(response.status).toBe(200);
+    expect(
+      [...response.body.posts].sort(
+        (
+          post_a: { _count: { upvotes: number; downvotes: number } },
+          post_b: { _count: { upvotes: number; downvotes: number } },
+        ) =>
+          top(post_b._count.upvotes, post_b._count.downvotes) -
+          top(post_a._count.upvotes, post_a._count.downvotes),
+      ),
+    ).toEqual(response.body.posts);
+  });
+
+  test('GET /community/:communityId/posts - query "sort" works (best)', async () => {
+    const response = await helpers.req('GET', '/community/1/posts?sort=best');
+    expect(response.status).toBe(200);
+    expect(
+      [...response.body.posts].sort(
+        (
+          post_a: { _count: { upvotes: number; downvotes: number } },
+          post_b: { _count: { upvotes: number; downvotes: number } },
+        ) =>
+          best(post_b._count.upvotes, post_b._count.downvotes) -
+          best(post_a._count.upvotes, post_a._count.downvotes),
+      ),
+    ).toEqual(response.body.posts);
+  });
+
+  test('GET /community/:communityId/posts - query "sort" works (controversial)', async () => {
+    const response = await helpers.req(
+      'GET',
+      '/community/1/posts?sort=controversial',
+    );
+    expect(response.status).toBe(200);
+    expect(
+      [...response.body.posts].sort(
+        (
+          post_a: { _count: { upvotes: number; downvotes: number } },
+          post_b: { _count: { upvotes: number; downvotes: number } },
+        ) =>
+          controversy(post_b._count.upvotes, post_b._count.downvotes) -
+          controversy(post_a._count.upvotes, post_a._count.downvotes),
+      ),
+    ).toEqual(response.body.posts);
+  });
+
+  test('GET /community/:communityId/posts - pagination', async () => {
+    let response = await helpers.req('GET', '/community/1/posts');
+    expect(response.body).toHaveProperty('links');
+    expect(response.body.links.nextPage).not.toBeNull();
+
+    // keep a record of results as we page forward
+    let pageCount: number = 1;
+    const results: Record<number, number[]> = {
+      [pageCount]: response.body.posts.map(({ id }: { id: number }) => id),
+    };
+    let nextPage: string = response.body.links.nextPage;
+    while (nextPage !== null) {
+      response = await helpers.req('GET', nextPage, null, null);
+      nextPage = response.body.links.nextPage;
+      pageCount++;
+      results[pageCount] = response.body.posts.map(
+        ({ id }: { id: number }) => id,
+      );
+    }
+
+    // use record to expect a correct amount of results
+    expect(
+      Object.keys(results).reduce((acc: number, curr: string) => {
+        return acc + results[parseInt(curr, 10)].length;
+      }, 0),
+    ).toEqual(50);
+    // use record expect a correct amount of pages
+    expect(pageCount).toEqual(Math.ceil(50 / 20));
+
+    // page backward, comparing against recorded "pages"
+    let prevPage: string = response.body.links.prevPage;
+    while (prevPage !== null) {
+      response = await helpers.req('GET', prevPage, null, null);
+      prevPage = response.body.links.prevPage;
+      pageCount--;
+      // expect that each "page" has the exact same results
+      expect(response.body.posts.map(({ id }: { id: number }) => id)).toEqual(
+        results[pageCount],
+      );
+    }
+  });
+
+  test('GET /community/:communityId/posts - pagination maintains other queries', async () => {
+    let response = await helpers.req(
+      'GET',
+      '/community/1/posts?take=10&sort=best',
+    );
+    expect(response.body).toHaveProperty('links');
+    expect(response.body.links.nextPage).not.toBeNull();
+
+    // pretty much the same as the last test except, in between pages,
+    // we assert that our additional queries are actually applying
+    const assertCorrectResults = () => {
+      expect(response.body.posts.length).toBe(10);
+      expect(
+        [...response.body.posts].sort(
+          (
+            post_a: { _count: { upvotes: number; downvotes: number } },
+            post_b: { _count: { upvotes: number; downvotes: number } },
+          ) =>
+            best(post_b._count.upvotes, post_b._count.downvotes) -
+            best(post_a._count.upvotes, post_a._count.downvotes),
+        ),
+      ).toEqual(response.body.posts);
+    };
+
+    assertCorrectResults();
+
+    let pageCount: number = 1;
+    const results: Record<number, number[]> = {
+      [pageCount]: response.body.posts.map(({ id }: { id: number }) => id),
+    };
+    let nextPage: string = response.body.links.nextPage;
+    while (nextPage !== null) {
+      response = await helpers.req('GET', nextPage, null, null);
+      assertCorrectResults();
+      nextPage = response.body.links.nextPage;
+      pageCount++;
+      results[pageCount] = response.body.posts.map(
+        ({ id }: { id: number }) => id,
+      );
+    }
+
+    expect(
+      Object.keys(results).reduce((acc: number, curr: string) => {
+        return acc + results[parseInt(curr, 10)].length;
+      }, 0),
+    ).toEqual(50);
+    expect(pageCount).toEqual(Math.ceil(50 / 10));
+
+    let prevPage: string = response.body.links.prevPage;
+    while (prevPage !== null) {
+      response = await helpers.req('GET', prevPage, null, null);
+      assertCorrectResults();
+      prevPage = response.body.links.prevPage;
+      pageCount--;
+      expect(response.body.posts.map(({ id }: { id: number }) => id)).toEqual(
+        results[pageCount],
+      );
+    }
   });
 });

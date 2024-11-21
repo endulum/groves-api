@@ -5,6 +5,47 @@ import { validate } from '../middleware/validate';
 import * as queries from '../../prisma/queries';
 import * as community from './community';
 
+export const search = [
+  community.exists,
+  asyncHandler(async (req, res) => {
+    const { before, after, take, title, sort } = req.query as Record<
+      string,
+      string | undefined
+    >;
+
+    const { results, nextCursor, prevCursor } = await queries.searchPosts({
+      before: before ?? undefined,
+      after: after ?? undefined,
+      take: take ? (parseInt(take, 10) ?? 20) : 20,
+      title: title ?? '',
+      sort: sort ?? 'activity',
+    });
+
+    const rebuiltQuery: string[] = [];
+    if (take) rebuiltQuery.push(`take=${take}`);
+    if (title) rebuiltQuery.push(`name=${title}`);
+    if (sort) rebuiltQuery.push(`sort=${sort}`);
+    const queryString =
+      rebuiltQuery.length > 0 ? '&' + rebuiltQuery.join('&') : '';
+
+    const nextPage = nextCursor
+      ? `/community/${
+          req.thisCommunity.urlName
+        }/posts?after=${nextCursor}${queryString}`
+      : null;
+    const prevPage = prevCursor
+      ? `/community/${
+          req.thisCommunity.urlName
+        }/posts?before=${prevCursor}${queryString}`
+      : null;
+
+    res.json({
+      posts: results,
+      links: { nextPage, prevPage },
+    });
+  }),
+];
+
 export const exists = asyncHandler(async (req, res, next) => {
   const post = await queries.findPost(req.params.postId);
   if (post) {

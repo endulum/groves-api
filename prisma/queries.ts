@@ -145,6 +145,74 @@ export async function updateUser(
   });
 }
 
+// use a pagination wrapper for both of these?
+
+export async function searchPosts(opts: {
+  before?: string;
+  after?: string;
+  take: number;
+  title: string;
+  sort: string;
+}) {
+  const orderBy: Prisma.PostOrderByWithRelationInput[] = [{ id: 'desc' }];
+  switch (opts.sort) {
+    case 'newest':
+      orderBy.unshift({ datePosted: 'desc' });
+      break;
+    case 'replies':
+      orderBy.unshift({ replies: { _count: 'desc' } });
+      break;
+    case 'top':
+      orderBy.unshift({ rating: { topScore: 'desc' } });
+      break;
+    case 'best':
+      orderBy.unshift({ rating: { bestScore: 'desc' } });
+      break;
+    case 'controversial':
+      orderBy.unshift({ rating: { controversyScore: 'desc' } });
+      break;
+    default:
+      orderBy.unshift({ rating: { hotScore: 'desc' } });
+  }
+
+  const cursor = opts.after ?? opts.before;
+  const direction = opts.after ? 'forward' : opts.before ? 'backward' : 'none';
+
+  const posts = await client.post.findMany({
+    where: {
+      status: 'ACTIVE',
+      title: { contains: opts.title ?? '' },
+    },
+    orderBy,
+    select: {
+      id: true,
+      title: true,
+      datePosted: true,
+      author: { select: { id: true, username: true } },
+      _count: { select: { replies: true, upvotes: true, downvotes: true } },
+    },
+    cursor: cursor ? { id: cursor } : undefined,
+    skip: direction === 'none' ? undefined : 1,
+    take: (direction === 'backward' ? -1 : 1) * (opts.take + 1),
+  });
+
+  const results =
+    direction === 'backward'
+      ? posts.slice(-opts.take)
+      : posts.slice(0, opts.take);
+
+  const hasMore = posts.length > opts.take;
+
+  const nextCursor =
+    direction === 'backward' || hasMore ? results.at(-1)?.id : null;
+  const prevCursor =
+    direction === 'forward' || (direction === 'backward' && hasMore)
+      ? results.at(0)?.id
+      : null;
+
+  return { results, nextCursor, prevCursor };
+}
+
 // GET /communities
 export async function searchCommunities(opts: {
   before?: number; // cursor for paging backwards

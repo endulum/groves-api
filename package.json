@@ -11,6 +11,7 @@
     "docker:db": "docker exec -it integration-tests-prisma psql -U prisma tests",
     "docker:migrate": "npm run docker:up && npx dotenv -e .env.test -- npx prisma migrate deploy",
     "docker:rollback": "npm run docker:up && npx dotenv -e .env.test -- npx prisma migrate resolve --rolled-back",
+    "docker:reset": "npm run docker:up && npx dotenv -e .env.test -- prisma migrate reset",
     "docker:clean": "docker compose down --rmi all --volumes --remove-orphans",
     "test": "npm run docker:migrate && npx dotenv -e .env.test -- vitest",
     "build": "tsc -p tsconfig.prod.json",
@@ -39,7 +40,8 @@
     "jsonwebtoken": "^9.0.2",
     "lorem-ipsum": "^2.0.8",
     "morgan": "^1.10.0",
-    "supertest": "^7.0.0"
+    "supertest": "^7.0.0",
+    "wilson-score-interval": "^2.1.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
