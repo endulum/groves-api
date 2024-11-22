@@ -38,60 +38,7 @@ export const search = asyncHandler(async (req, res) => {
   });
 });
 
-export const exists = asyncHandler(async (req, res, next) => {
-  const community = await queries.findCommunity({
-    urlName: req.params.communityUrlOrId,
-    id: parseInt(req.params.communityUrlOrId),
-  });
-  if (
-    community &&
-    (!(community.status === 'HIDDEN') ||
-      (req.user && req.user.id === community.adminId))
-  ) {
-    req.thisCommunity = community;
-    next();
-  } else res.sendStatus(404);
-});
-
-export const get = asyncHandler(async (req, res) => {
-  const moderators = await queries.findCommMods(req.thisCommunity.id);
-  const { id, username } = req.thisCommunity.admin;
-  delete req.thisCommunity.adminId;
-  delete req.thisCommunity.wiki;
-  res.json({
-    ...req.thisCommunity,
-    admin: { id, username },
-    moderators,
-  });
-});
-
-export const getWiki = asyncHandler(async (req, res) => {
-  res.json({
-    content: req.thisCommunity.wiki,
-  });
-});
-
-export const isActive = asyncHandler(async (req, res, next) => {
-  if (req.thisCommunity.status === 'ACTIVE') next();
-  else res.sendStatus(403);
-});
-
-export const isAdmin = asyncHandler(async (req, res, next) => {
-  if (req.thisCommunity.adminId === req.user.id) next();
-  else res.sendStatus(403);
-});
-
-export const isMod = asyncHandler(async (req, res, next) => {
-  const moderators = await queries.findCommMods(req.thisCommunity.id);
-  if (
-    req.thisCommunity.admin.id === req.user.id ||
-    moderators.find((mod) => mod.id === req.user.id)
-  )
-    next();
-  else res.sendStatus(403);
-});
-
-export const validation = [
+const validation = [
   body('urlName')
     .trim()
     .notEmpty()
@@ -106,6 +53,8 @@ export const validation = [
     .withMessage('Community URL names must only contain lowercase and numbers.')
     .bail()
     .custom(async (value, { req }) => {
+      if (parseInt(value, 10) > 0)
+        throw new Error('Community URLs cannot be made solely of numbers.');
       const existingCommunity = await queries.findCommunity({ urlName: value });
       if (
         existingCommunity && // a community exists
@@ -140,7 +89,7 @@ export const validation = [
     .escape(),
 ];
 
-export const newCommunity = [
+export const create = [
   ...validation,
   validate,
   asyncHandler(async (req, res) => {
@@ -154,9 +103,48 @@ export const newCommunity = [
   }),
 ];
 
-export const updateCommunity = [
+export const exists = asyncHandler(async (req, res, next) => {
+  const community = await queries.findCommunity({
+    urlName: req.params.community,
+    id: parseInt(req.params.community),
+  });
+  if (
+    community &&
+    (!(community.status === 'HIDDEN') ||
+      (req.user && req.user.id === community.adminId))
+  ) {
+    req.thisCommunity = community;
+    next();
+  } else res.sendStatus(404);
+});
+
+export const get = [
   exists,
-  isActive,
+  asyncHandler(async (req, res) => {
+    // no. just expand these in query in the `exists` handler..
+    // const moderators = await queries.findCommMods(req.thisCommunity.id);
+    // const { id, username } = req.thisCommunity.admin;
+    delete req.thisCommunity.adminId;
+    delete req.thisCommunity.wiki;
+    res.json(req.thisCommunity);
+    // also consider adding counts?
+    // total votes, total posts, total followers
+  }),
+];
+
+export const isNotFrozen = asyncHandler(async (req, res, next) => {
+  if (req.thisCommunity.status !== 'FROZEN') next();
+  else res.sendStatus(403);
+});
+
+export const isAdmin = asyncHandler(async (req, res, next) => {
+  if (req.thisCommunity.admin.id === req.user.id) next();
+  else res.sendStatus(403);
+});
+
+export const edit = [
+  exists,
+  isNotFrozen,
   isAdmin,
   ...validation,
   validate,
@@ -170,9 +158,59 @@ export const updateCommunity = [
   }),
 ];
 
+export const isAdminOrMod = asyncHandler(async (req, res, next) => {
+  if (
+    req.thisCommunity.admin.id === req.user.id ||
+    req.thisCommunity.moderators.find(
+      (mod: { id: number }) => mod.id === req.user.id,
+    )
+  )
+    next();
+  else res.sendStatus(403);
+});
+
+export const getWiki = [
+  exists,
+  asyncHandler(async (req, res) => {
+    res.json({
+      content: req.thisCommunity.wiki,
+    });
+  }),
+];
+
+export const editWiki = [
+  exists,
+  isNotFrozen,
+  isAdminOrMod,
+  body('content').trim().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    if (req.body.content === '')
+      await queries.editCommunityWiki(req.thisCommunity.id, null);
+    else
+      await queries.editCommunityWiki(req.thisCommunity.id, req.body.content);
+    res.sendStatus(200);
+  }),
+];
+
+export const follow = [
+  exists,
+  isNotFrozen,
+  body('follow').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    await queries.followCommunity(
+      req.thisCommunity.id,
+      req.user.id,
+      req.body.follow,
+    );
+    res.sendStatus(200);
+  }),
+];
+
 export const promote = [
   exists,
-  isActive,
+  isNotFrozen,
   isAdmin,
   body('username')
     .trim()
@@ -203,7 +241,7 @@ export const promote = [
 
 export const demote = [
   exists,
-  isActive,
+  isNotFrozen,
   isAdmin,
   body('username')
     .trim()
@@ -232,21 +270,6 @@ export const demote = [
   }),
 ];
 
-export const follow = [
-  exists,
-  isActive,
-  body('follow').trim().isBoolean().escape(),
-  validate,
-  asyncHandler(async (req, res) => {
-    await queries.followCommunity(
-      req.thisCommunity.id,
-      req.user.id,
-      req.body.follow,
-    );
-    res.sendStatus(200);
-  }),
-];
-
 export const freeze = [
   exists,
   isAdmin,
@@ -258,21 +281,6 @@ export const freeze = [
       req.thisCommunity.status,
       req.body.freeze,
     );
-    res.sendStatus(200);
-  }),
-];
-
-export const editWiki = [
-  exists,
-  isActive,
-  isMod,
-  body('content').trim().escape(),
-  validate,
-  asyncHandler(async (req, res) => {
-    if (req.body.content === '')
-      await queries.editCommunityWiki(req.thisCommunity.id, null);
-    else
-      await queries.editCommunityWiki(req.thisCommunity.id, req.body.content);
     res.sendStatus(200);
   }),
 ];

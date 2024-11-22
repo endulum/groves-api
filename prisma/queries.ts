@@ -18,14 +18,18 @@ export async function findUser(find: { username?: string; id?: number }) {
 }
 
 export async function findCommunity(find: { urlName?: string; id?: number }) {
-  return client.community.findFirst({
+  return await client.community.findFirst({
     where: {
       OR: [
         { id: Object.is(find.id, NaN) ? 0 : find.id },
         { urlName: find.urlName ?? '' },
       ],
     },
-    include: { admin: true },
+    include: {
+      admin: { select: { id: true, username: true } },
+      moderators: { select: { id: true, username: true } },
+      _count: { select: { followers: true, posts: true } },
+    },
   });
 }
 
@@ -46,11 +50,11 @@ export async function findPost(id: string) {
           canonicalName: true,
         },
       },
-      replies: true,
       _count: {
         select: {
           upvotes: true,
           downvotes: true,
+          replies: true,
         },
       },
     },
@@ -407,7 +411,11 @@ export async function freezeCommunity(
 export async function createPost(
   communityId: number,
   authorId: number,
-  body: { title: string; content: string },
+  body: {
+    title: string;
+    content: string;
+    status?: 'ACTIVE' | 'HIDDEN' | 'FROZEN';
+  },
 ) {
   const post = await client.post.create({
     data: {
@@ -420,6 +428,14 @@ export async function createPost(
       author: true,
     },
   });
+
+  await client.community.update({
+    where: { id: communityId },
+    data: {
+      lastActivity: new Date(),
+    },
+  });
+
   return post.id;
   // todo: record action
 }

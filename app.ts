@@ -5,8 +5,7 @@ import cors from 'cors';
 import logger from 'morgan';
 
 import { errorHandler } from './src/middleware/errorHandler';
-import { router as authRouter } from './src/routers/authRouter';
-import { router as indexRouter } from './src/routers/indexRouter';
+import { router } from './src/router';
 
 dotenv.config({ path: '.env' });
 dotenv.config({ path: `.env.${process.env.ENV}` });
@@ -41,8 +40,7 @@ if (process.env.ENV === 'development') {
   );
 }
 
-app.use(authRouter);
-app.use(indexRouter);
+app.use(router);
 
 app.use(
   '*',

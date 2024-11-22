@@ -6,8 +6,6 @@ import * as queries from '../../prisma/queries';
 import { usernameValidation } from './auth';
 import { validate } from '../middleware/validate';
 
-// use the incoming jwt to define req.user
-// for routes where req.user may or may not exist
 export const deserialize = asyncHandler(async (req, _res, next) => {
   const bearerHeader = req.headers.authorization;
   const bearerToken = bearerHeader?.split(' ')[1];
@@ -23,12 +21,9 @@ export const deserialize = asyncHandler(async (req, _res, next) => {
   } catch (err) {
     console.error(err);
   }
-
   return next();
 });
 
-// check if req.user is defined
-// for routes that require req.user to be defined
 export const authenticate = [
   deserialize,
   asyncHandler(async (req, res, next) => {
@@ -40,8 +35,8 @@ export const authenticate = [
   }),
 ];
 
-// edit self details
-export const editMe = [
+export const edit = [
+  ...authenticate,
   usernameValidation,
   body('bio')
     .trim()
@@ -80,22 +75,17 @@ export const editMe = [
       }
     })
     .escape(),
-
   validate,
-
   asyncHandler(async (req, res) => {
     await queries.updateUser({ username: req.user.username }, req.body);
     res.sendStatus(200);
   }),
 ];
 
-// imported to any controllers that need the `userNameOrId` param.
-// checks if user by that id exists, sets req.thisUser to existing user,
-// returns 404 if user not found
 export const exists = asyncHandler(async (req, res, next) => {
   const user = await queries.findUser({
-    username: req.params.userNameOrId,
-    id: parseInt(req.params.userNameOrId, 10),
+    username: req.params.user,
+    id: parseInt(req.params.user, 10),
   });
   if (user) {
     req.thisUser = user;
@@ -103,17 +93,18 @@ export const exists = asyncHandler(async (req, res, next) => {
   } else res.sendStatus(404);
 });
 
-// respond with data, omitting username
-export const get = asyncHandler(async (req, res) => {
-  delete req.thisUser.password;
-  res.json(req.thisUser);
-});
-
-// if getting self details, just set thisUser to the auth user
-export const me = [
-  asyncHandler(async (req, _res, next) => {
-    req.thisUser = req.user;
-    next();
+export const get = [
+  exists,
+  asyncHandler(async (req, res) => {
+    delete req.thisUser.password;
+    res.json(req.thisUser);
   }),
-  get,
+];
+
+export const me = [
+  ...authenticate,
+  asyncHandler(async (req, res) => {
+    delete req.user.password;
+    res.json(req.user);
+  }),
 ];

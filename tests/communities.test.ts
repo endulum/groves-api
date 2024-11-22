@@ -2,61 +2,114 @@ import * as helpers from './helpers';
 import * as queries from '../prisma/queries';
 import { populate } from '../prisma/populate';
 
-beforeAll(async () => {
-  await queries.truncateTable('User');
-  await queries.createAdmin();
-  await queries.createUser('basic');
-});
+describe('search communities', () => {
+  const commCount = 100;
 
-describe('see a community', () => {
   beforeAll(async () => {
-    await queries.truncateTable('Community');
-    await queries.createBulkCommunities(
-      [
-        {
-          urlName: 'active',
-          canonicalName: 'Active Community',
-          description: 'You should be able to see this one.',
-        },
-        {
-          urlName: 'hidden',
-          canonicalName: 'Hidden Community',
-          description:
-            'Nobody should be able to see this one except for the site admin.',
-          status: 'HIDDEN',
-        },
-      ],
-      1,
-    );
+    await populate({
+      userCount: 250,
+      commCount,
+      postCount: 1000,
+      followers: {
+        max: 250,
+      },
+    });
   });
 
-  test('GET /community/:communityUrlOrId - 404 if community not found', async () => {
-    const response = await helpers.req('GET', '/community/owo', null, null);
-    expect(response.status).toEqual(404);
-  });
-
-  test('GET /community/:communityUrlOrId - 200 and community details', async () => {
-    const response = await helpers.req('GET', '/community/active', null, null);
-    expect(response.status).toEqual(200);
+  test('GET /communities - shows max 15 communities by activity descending, by default', async () => {
+    const response = await helpers.req('GET', '/communities');
     // console.dir(response.body, { depth: null });
+    expect(response.status).toBe(200);
+    expect(response.body).toHaveProperty('communities');
+    expect(response.body.communities.length).toBe(15);
+    expect(
+      [...response.body.communities].sort(
+        (comm_a: { lastActivity: string }, comm_b: { lastActivity: string }) =>
+          Date.parse(comm_b.lastActivity) - Date.parse(comm_a.lastActivity),
+      ),
+    ).toEqual(response.body.communities);
   });
 
-  test('GET /community/:communityUlrOrId - 404 if community is hidden', async () => {
-    let response = await helpers.req('GET', '/community/hidden', null, null);
-    expect(response.status).toEqual(404);
-    const token = await helpers.getToken('basic');
-    response = await helpers.req('GET', '/community/hidden', null, token);
-    expect(response.status).toEqual(404);
+  test('GET /communities - query "take" works', async () => {
+    const response = await helpers.req('GET', `/communities?take=${commCount}`);
+    expect(response.status).toBe(200);
+    expect(response.body.communities.length).toBe(commCount);
   });
 
-  test('GET /community/:communityUrlOrId - 200 if hidden and is admin', async () => {
-    const token = await helpers.getToken('admin');
-    const response = await helpers.req('GET', '/community/hidden', null, token);
-    expect(response.status).toEqual(200);
+  test('GET /communities - query "name" works', async () => {
+    const response = await helpers.req('GET', '/communities?name=soup');
+    expect(response.status).toBe(200);
+    expect(
+      response.body.communities.filter(
+        (comm: { urlName: string; canonicalName: string }) =>
+          comm.urlName.includes('soup') ||
+          comm.canonicalName.toLocaleLowerCase().includes('soup'),
+      ),
+    ).toEqual(response.body.communities);
+  });
+
+  test('GET /communities - query "sort" works', async () => {
+    // followers
+    let response = await helpers.req('GET', '/communities?sort=followers');
+    expect(
+      [...response.body.communities].sort(
+        (
+          comm_a: { _count: { followers: number } },
+          comm_b: { _count: { followers: number } },
+        ) => comm_b._count.followers - comm_a._count.followers,
+      ),
+    ).toEqual(response.body.communities);
+    // activity
+    response = await helpers.req('GET', '/communities?sort=activity');
+    expect(
+      [...response.body.communities].sort(
+        (comm_a: { lastActivity: string }, comm_b: { lastActivity: string }) =>
+          Date.parse(comm_b.lastActivity) - Date.parse(comm_a.lastActivity),
+      ),
+    ).toEqual(response.body.communities);
+    // posts
+    response = await helpers.req('GET', '/communities?sort=posts');
+    expect(
+      [...response.body.communities].sort(
+        (
+          comm_a: { _count: { posts: number } },
+          comm_b: { _count: { posts: number } },
+        ) => comm_b._count.posts - comm_a._count.posts,
+      ),
+    ).toEqual(response.body.communities);
+  });
+
+  test('GET /communities - pagination', async () => {
+    await helpers.testPaginationStability({
+      url: '/communities',
+      resultsName: 'communities',
+      contentCount: commCount,
+      resultsLength: 15,
+    });
+  });
+
+  test('GET /communities - pagination maintains other queries', async () => {
+    await helpers.testPaginationStability({
+      url: '/communities?take=10&sort=followers',
+      resultsName: 'communities',
+      contentCount: commCount,
+      resultsLength: 10,
+      perPageAssertion: async (response) => {
+        expect(response.body.communities.length).toBe(10);
+        expect(
+          [...response.body.communities].sort(
+            (
+              comm_a: { _count: { followers: number } },
+              comm_b: { _count: { followers: number } },
+            ) => comm_b._count.followers - comm_a._count.followers,
+          ),
+        ).toEqual(response.body.communities);
+      },
+    });
   });
 });
 
-describe('create and edit a community', async () => {
+describe('create, see, and edit a community', () => {
   const correctInputs = {
     urlName: 'askgroves',
     canonicalName: 'Ask Groves',
@@ -72,13 +125,15 @@ describe('create and edit a community', async () => {
     { urlName: Array(1000).fill('A').join('') },
     { urlName: '&&&' },
     { urlName: 'bestofgroves' },
+    { urlName: '12345' },
     { canonicalName: 'a' },
     { canonicalName: Array(1000).fill('A').join('') },
     { description: Array(1000).fill('A').join('') },
   ];
 
   beforeAll(async () => {
-    await queries.truncateTable('Community');
+    await queries.truncateTable('User');
+    await queries.createAdmin();
     await queries.createCommunity({
       urlName: 'bestofgroves',
       canonicalName: 'Best of Groves',
@@ -104,7 +159,7 @@ describe('create and edit a community', async () => {
           'POST',
           '/communities',
           { ...correctInputs, ...wrongInputs },
-          await helpers.getToken('basic'),
+          await helpers.getToken('admin'),
         );
         expect(response.status).toBe(400);
         expect(response.body).toHaveProperty('errors');
@@ -118,7 +173,7 @@ describe('create and edit a community', async () => {
       'POST',
       '/communities',
       correctInputs,
-      await helpers.getToken('basic'),
+      await helpers.getToken('admin'),
     );
     expect(response.status).toBe(200);
     const newCommunity = await queries.findCommunity({
@@ -127,7 +182,18 @@ describe('create and edit a community', async () => {
     expect(newCommunity).toBeDefined();
   });
 
-  test('PUT /community/:communityNameOrId - 401 if not logged in', async () => {
+  test('GET /community/:community - 404 if community not found', async () => {
+    const response = await helpers.req('GET', '/community/owo');
+    expect(response.status).toEqual(404);
+  });
+
+  test('GET /community/:community - 200 and community details', async () => {
+    const response = await helpers.req('GET', '/community/askgroves');
+    // console.dir(response.body, { depth: null });
+    expect(response.status).toEqual(200);
+  });
+
+  test('PUT /community/:community - 401 if not logged in', async () => {
     const response = await helpers.req(
       'PUT',
       `/community/${correctInputs.urlName}`,
@@ -137,24 +203,25 @@ describe('create and edit a community', async () => {
     expect(response.status).toBe(401);
   });
 
-  test('PUT /community/:communityNameOrId - 403 if not mod', async () => {
+  test('PUT /community/:community - 403 if not mod', async () => {
+    await queries.createUser('basic');
     const response = await helpers.req(
       'PUT',
       `/community/${correctInputs.urlName}`,
       correctInputs,
-      await helpers.getToken('admin'),
+      await helpers.getToken('basic'),
     );
     expect(response.status).toBe(403);
   });
 
-  test('PUT /community/:communityNameOrId - 400 if errors', async () => {
+  test('PUT /community/:community - 400 if errors', async () => {
     await Promise.all(
       wrongInputsArray.map(async (wrongInputs) => {
         const response = await helpers.req(
           'PUT',
           `/community/${correctInputs.urlName}`,
           { ...correctInputs, ...wrongInputs },
-          await helpers.getToken('basic'),
+          await helpers.getToken('admin'),
         );
         expect(response.status).toBe(400);
         expect(response.body).toHaveProperty('errors');
@@ -163,20 +230,20 @@ describe('create and edit a community', async () => {
     );
   });
 
-  test('PUT /community/:communityNameOrId - 200 and edits community details', async () => {
+  test('PUT /community/:community - 200 and edits community details', async () => {
     const response = await helpers.req(
       'PUT',
       `/community/${correctInputs.urlName}`,
       correctInputs,
-      await helpers.getToken('basic'),
+      await helpers.getToken('admin'),
     );
     expect(response.status).toBe(200);
   });
 });
 
-describe('see and edit community wiki', async () => {
-  const wiki = { content: 'owo' };
-  // wiki editing does not depend on other inputs, so it's its own form.
+describe('see and edit the wiki', () => {
+  const wiki = { content: 'This is some wiki content.' };
+
   beforeAll(async () => {
     await queries.truncateTable('User');
     await queries.createAdmin();
@@ -191,7 +258,7 @@ describe('see and edit community wiki', async () => {
     await queries.createUser('demo-2');
   });
 
-  test('PUT /community/communityUrlOrId/wiki - 403 if not mod', async () => {
+  test('PUT /community/:community/wiki - 403 if not mod', async () => {
     const response = await helpers.req(
       'PUT',
       '/community/comm/wiki',
@@ -201,7 +268,7 @@ describe('see and edit community wiki', async () => {
     expect(response.status).toBe(403);
   });
 
-  test('PUT /community/communityUrlOrId/wiki - 200 and writes wiki', async () => {
+  test('PUT /community/:community/wiki - 200 and writes wiki', async () => {
     const response = await helpers.req(
       'PUT',
       '/community/comm/wiki',
@@ -213,19 +280,14 @@ describe('see and edit community wiki', async () => {
     expect(comm?.wiki).toEqual(wiki.content);
   });
 
-  test('GET /community/:communityUrlOrId/wiki - 200 and sees wiki', async () => {
-    const response = await helpers.req(
-      'GET',
-      '/community/comm/wiki',
-      null,
-      null,
-    );
+  test('GET /community/:community/wiki - 200 and sees wiki', async () => {
+    const response = await helpers.req('GET', '/community/comm/wiki');
     expect(response.status).toBe(200);
     expect(response.body).toHaveProperty('content');
     expect(response.body.content).toEqual(wiki.content);
   });
 
-  test('PUT /community/communityUrlOrId/wiki - 200 and clears wiki', async () => {
+  test('PUT /community/:community/wiki - 200 and clears wiki', async () => {
     const response = await helpers.req(
       'PUT',
       '/community/comm/wiki',
@@ -235,6 +297,45 @@ describe('see and edit community wiki', async () => {
     expect(response.status).toBe(200);
     const comm = await queries.findCommunity({ id: 1 });
     expect(comm?.wiki).toBeNull();
+  });
+});
+
+describe('follow and unfollow a community', async () => {
+  let commId: number = 0;
+  beforeAll(async () => {
+    await queries.truncateTable('User');
+    await queries.createAdmin();
+    await queries.createUser('basic');
+    commId = await queries.createCommunity({
+      urlName: 'bestofgroves',
+      canonicalName: 'Best of Groves',
+      description: 'The funniest and most memorable happenings.',
+      adminId: 1,
+    });
+  });
+
+  test('POST /community/:community/follow - 200 and follows', async () => {
+    const response = await helpers.req(
+      'POST',
+      '/community/bestofgroves/follow',
+      { follow: true },
+      await helpers.getToken('basic'),
+    );
+    expect(response.status).toBe(200);
+    const followers = await queries.findCommFollowers(commId);
+    expect(followers.length).toBe(1);
+  });
+
+  test('POST /community/:community/follow - 200 and unfollows', async () => {
+    const response = await helpers.req(
+      'POST',
+      '/community/bestofgroves/follow',
+      { follow: false },
+      await helpers.getToken('basic'),
+    );
+    expect(response.status).toBe(200);
+    const followers = await queries.findCommFollowers(commId);
+    expect(followers.length).toBe(0);
   });
 });
 
@@ -260,7 +361,7 @@ describe('moderator promotion and demotion', async () => {
 
   // demo-1 is mod, demo-2 and demo-3 are not mods, admin wants to promote demo-2
 
-  test('POST /community/:communityUrlOrId/promote - 403 if not admin', async () => {
+  test('POST /community/:community/promote - 403 if not admin', async () => {
     const response = await helpers.req(
       'POST',
       '/community/comm/promote',
@@ -270,7 +371,7 @@ describe('moderator promotion and demotion', async () => {
     expect(response.status).toBe(403);
   });
 
-  test('POST /community/:communityUrlOrId/promote - 400 if errors', async () => {
+  test('POST /community/:community/promote - 400 if errors', async () => {
     const wrongInputArray = [
       { username: '' },
       { username: 'admin' }, // can't promote yourself
@@ -292,7 +393,7 @@ describe('moderator promotion and demotion', async () => {
     );
   });
 
-  test('POST /community/:communityUrlOrId/promote - 200 and adds user', async () => {
+  test('POST /community/:community/promote - 200 and adds user', async () => {
     const response = await helpers.req(
       'POST',
       '/community/comm/promote',
@@ -304,17 +405,9 @@ describe('moderator promotion and demotion', async () => {
     expect(moderators.find((m) => m.username === 'demo-2')).toBeDefined();
   });
 
-  test('GET /community/:communityUrlOrId - 200 and shows moderators', async () => {
-    const response = await helpers.req('GET', '/community/comm', null, null);
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('moderators');
-    expect(response.body.moderators.length).toBe(3);
-    // console.dir(response.body, { depth: null });
-  });
-
   // demo-1 and demo-2 are mods, demo-3 is not mod, admin wants to demote demo-2
 
-  test('POST /community/:communityUrlOrId/demote - 403 if not admin', async () => {
+  test('POST /community/:community/demote - 403 if not admin', async () => {
     const response = await helpers.req(
       'POST',
       '/community/comm/demote',
@@ -324,7 +417,7 @@ describe('moderator promotion and demotion', async () => {
     expect(response.status).toBe(403);
   });
 
-  test('POST /community/:communityUrlOrId/demote - 400 if errors', async () => {
+  test('POST /community/:community/demote - 400 if errors', async () => {
     const wrongInputArray = [
       { username: '' },
       { username: 'admin' }, // can't demote yourself
@@ -346,7 +439,7 @@ describe('moderator promotion and demotion', async () => {
     );
   });
 
-  test('POST /community/:communityUrlOrId/demote - 200 and removes user', async () => {
+  test('POST /community/:community/demote - 200 and removes user', async () => {
     const response = await helpers.req(
       'POST',
       '/community/comm/demote',
@@ -356,256 +449,6 @@ describe('moderator promotion and demotion', async () => {
     expect(response.status).toBe(200);
     const moderators = await queries.findCommMods(commId);
     expect(moderators.find((m) => m.username === 'demo-2')).not.toBeDefined();
-  });
-});
-
-describe('follow and unfollow a community', async () => {
-  let commId: number = 0;
-  beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    await queries.createUser('basic');
-    commId = await queries.createCommunity({
-      urlName: 'bestofgroves',
-      canonicalName: 'Best of Groves',
-      description: 'The funniest and most memorable happenings.',
-      adminId: 1,
-    });
-  });
-
-  test('POST /community/:communityNameOrId/follow - 200 and follows', async () => {
-    const response = await helpers.req(
-      'POST',
-      '/community/bestofgroves/follow',
-      { follow: true },
-      await helpers.getToken('basic'),
-    );
-    expect(response.status).toBe(200);
-    const followers = await queries.findCommFollowers(commId);
-    expect(followers.length).toBe(1);
-  });
-
-  test('POST /community/:communityNameOrId/follow - 200 and unfollows', async () => {
-    const response = await helpers.req(
-      'POST',
-      '/community/bestofgroves/follow',
-      { follow: false },
-      await helpers.getToken('basic'),
-    );
-    expect(response.status).toBe(200);
-    const followers = await queries.findCommFollowers(commId);
-    expect(followers.length).toBe(0);
-  });
-});
-
-describe('search communities', async () => {
-  const commCount = 100;
-
-  beforeAll(async () => {
-    await populate({
-      userCount: 250,
-      commCount,
-      postCount: 1000,
-      followers: {
-        max: 250,
-      },
-    });
-  });
-
-  test('GET /communities - shows max 15 communities by activity descending, by default', async () => {
-    const response = await helpers.req('GET', '/communities', null, null);
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('communities');
-    expect(response.body.communities.length).toBe(15);
-    expect(
-      [...response.body.communities].sort(
-        (comm_a: { lastActivity: string }, comm_b: { lastActivity: string }) =>
-          Date.parse(comm_b.lastActivity) - Date.parse(comm_a.lastActivity),
-      ),
-    ).toEqual(response.body.communities);
-  });
-
-  test('GET /communities - query "take" works', async () => {
-    const response = await helpers.req(
-      'GET',
-      `/communities?take=${commCount}`,
-      null,
-      null,
-    );
-    expect(response.status).toBe(200);
-    expect(response.body.communities.length).toBe(commCount);
-  });
-
-  test('GET /communities - query "name" works', async () => {
-    const response = await helpers.req(
-      'GET',
-      '/communities?name=soup&take=150',
-      null,
-      null,
-    );
-    expect(response.status).toBe(200);
-    expect(
-      response.body.communities.filter(
-        (comm: { urlName: string; canonicalName: string }) =>
-          comm.urlName.includes('soup') ||
-          comm.canonicalName.toLocaleLowerCase().includes('soup'),
-      ),
-    ).toEqual(response.body.communities);
-  });
-
-  test('GET /communities - query "sort" works (follower count)', async () => {
-    const response = await helpers.req(
-      'GET',
-      '/communities?sort=followers&take=150',
-      null,
-      null,
-    );
-    expect(
-      [...response.body.communities].sort(
-        (
-          comm_a: { _count: { followers: number } },
-          comm_b: { _count: { followers: number } },
-        ) => comm_b._count.followers - comm_a._count.followers,
-      ),
-    ).toEqual(response.body.communities);
-  });
-
-  test('GET /communities - query "sort" works (activity)', async () => {
-    const response = await helpers.req(
-      'GET',
-      '/communities?sort=activity&take=150',
-      null,
-      null,
-    );
-    expect(
-      [...response.body.communities].sort(
-        (comm_a: { lastActivity: string }, comm_b: { lastActivity: string }) =>
-          Date.parse(comm_b.lastActivity) - Date.parse(comm_a.lastActivity),
-      ),
-    ).toEqual(response.body.communities);
-  });
-
-  test('GET /communities - query "sort" works (post count)', async () => {
-    const response = await helpers.req(
-      'GET',
-      '/communities?sort=posts&take=150',
-      null,
-      null,
-    );
-    expect(
-      [...response.body.communities].sort(
-        (
-          comm_a: { _count: { posts: number } },
-          comm_b: { _count: { posts: number } },
-        ) => comm_b._count.posts - comm_a._count.posts,
-      ),
-    ).toEqual(response.body.communities);
-  });
-
-  test('GET /communities - pagination', async () => {
-    let response = await helpers.req('GET', '/communities', null, null);
-    expect(response.body).toHaveProperty('links');
-    expect(response.body.links.nextPage).not.toBeNull();
-
-    // keep a record of results as we page forward
-    let pageCount: number = 1;
-    const results: Record<number, number[]> = {
-      [pageCount]: response.body.communities.map(
-        ({ id }: { id: number }) => id,
-      ),
-    };
-    let nextPage: string = response.body.links.nextPage;
-    while (nextPage !== null) {
-      response = await helpers.req('GET', nextPage, null, null);
-      nextPage = response.body.links.nextPage;
-      pageCount++;
-      results[pageCount] = response.body.communities.map(
-        ({ id }: { id: number }) => id,
-      );
-    }
-
-    // use record to expect a correct amount of results
-    expect(
-      Object.keys(results).reduce((acc: number, curr: string) => {
-        return acc + results[parseInt(curr, 10)].length;
-      }, 0),
-    ).toEqual(commCount);
-    // use record expect a correct amount of pages
-    expect(pageCount).toEqual(Math.ceil(commCount / 15));
-
-    // page backward, comparing against recorded "pages"
-    let prevPage: string = response.body.links.prevPage;
-    while (prevPage !== null) {
-      response = await helpers.req('GET', prevPage, null, null);
-      prevPage = response.body.links.prevPage;
-      pageCount--;
-      // expect that each "page" has the exact same results
-      expect(
-        response.body.communities.map(({ id }: { id: number }) => id),
-      ).toEqual(results[pageCount]);
-    }
-  });
-
-  test('GET /communities - pagination maintains other queries', async () => {
-    let response = await helpers.req(
-      'GET',
-      '/communities?take=10&sort=followers',
-      null,
-      null,
-    );
-    expect(response.body).toHaveProperty('links');
-    expect(response.body.links.nextPage).not.toBeNull();
-
-    // pretty much the same as the last test except, in between pages,
-    // we assert that our additional queries are actually applying
-    const assertCorrectResults = () => {
-      expect(response.body.communities.length).toBe(10);
-      expect(
-        [...response.body.communities].sort(
-          (
-            comm_a: { _count: { followers: number } },
-            comm_b: { _count: { followers: number } },
-          ) => comm_b._count.followers - comm_a._count.followers,
-        ),
-      ).toEqual(response.body.communities);
-    };
-
-    assertCorrectResults();
-
-    let pageCount: number = 1;
-    const results: Record<number, number[]> = {
-      [pageCount]: response.body.communities.map(
-        ({ id }: { id: number }) => id,
-      ),
-    };
-    let nextPage: string = response.body.links.nextPage;
-    while (nextPage !== null) {
-      response = await helpers.req('GET', nextPage, null, null);
-      assertCorrectResults();
-      nextPage = response.body.links.nextPage;
-      pageCount++;
-      results[pageCount] = response.body.communities.map(
-        ({ id }: { id: number }) => id,
-      );
-    }
-
-    expect(
-      Object.keys(results).reduce((acc: number, curr: string) => {
-        return acc + results[parseInt(curr, 10)].length;
-      }, 0),
-    ).toEqual(commCount);
-    expect(pageCount).toEqual(Math.ceil(commCount / 10));
-
-    let prevPage: string = response.body.links.prevPage;
-    while (prevPage !== null) {
-      response = await helpers.req('GET', prevPage, null, null);
-      assertCorrectResults();
-      prevPage = response.body.links.prevPage;
-      pageCount--;
-      expect(
-        response.body.communities.map(({ id }: { id: number }) => id),
-      ).toEqual(results[pageCount]);
-    }
   });
 });
 
@@ -621,7 +464,7 @@ describe('freeze and unfreeze a community', async () => {
     });
   });
 
-  test('POST /community/:communityId/freeze - 403 if not admin', async () => {
+  test('POST /community/:community/freeze - 403 if not admin', async () => {
     const response = await helpers.req(
       'POST',
       '/community/comm/freeze',
@@ -631,7 +474,7 @@ describe('freeze and unfreeze a community', async () => {
     expect(response.status).toBe(403);
   });
 
-  test('POST /community/:communityId/freeze - 200 and freezes or unfreezes', async () => {
+  test('POST /community/:community/freeze - 200 and freezes or unfreezes', async () => {
     const response = await helpers.req(
       'POST',
       '/community/comm/freeze',
@@ -665,7 +508,7 @@ describe('freeze and unfreeze a community', async () => {
     );
   });
 
-  test('POST /community/:communityId/freeze - 200 and unfreezes', async () => {
+  test('POST /community/:community/freeze - 200 and unfreezes', async () => {
     const response = await helpers.req(
       'POST',
       '/community/comm/freeze',

@@ -18,6 +18,8 @@ export const usernameValidation = body('username')
     'Username must only consist of lowercase letters, numbers, and hyphens.',
   )
   .custom(async (value, { req }) => {
+    if (parseInt(value, 10) % 1 === 0)
+      throw new Error('Usernames cannot be made solely of numbers.');
     const existingUser = await queries.findUser({ username: value });
     if (existingUser && !('user' in req && existingUser.id === req.user.id)) {
       throw new Error(
@@ -48,9 +50,7 @@ export const signup = [
       }
     })
     .escape(),
-
   validate,
-
   asyncHandler(async (req, res) => {
     await queries.createUser(req.body.username, req.body.password);
     res.sendStatus(200);
@@ -77,9 +77,7 @@ export const login = [
       req.user = user;
     })
     .escape(),
-
   validate,
-
   asyncHandler(async (req, res) => {
     if (!process.env.TOKEN_SECRET)
       throw new Error('Token secret is not defined.');

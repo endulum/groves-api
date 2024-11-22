@@ -4,23 +4,44 @@ Groves is an arboreal semiclone of Reddit.
 
 [Project Spec](https://www.theodinproject.com/lessons/node-path-nodejs-odin-book)
 
-The units of interaction in Groves are Communities (likened to "groves"), Posts (likened to "trees" in a grove), and Replies (likened to "leaves" of a tree). Users can form Communities, create Posts in Communities, and write Replies to Posts, with Replies being nestable within other Replies.
+The units of interaction in Groves are Communities (likened to "groves"), Posts (likened to "trees" in a grove), and Replies (likened to "leaves" of a tree). Users can form Communities, create Posts in Communities, and write Replies to Posts.
 
-- A user can "vote" positively or negatively on a Post or Reply. A user's "verdancy" is a cumulation of positive votes, countered by negative votes, their content has gotten in total.
-- Communities are managed by singular Admins with a variable team of Moderators. Both Admins and Moderators can freeze or hide Posts and Replies, pin Posts, silence users, and edit the community wiki. Admins can appoint or remove Moderators, and change basic details of the Community.
+- A user can "vote" positively or negatively on a Post or Reply. A user's "verdancy" is a cumulation of positive votes, countered by negative votes, the content they authored has earned in total.
+- Communities are managed by singular Admins with a variable team of Moderators.
+  - Moderators can:
+    - Freeze, hide, and pin Posts and Replies
+    - Edit the Community Wiki
+    - Mute users
+
+  - Admins can:
+    - Do anything Moderators can
+    - Grant or remove Moderator privileges
+    - Freeze the Community
+
 - Communities have a public Action log wherein certain Community activites are recorded into Actions, such as new Posts and Replies, moderator demotions and additions, and editions to Community details.
 
-Groves uses JSON Web Tokens to authenticate users for protected routes. When making requests to protected routes, the JWT must be passed into the `Authorization` header, preceded with `Bearer` and a space.
+Groves uses JSON Web Tokens to authenticate users for protected :key: routes. When making requests to protected routes, the JWT must be passed into the `Authorization` header, preceded with `Bearer` and a space.
 
-### Todos
+### Todo
 
-- Pinning and unpinning Posts
-- Paginated search for Posts
-- Add voting to schema and manage voting
+- Accompany error codes with precise status text. In testing, make a helper to test for a `200 OK`
+- For Communities, add logic for counting total votes made on all content in the Community
+- For Posts and Replies, have the API reflect whether the viewing User has voted on a Post or Reply, or not
+- For every noteworthy action, test that an Action was recorded
+- Handle replies
+- Handle actions
 
 ## Endpoint Overview
 
+- :eye: - public routes
+- :key: - requires any authenticated user
+- :shield: - requires an authenticated user with certain privileges
+
 ### Errors
+
+The API will return a `200 OK` on routes with actions that have completed successfully.
+
+On routes where actions have failed, the API will accompany the response with status text describing what went wrong.
 
 On routes requiring form input, if the input does not pass validation, the route returns a status of `400` as well as an `errors` object consisting of an array of the described errors.
 
@@ -39,24 +60,21 @@ On routes requiring form input, if the input does not pass validation, the route
 
 ### Account
 
-> `POST /login`
+`POST /login` :eye:
 
-Returns a signed JWT representing the user identified by the provided credentials.
+Returns a signed JWT representing the user idenfitied by the credentials provided.
 
-- `username`: Required. There must exist a user in the database with the provided `username`.
-- `password`: Required. Assuming the user record was identified with the `username`, the `password` must match the user record's own `password`.
+Accepts form inputs: `username` and `password`.
 
-> `POST /signup`
+`POST /signup` :eye:
 
-Creates a new user in the database.
+Creates a new User.
 
-- `username`: Required. Must be between 2 and 32 characters in length. Can only consist of lowercase letters, numbers, and hyphens. There must not exist a user in the database with the provided `username`.
-- `password`: Required. Must be at least eight characters in length.
-- `confirmPassword`: Required. Must exactly match the `password` provided.
+Accepts form inputs: `username`, `password`, and `confirmPassword`.
 
-> `GET /me` <sub>protected</sub>
+`GET /me` :key:
 
-Returns the identity of the authenticated user.
+Returns the identity of the authenticated User.
 
 ```js
 {
@@ -68,25 +86,27 @@ Returns the identity of the authenticated user.
 }
 ```
 
-> `PUT /me` <sub>protected</sub>
+`PUT /me` :key:
 
-Edits the identity of the authenticated user.
+Edits the identity of the authenticated User.
 
-- `username`: Required. Must be between 2 and 32 characters in length. Can only consist of lowercase letters, numbers, and hyphens. If the provided `username` does not match the user's current `username`, there must exist another user in the database with the provided `username`.
+Accepts form inputs:
+
+- `username`: Required. Must be between 2 and 32 characters in length. Can only consist of lowercase letters, numbers, and hyphens. If the provided `username` does not match the User's current `username`, there must not exist another User with the provided `username`.
 - `bio`: Not required. Must not exceed 200 characters in length.
 - `password`: Not required. Must be at least eight characters in length.
 - `confirmPassword`: Required if `password` is provided. Must exactly match the `password` provided.
-- `currentPassword`: Required if `password` is provided. Must match the user record's own `password`.
+- `currentPassword`: Required if `password` is provided. Must match the User's own password.
 
-> `GET /user/:userNameOrId`
+`GET /user/:user` :eye:
 
-Similarly to `GET /me`, returns the identity of the user identified by the parameter `userNameOrId`, if a user exists with an `id` or `username` matching the value of this parameter.
+Returns the identity of the User identified by the `:user` parameter, if there exists such a User with an `id` or `username` matching this parameter.
 
 ### Community
 
-> `GET /communities`
+`GET /communities` :eye:
 
-Returns a paginated list of communities. A community must have a status of `ACTIVE` to show up in this list.
+Returns a paginated list of Communities. A Community must have a status of `ACTIVE` to show up in this list.
 
 ```js
 {
@@ -114,22 +134,22 @@ Returns a paginated list of communities. A community must have a status of `ACTI
 This endpoint accepts query parameters:
 
 - `sort`: sorts by follower count (`=followers`), post count (`=posts`), or latest activity (`=activity`) descending.
-- `name`: filters for any communities whose `urlName` or `canonicalName` includes the string provided.
+- `name`: filters for any Communities whose `urlName` or `canonicalName` includes the string provided.
 - `take`: how many results to show at once. By default, 15 results are shown.
 
 This endpoint uses cursor-based pagination. A cursor "id" is passed into a `before` or `after` query parameter when visiting a previous or next page, respectively. Under `links`, this endpoint lists a "next" or "previous" page endpoint if present.
 
-> `POST /communities` <sub>protected</sub>
+`POST /communities` :key:
 
-Creates a new community in the database, with the authenticated user automatically given admin privileges over the community.
+Creates a new Community, with the authenticated user automatically given admin privileges over the Community.
 
-- `urlName`: Required. Must be between 2 and 32 characters in length. Can only consist of lowercase letters and numbers. There must not exist another community in the database with the provided `urlName`.
+- `urlName`: Required. Must be between 2 and 32 characters in length. Can only consist of lowercase letters and numbers. There must not exist another Community in the database with the provided `urlName`.
 - `canonicalName`: Required. Must be between 2 and 32 characters in length.
 - `description`: Not required. Cannot exceed 200 characters in length.
 
-> `GET /community/:communityNameOrId`
+`GET /community/:community` :eye:
 
-Returns the identity of the community identified by `:communityNameOrId`, if a community exists with an `id` or `urlName` matching the value of this parameter. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges over this community.
+Returns the identity of the Community identified by the `:community` parameter, if there exists such a Community with an `id` or `urlName` matching this parameter.
 
 ```js
 {
@@ -141,53 +161,55 @@ Returns the identity of the community identified by `:communityNameOrId`, if a c
   created: '2024-11-18T06:41:53.162Z',
   lastActivity: '2024-11-18T06:41:53.162Z',
   admin: { id: 1, username: 'admin' },
-  moderators: [ { id: 2, username: 'demo-1' }, { id: 3, username: 'demo-2' } ]
+  moderators: [ 
+      { id: 2, username: 'demo-1' }, 
+      { id: 3, username: 'demo-2' } 
+  ],
+  _count: {
+      followers: 75,
+      posts: 125,
+      totalVotes: 2125
+  }
 }
 ```
 
-> `PUT /community/:communityNameOrId` <sub>protected</sub>
+ `PUT /community/:community` :shield:
 
-Edits the record of the identified community. Follows the same validation rules as `POST /communities`. The community must be `ACTIVE` and the authenticated user must have admin privileges over the community.
+Edits the identity of the identified Community. Accepts the same form inputs and follows the same validation rules as `POST /communities`. The Community must be `ACTIVE` and the authenticated user must have admin privileges over the Community.
 
-> `POST /community/:communityNameOrId/follow` <sub>protected</sub>
+`GET /community/:community/wiki` :eye:
 
-Adds or removes the authenticated user to the "followers" list of the identified community. The community must be `ACTIVE`.
+Returns a `content` string representing the Community's Wiki.
 
-- `follow`: Required. Must be a boolean. `true` follows the community, `false` unfollows it.
+`PUT /community/:community/wiki`​ :shield:
 
-> `POST /community/:communityNameOrId/promote` <sub>protected</sub>
+Edits the Community's Wiki. Accepts a form input `content`, which can be a blank string, but cannot exceed 10,000 characters in length. The Community must be `ACTIVE` and the authenticated user must have moderator privileges over this Community.
 
-Grants a user moderator privileges of the identified community. The community must be `ACTIVE` and the authenticated user must have admin privileges over the community.
+`POST /community/:community/follow` :key: 
 
-- `username`: Required. There must exist a user in the database with the provided `username` who does not already have moderator privileges over this community.
+Adds or removes the authenticated User to the "followers" list of the identified Community. Accepts a form input `follow` which must be `true` (having the User follow the Community) or `false` (having the User unfollow the Community). The Community must be `ACTIVE`.
 
-> `POST /community/:communityNameOrId/demote` <sub>protected</sub>
+`POST /community/:community/promote`​ :shield: 
 
-Removes moderator privileges of the identified community from a user. The community must be `ACTIVE` and the authenticated user must have admin privileges over the community.
+Grants a User moderator privileges over the identified Community. The Community must be `ACTIVE` and the authenticated User must have admin privileges over the Community.
 
-- `username`: Required. There must exist a user in the database with the provided `username` who has moderator privileges over this community.
+- `username`: Required. There must exist a User with the provided `username` who does not already have moderator privileges over this Community.
 
-> `GET /community/:communityNameOrId/wiki`
+`POST /community/:community/demote`​ :shield:
 
-Returns a `content` string consisting of the community's wiki text. If the identified community has a status of `HIDDEN`, there must be an authenticated user, and the user must have admin privileges over this community.
+Removes moderator privileges over the identified Community from a User. The Community must be `ACTIVE` and the authenticated User must have admin privileges over the Community.
 
-> `PUT /community/:communityNameOrId/wiki` <sub>protected</sub>
+- `username`: Required. There must exist a User with the provided `username` who has moderator privileges over this Community.
 
-Edits the community wiki. The community must be `ACTIVE` and the authenticated user must have moderator privileges over this community.
+`POST /community/:community/freeze` :shield:
 
-- `content`: Not required. Can be an empty string to "clear" the wiki.
-
-> `POST /community/:communityNameOrId/freeze` <sub>protected</sub>
-
-Sets the `status` of the identified community to `ACTIVE` or `FROZEN`. The authenticated user must have admin privileges over this community.
-
-- `freeze`: Required. Must be a boolean. `true` freezes the community, `false` unfreezes it.
+Sets the `status` of the identified Community to `ACTIVE` or `FROZEN`. Accepts a form input `freeze` which must be `true` (having this Community be `FROZEN`) or `false` (having this Community no longer be `FROZEN`). The authenticated User must have admin privileges over this Community.
 
 ### Posts
 
-> `GET /community/:communityUrl/posts`
+`GET /community/:communityUrl/posts` :eye:
 
-Returns a paginated list of posts under the identified community. A post must have a status of `ACTIVE` to show up in this list.
+Returns a paginated list of Posts under the identified Community. A post must have a status of `ACTIVE` to show up in this list.
 
 ```js
 {
@@ -217,24 +239,33 @@ Returns a paginated list of posts under the identified community. A post must ha
 This endpoint accepts query parameters:
 
 - `sort`: sorts by:
-  - `new`: the date of post creation.
-  - `comments`: the count of comments under this post.
-  - `hot`: voting popularity, relative to time.
-  - `top`: highest upvotes, countered by downvotes.
-  - `best`: specially rated "best" posts.
-  - `controversial`: highest vote count with the closest ratio of upvotes to downvotes.
+  - `=new`: the date of post creation.
+  - `=comments`: the count of comments under this post.
+  - `=hot`: voting popularity, relative to time.
+  - `=top`: highest upvotes, countered by downvotes.
+  - `=best`: specially rated "best" posts.
+  - `=controversial`: highest vote count with the closest ratio of upvotes to downvotes.
 
 
 - `name`: filters for any posts whose `title` includes the string provided.
 - `take`: how many results to show at once. By default, 20 results are shown.
 
-The `hot` and `controversial` rankings are based off of [Reddit's own implementation of those rankings.](https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx) The `best` ranking uses the SQL implementation of the William score in [How Not To Sort By Average Rating.](https://www.evanmiller.org/how-not-to-sort-by-average-rating.html)
+The `hot` and `controversial` rankings are based off of [Reddit's own implementation of those rankings.](https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx) The `best` ranking uses the SQL implementation of the Wilson score in [How Not To Sort By Average Rating.](https://www.evanmiller.org/how-not-to-sort-by-average-rating.html)
 
 This endpoint uses cursor-based pagination. A cursor "id" is passed into a `before` or `after` query parameter when visiting a previous or next page, respectively. Under `links`, this endpoint lists a "next" or "previous" page endpoint if present.
 
-> `GET /post/:postId`
+`POST /community/:community/posts` :key:
 
-Returns the details of the post identified by `:postId`, if a post exists with an `id` matching the value of this parameter. If the identified post has a status of `HIDDEN`, there must be an authenticated user, and the user must have moderator privileges over the community this post was posted under.
+Creates a new Post under the identified Community. The root Community must be `ACTIVE`.
+
+- `title`: Required. Must be no longer than 64 characters in length.
+- `content`: Required. Must be no longer than 10,000 characters in length.
+
+This will change the `lastActivity` field of the identified Community.
+
+`GET /post/:post` :eye:
+
+Returns the identity of the Post identified by `:post`, if a Post exists with an `id` matching the value of this parameter. If the identified Post has a status of `HIDDEN`, there must be an authenticated User, and the User must have moderator privileges over the Community this post was posted under.
 
 ```js
 {
@@ -247,74 +278,39 @@ Returns the details of the post identified by `:postId`, if a post exists with a
   pinned: false,
   author: { id: 1, username: 'admin' },
   community: { id: 1, urlName: 'comm', canonicalName: 'Community' },
-  replies: [],
-  voting: {
-      upvotes: 0,
-      downvotes: 0,
-      voted: false
+  _count: {
+      upvotes: 100,
+      downvotes: 50,
+      replies: 10
   }
 }
 ```
 
-- The `replies` property should host an array of reply trees.
-- The `voted` property under `voting` will be `null` if there is no authenticated user, and `true` or `false` depending on whether the authenticated user added a vote to this post.
+`PUT /post/:post`​ :shield:
 
-> `POST /community/:communityId/posts` <sub>protected</sub>
+Edits the identity of the identified Post. Accepts the same form inputs and follows the same validation rules as `POST /community/:community/posts`. The Community must be `ACTIVE`, the Post must be `ACTIVE`, and the authenticated User must either be the original author of this Post or have moderator privileges over the Community. This will change the `lastEdited` field of the identified Post.
 
-Creates a new post in the database, with the root community identified through the `communityId` parameter. The root community must be `ACTIVE`.
+`POST /post/:post/upvote` :key:
 
-- `title`: Required. Must be no longer than 64 characters in length.
-- `content`: Required. Must be no longer than 10,000 characters in length.
+Adds or removes the authenticated User to the upvotes of the identified Post. The Post and its root Community must both be `ACTIVE`.
 
-> `PUT /post/:postId` <sub>protected</sub>
+- `upvote`: Required. Must be a boolean. `true` adds an upvote if the User has not already done so, `false` removes the upvote if the User has upvoted.
 
-Edits the identified post. Follows the same validation rules as `POST /community/:communityId/posts`. The root community must be `ACTIVE`, the authenticated user must be the original author of this post, and this post must be `ACTIVE`.
+`POST /post/:postId/downvote` :key:
 
-> `POST /post/:postId/freeze` <sub>protected</sub>
+Adds or removes the authenticated User to the downvotes of the identified Post. The Post and its root Community must both be `ACTIVE`.
 
-Sets the `status` of the identified post to `ACTIVE` or `FROZEN`. The authenticated user must either be the original author of this post, or have moderator privileges over the root community of this post. The root community of this post must be `ACTIVE`.
+- `downvote`: Required. Must be a boolean. `true` adds a downvote if the User has not already done so, `false` removes the downvote if the User has downvoted.
 
-- `freeze`: Required. Must be a boolean. `true` freezes the post `false` unfreezes it.
+`POST /post/:postId/freeze` :shield:
 
-> `POST /post/:postId/hide` <sub>protected</sub>
+Sets the `status` of the identified Post to `ACTIVE` or `FROZEN`. The authenticated User must either be the original author of this Post or have moderator privileges over the root Community of this post. The root Community of this post must be `ACTIVE`.
 
-Sets the `status` of the identified post to `ACTIVE` or `HIDDEN`. The authenticated user must either be the original author of this post, or have moderator privileges over the root community of this post. The root community of this post must be `ACTIVE`.
+- `freeze`: Required. Must be a boolean. `true` freezes the Post `false` unfreezes it.
 
-- `freeze`: Required. Must be a boolean. `true` hides the post, `false` unhides it.
+`POST /post/:postId/hide` :shield:
 
-> `POST /post/:postId/upvote` <sub>protected</sub>
+Sets the `status` of the identified Post to `ACTIVE` or `HIDDEN`. The authenticated User must either be the original author of this Post or have moderator privileges over the root Community of this post. The root Community of this post must be `ACTIVE`.
 
-Adds or removes the authenticated user to the upvotes of the identified post. The post and its root community must both be `ACTIVE`.
+- `freeze`: Required. Must be a boolean. `true` hides the Post, `false` unhides it.
 
-- `upvote`: Required. Must be a boolean. `true` adds an upvote if the user has not already done so, `false` removes the upvote if the user has upvoted.
-
-> `POST /post/:postId/downvote` <sub>protected</sub>
-
-Adds or removes the authenticated user to the downvotes of the identified post. The post and its root community must both be `ACTIVE`.
-
-- `downvote`: Required. Must be a boolean. `true` adds a downvote if the user has not already done so, `false` removes the downvote if the user has downvoted.
-
-### Actions
-
-> `GET /community/:communityNameOrId/actions`
-
-Returns a list of actions done in the identified community, paginated by 50 entries per page.
-
-```js
-[
-  {
-    activity: 'User #1 promoted User #3 to Moderator.',
-    date: '2024-10-17T20:36:28.391Z',
-  },
-  // ...
-];
-```
-
-- `activity`: a string describing the action. User `id`s identify the users involved.
-- `date`: the creation date of this record.
-
-This endpoint accepts query parameters:
-
-- `actionName`: filters for any actions whose `activity` text contains the provided string.
-- `before` and `after`: filters for any actions whose `date` lies in between the provided values. The string must be in ISO format, e.g. `2024-01-01`.
-- `page`: fetches the page represented by the provided integer.

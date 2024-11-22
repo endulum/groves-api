@@ -7,19 +7,19 @@ beforeAll(async () => {
 });
 
 describe('get user', () => {
-  test('GET /user/:userNameOrId - 404 if user not found', async () => {
-    const response = await helpers.req('GET', '/user/owo', null, null);
+  test('GET /user/:user - 404 if user not found', async () => {
+    const response = await helpers.req('GET', '/user/owo');
     expect(response.status).toBe(404);
   });
 
-  test('GET /user/:userNameOrId - 200 and user details with id', async () => {
-    const response = await helpers.req('GET', '/user/1', null, null);
+  test('GET /user/:user - 200 and user details with id', async () => {
+    const response = await helpers.req('GET', '/user/1');
     expect(response.status).toBe(200);
     expect(response.body).not.toHaveProperty('password');
   });
 
-  test('GET /user/:userNameOrId - 200 and user details with username', async () => {
-    const response = await helpers.req('GET', '/user/admin', null, null);
+  test('GET /user/:user - 200 and user details with username', async () => {
+    const response = await helpers.req('GET', '/user/admin');
     expect(response.status).toBe(200);
     expect(response.body).not.toHaveProperty('password');
     // console.dir(response.body, { depth: null });
@@ -28,7 +28,7 @@ describe('get user', () => {
 
 describe('get self', () => {
   test('GET /me - 401 if not logged in', async () => {
-    const response = await helpers.req('GET', '/me', null, null);
+    const response = await helpers.req('GET', '/me');
     expect(response.status).toBe(401);
   });
 
@@ -55,7 +55,7 @@ describe('change account details of self', () => {
   });
 
   test('PUT /me - 401 without token', async () => {
-    const response = await helpers.req('PUT', '/me', null, null);
+    const response = await helpers.req('PUT', '/me');
     expect(response.status).toBe(401);
   });
 
