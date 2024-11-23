@@ -9,18 +9,18 @@ beforeAll(async () => {
 describe('get user', () => {
   test('GET /user/:user - 404 if user not found', async () => {
     const response = await helpers.req('GET', '/user/owo');
-    expect(response.status).toBe(404);
+    helpers.check(response, 404, 'User could not be found.');
   });
 
   test('GET /user/:user - 200 and user details with id', async () => {
     const response = await helpers.req('GET', '/user/1');
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body).not.toHaveProperty('password');
   });
 
   test('GET /user/:user - 200 and user details with username', async () => {
     const response = await helpers.req('GET', '/user/admin');
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body).not.toHaveProperty('password');
     // console.dir(response.body, { depth: null });
   });
@@ -29,13 +29,13 @@ describe('get user', () => {
 describe('get self', () => {
   test('GET /me - 401 if not logged in', async () => {
     const response = await helpers.req('GET', '/me');
-    expect(response.status).toBe(401);
+    helpers.check(response, 401, 'Please log in.');
   });
 
   test('GET /me - 200 and user details', async () => {
     const token = await helpers.getToken('admin');
     const response = await helpers.req('GET', '/me', null, token);
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body.username).toBe('admin');
     expect(response.body).not.toHaveProperty('password');
   });
@@ -56,7 +56,7 @@ describe('change account details of self', () => {
 
   test('PUT /me - 401 without token', async () => {
     const response = await helpers.req('PUT', '/me');
-    expect(response.status).toBe(401);
+    helpers.check(response, 401, 'Please log in.');
   });
 
   test('PUT /me - 400 and errors (with password)', async () => {
@@ -84,7 +84,7 @@ describe('change account details of self', () => {
           { ...correctInputs, ...wrongInputs },
           token,
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
       }),
     );
@@ -98,7 +98,7 @@ describe('change account details of self', () => {
       { username: 'owo', bio: 'Snazzy bio here.' },
       token,
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
 
     // change it back
     response = await helpers.req(
@@ -107,13 +107,13 @@ describe('change account details of self', () => {
       { username: 'admin', bio: '' },
       token,
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
   });
 
   test('PUT /me - 200 and changes account details (with password)', async () => {
     const token = await helpers.getToken('admin');
     const response = await helpers.req('PUT', '/me', correctInputs, token);
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     await helpers.req(
       'PUT',
       '/me',

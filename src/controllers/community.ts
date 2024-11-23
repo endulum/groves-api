@@ -115,31 +115,27 @@ export const exists = asyncHandler(async (req, res, next) => {
   ) {
     req.thisCommunity = community;
     next();
-  } else res.sendStatus(404);
+  } else res.status(404).send('Community could not be found.');
 });
 
 export const get = [
   exists,
   asyncHandler(async (req, res) => {
-    // no. just expand these in query in the `exists` handler..
-    // const moderators = await queries.findCommMods(req.thisCommunity.id);
-    // const { id, username } = req.thisCommunity.admin;
     delete req.thisCommunity.adminId;
     delete req.thisCommunity.wiki;
     res.json(req.thisCommunity);
-    // also consider adding counts?
-    // total votes, total posts, total followers
   }),
 ];
 
 export const isNotFrozen = asyncHandler(async (req, res, next) => {
   if (req.thisCommunity.status !== 'FROZEN') next();
-  else res.sendStatus(403);
+  else res.status(403).send('This community is frozen.');
 });
 
 export const isAdmin = asyncHandler(async (req, res, next) => {
   if (req.thisCommunity.admin.id === req.user.id) next();
-  else res.sendStatus(403);
+  else
+    res.status(403).send('Only the community admin can perform this action.');
 });
 
 export const edit = [
@@ -166,7 +162,8 @@ export const isAdminOrMod = asyncHandler(async (req, res, next) => {
     )
   )
     next();
-  else res.sendStatus(403);
+  else
+    res.status(403).send('Only a community moderator can perform this action.');
 });
 
 export const getWiki = [
@@ -199,12 +196,25 @@ export const follow = [
   body('follow').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await queries.followCommunity(
-      req.thisCommunity.id,
-      req.user.id,
-      req.body.follow,
-    );
-    res.sendStatus(200);
+    const followers = await queries.findCommFollowers(req.thisCommunity.id);
+    if (
+      req.body.follow === 'true' &&
+      followers.find(({ id }) => id === req.user.id)
+    ) {
+      res.status(403).send('You are already following this community.');
+    } else if (
+      req.body.follow === 'false' &&
+      !followers.find(({ id }) => id === req.user.id)
+    ) {
+      res.status(403).send('You are not following this community.');
+    } else {
+      await queries.followCommunity(
+        req.thisCommunity.id,
+        req.user.id,
+        req.body.follow,
+      );
+      res.sendStatus(200);
+    }
   }),
 ];
 

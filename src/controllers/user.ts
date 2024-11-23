@@ -28,7 +28,7 @@ export const authenticate = [
   deserialize,
   asyncHandler(async (req, res, next) => {
     if (!req.user) {
-      res.sendStatus(401);
+      res.status(401).send('Please log in.');
     } else {
       next();
     }
@@ -90,7 +90,7 @@ export const exists = asyncHandler(async (req, res, next) => {
   if (user) {
     req.thisUser = user;
     next();
-  } else res.sendStatus(404);
+  } else res.status(404).send('User could not be found.');
 });
 
 export const get = [

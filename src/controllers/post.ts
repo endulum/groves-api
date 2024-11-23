@@ -85,16 +85,19 @@ export const exists = asyncHandler(async (req, res, next) => {
   if (post) {
     req.thisPost = post;
     next();
-  } else res.sendStatus(404);
+  } else res.status(404).send('Post could not be found.');
 });
 
 export const isNotHiddenOrMod = asyncHandler(async (req, res, next) => {
   if (req.thisPost.status !== 'HIDDEN') next();
-  else if (req.user) {
-    const moderators = await queries.findCommMods(req.thisPost.community.id);
-    if (moderators.find((mod) => mod.id === req.user.id)) next();
-    else res.sendStatus(404);
-  } else res.sendStatus(404);
+  else if (
+    req.user &&
+    (await queries.findCommMods(req.thisPost.community.id)).find(
+      (mod) => mod.id === req.user.id,
+    )
+  )
+    next();
+  else res.status(404).send('Post could not be found.');
 });
 
 export const get = [
@@ -107,17 +110,17 @@ export const get = [
 
 export const isAuthor = asyncHandler(async (req, res, next) => {
   if (req.thisPost.author.id === req.user.id) next();
-  else res.sendStatus(403);
+  else res.status(403).send('You are not the author of this post.');
 });
 
 export const isNotHidden = asyncHandler(async (req, res, next) => {
   if (req.thisPost.status !== 'HIDDEN') next();
-  else res.sendStatus(404);
+  else res.status(404).send('Post could not be found.');
 });
 
 export const isNotFrozen = asyncHandler(async (req, res, next) => {
   if (req.thisPost.status !== 'FROZEN') next();
-  else res.sendStatus(403);
+  else res.status(403).send('This post is frozen.');
 });
 
 export const rootCommunityIsActive = asyncHandler(async (req, res, next) => {
@@ -125,7 +128,7 @@ export const rootCommunityIsActive = asyncHandler(async (req, res, next) => {
     id: req.thisPost.community.id,
   });
   if (community && community.status === 'ACTIVE') next();
-  else res.sendStatus(403);
+  else res.status(403).send('The root community of this post is frozen.');
 });
 
 export const edit = [
@@ -144,7 +147,7 @@ export const edit = [
 
 export const isNotOwnPost = asyncHandler(async (req, res, next) => {
   if (req.thisPost.author.id !== req.user.id) next();
-  else res.sendStatus(403);
+  else res.status(403).send('You cannot vote on your own content.');
 });
 
 export const upvote = [
@@ -163,7 +166,9 @@ export const upvote = [
       // you never voted and you want to remove your vote
       (!voted && req.body.upvote === 'false')
     ) {
-      res.sendStatus(403);
+      res
+        .status(403)
+        .send('You cannot double-vote or remove a nonexistent vote.');
     } else {
       await queries.votePost(
         req.thisPost.id,
@@ -192,7 +197,9 @@ export const downvote = [
       // you never voted and you want to remove your vote
       (!voted && req.body.downvote === 'false')
     ) {
-      res.sendStatus(403);
+      res
+        .status(403)
+        .send('You cannot double-vote or remove a nonexistent vote.');
     } else {
       await queries.votePost(
         req.thisPost.id,
@@ -212,7 +219,12 @@ export const isAuthorOrMod = asyncHandler(async (req, res, next) => {
     moderators.find((mod) => mod.id === req.user.id)
   )
     next();
-  else res.sendStatus(403);
+  else
+    res
+      .status(403)
+      .send(
+        'Only the post author or a community moderator can perform this action.',
+      );
 });
 
 export const freeze = [

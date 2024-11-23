@@ -19,7 +19,7 @@ describe('search communities', () => {
   test('GET /communities - shows max 15 communities by activity descending, by default', async () => {
     const response = await helpers.req('GET', '/communities');
     // console.dir(response.body, { depth: null });
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body).toHaveProperty('communities');
     expect(response.body.communities.length).toBe(15);
     expect(
@@ -32,13 +32,13 @@ describe('search communities', () => {
 
   test('GET /communities - query "take" works', async () => {
     const response = await helpers.req('GET', `/communities?take=${commCount}`);
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body.communities.length).toBe(commCount);
   });
 
   test('GET /communities - query "name" works', async () => {
     const response = await helpers.req('GET', '/communities?name=soup');
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(
       response.body.communities.filter(
         (comm: { urlName: string; canonicalName: string }) =>
@@ -149,7 +149,7 @@ describe('create, see, and edit a community', () => {
       correctInputs,
       null,
     );
-    expect(response.status).toBe(401);
+    helpers.check(response, 401, 'Please log in.');
   });
 
   test('POST /communities - 400 if errors', async () => {
@@ -161,7 +161,7 @@ describe('create, see, and edit a community', () => {
           { ...correctInputs, ...wrongInputs },
           await helpers.getToken('admin'),
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
         expect(response.body.errors.length).toBe(1);
       }),
@@ -175,7 +175,7 @@ describe('create, see, and edit a community', () => {
       correctInputs,
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const newCommunity = await queries.findCommunity({
       urlName: correctInputs.urlName,
     });
@@ -184,13 +184,13 @@ describe('create, see, and edit a community', () => {
 
   test('GET /community/:community - 404 if community not found', async () => {
     const response = await helpers.req('GET', '/community/owo');
-    expect(response.status).toEqual(404);
+    helpers.check(response, 404, 'Community could not be found.');
   });
 
   test('GET /community/:community - 200 and community details', async () => {
     const response = await helpers.req('GET', '/community/askgroves');
     // console.dir(response.body, { depth: null });
-    expect(response.status).toEqual(200);
+    helpers.check(response, 200);
   });
 
   test('PUT /community/:community - 401 if not logged in', async () => {
@@ -200,7 +200,7 @@ describe('create, see, and edit a community', () => {
       correctInputs,
       null,
     );
-    expect(response.status).toBe(401);
+    helpers.check(response, 401, 'Please log in.');
   });
 
   test('PUT /community/:community - 403 if not mod', async () => {
@@ -211,7 +211,11 @@ describe('create, see, and edit a community', () => {
       correctInputs,
       await helpers.getToken('basic'),
     );
-    expect(response.status).toBe(403);
+    helpers.check(
+      response,
+      403,
+      'Only the community admin can perform this action.',
+    );
   });
 
   test('PUT /community/:community - 400 if errors', async () => {
@@ -223,7 +227,7 @@ describe('create, see, and edit a community', () => {
           { ...correctInputs, ...wrongInputs },
           await helpers.getToken('admin'),
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
         expect(response.body.errors.length).toEqual(1);
       }),
@@ -237,7 +241,7 @@ describe('create, see, and edit a community', () => {
       correctInputs,
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
   });
 });
 
@@ -265,7 +269,11 @@ describe('see and edit the wiki', () => {
       wiki,
       await helpers.getToken('demo-2'),
     );
-    expect(response.status).toBe(403);
+    helpers.check(
+      response,
+      403,
+      'Only a community moderator can perform this action.',
+    );
   });
 
   test('PUT /community/:community/wiki - 200 and writes wiki', async () => {
@@ -275,14 +283,14 @@ describe('see and edit the wiki', () => {
       wiki,
       await helpers.getToken('demo-1'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const comm = await queries.findCommunity({ id: 1 });
     expect(comm?.wiki).toEqual(wiki.content);
   });
 
   test('GET /community/:community/wiki - 200 and sees wiki', async () => {
     const response = await helpers.req('GET', '/community/comm/wiki');
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body).toHaveProperty('content');
     expect(response.body.content).toEqual(wiki.content);
   });
@@ -294,7 +302,7 @@ describe('see and edit the wiki', () => {
       { content: null },
       await helpers.getToken('demo-1'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const comm = await queries.findCommunity({ id: 1 });
     expect(comm?.wiki).toBeNull();
   });
@@ -321,7 +329,19 @@ describe('follow and unfollow a community', async () => {
       { follow: true },
       await helpers.getToken('basic'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
+    const followers = await queries.findCommFollowers(commId);
+    expect(followers.length).toBe(1);
+  });
+
+  test('POST /community/:community/follow - 403 if trying to double follow', async () => {
+    const response = await helpers.req(
+      'POST',
+      '/community/bestofgroves/follow',
+      { follow: true },
+      await helpers.getToken('basic'),
+    );
+    helpers.check(response, 403, 'You are already following this community.');
     const followers = await queries.findCommFollowers(commId);
     expect(followers.length).toBe(1);
   });
@@ -333,7 +353,19 @@ describe('follow and unfollow a community', async () => {
       { follow: false },
       await helpers.getToken('basic'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
+    const followers = await queries.findCommFollowers(commId);
+    expect(followers.length).toBe(0);
+  });
+
+  test('POST /community/:community/follow - 403 if unfollowing but never followed', async () => {
+    const response = await helpers.req(
+      'POST',
+      '/community/bestofgroves/follow',
+      { follow: false },
+      await helpers.getToken('basic'),
+    );
+    helpers.check(response, 403, 'You are not following this community.');
     const followers = await queries.findCommFollowers(commId);
     expect(followers.length).toBe(0);
   });
@@ -368,7 +400,11 @@ describe('moderator promotion and demotion', async () => {
       { username: 'demo-2' },
       await helpers.getToken('demo-1'),
     );
-    expect(response.status).toBe(403);
+    helpers.check(
+      response,
+      403,
+      'Only the community admin can perform this action.',
+    );
   });
 
   test('POST /community/:community/promote - 400 if errors', async () => {
@@ -386,7 +422,7 @@ describe('moderator promotion and demotion', async () => {
           wrongInput,
           await helpers.getToken('admin'),
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
         expect(response.body.errors.length).toEqual(1);
       }),
@@ -400,7 +436,7 @@ describe('moderator promotion and demotion', async () => {
       { username: 'demo-2' },
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const moderators = await queries.findCommMods(commId);
     expect(moderators.find((m) => m.username === 'demo-2')).toBeDefined();
   });
@@ -414,7 +450,11 @@ describe('moderator promotion and demotion', async () => {
       { username: 'demo-2' },
       await helpers.getToken('demo-2'),
     );
-    expect(response.status).toBe(403);
+    helpers.check(
+      response,
+      403,
+      'Only the community admin can perform this action.',
+    );
   });
 
   test('POST /community/:community/demote - 400 if errors', async () => {
@@ -432,7 +472,7 @@ describe('moderator promotion and demotion', async () => {
           wrongInput,
           await helpers.getToken('admin'),
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
         expect(response.body.errors.length).toEqual(1);
       }),
@@ -446,7 +486,7 @@ describe('moderator promotion and demotion', async () => {
       { username: 'demo-2' },
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const moderators = await queries.findCommMods(commId);
     expect(moderators.find((m) => m.username === 'demo-2')).not.toBeDefined();
   });
@@ -471,7 +511,11 @@ describe('freeze and unfreeze a community', async () => {
       { freeze: true },
       await helpers.getToken('basic'),
     );
-    expect(response.status).toBe(403);
+    helpers.check(
+      response,
+      403,
+      'Only the community admin can perform this action.',
+    );
   });
 
   test('POST /community/:community/freeze - 200 and freezes or unfreezes', async () => {
@@ -481,7 +525,7 @@ describe('freeze and unfreeze a community', async () => {
       { freeze: true },
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
 
     const comm = await queries.findCommunity({ id: 1 });
     expect(comm?.status).toBe('FROZEN');
@@ -503,7 +547,7 @@ describe('freeze and unfreeze a community', async () => {
           null,
           await helpers.getToken('admin'),
         );
-        expect(activityResponse.status).toBe(403);
+        helpers.check(activityResponse, 403, 'This community is frozen.');
       }),
     );
   });
@@ -515,7 +559,7 @@ describe('freeze and unfreeze a community', async () => {
       { freeze: false },
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const comm = await queries.findCommunity({ id: 1 });
     expect(comm?.status).not.toBe('FROZEN');
   });

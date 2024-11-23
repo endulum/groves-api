@@ -24,10 +24,9 @@ Groves uses JSON Web Tokens to authenticate users for protected :key: routes. Wh
 
 ### Todo
 
-- Accompany error codes with precise status text. In testing, make a helper to test for a `200 OK`
+- In the server error handler, discern between API and database/Prisma errors
 - For Communities, add logic for counting total votes made on all content in the Community
 - For Posts and Replies, have the API reflect whether the viewing User has voted on a Post or Reply, or not
-- For every noteworthy action, test that an Action was recorded
 - Handle replies
 - Handle actions
 
@@ -43,7 +42,7 @@ The API will return a `200 OK` on routes with actions that have completed succes
 
 On routes where actions have failed, the API will accompany the response with status text describing what went wrong.
 
-On routes requiring form input, if the input does not pass validation, the route returns a status of `400` as well as an `errors` object consisting of an array of the described errors.
+On routes requiring form input, if the input does not pass validation, the route returns a status of `400` without status text, but with an `errors` object consisting of an array of the described errors.
 
 ```js
 {

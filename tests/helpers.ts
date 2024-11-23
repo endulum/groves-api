@@ -61,6 +61,21 @@ export async function getToken(userInfo: string | number): Promise<string> {
   return token;
 }
 
+export function check(
+  response: Response,
+  expectedCode: number,
+  expectedText?: string,
+) {
+  if (expectedText) {
+    expect({
+      code: response.status,
+      text: response.text,
+    }).toEqual({ code: expectedCode, text: expectedText });
+  } else {
+    expect(response.status).toBe(expectedCode);
+  }
+}
+
 export async function testPaginationStability({
   url,
   resultsName,

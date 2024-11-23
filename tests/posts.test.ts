@@ -49,7 +49,7 @@ describe('search posts', () => {
 
   test('GET /community/:community/posts - shows max 20 posts by hotness descending, by default', async () => {
     const response = await helpers.req('GET', '/community/1/posts');
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body).toHaveProperty('posts');
     expect(response.body.posts.length).toBe(20);
     expect(
@@ -67,13 +67,13 @@ describe('search posts', () => {
 
   test('GET /community/:communityId/posts - query "take" works', async () => {
     const response = await helpers.req('GET', '/community/1/posts?take=30');
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body.posts.length).toBe(30);
   });
 
   test('GET /community/:communityId/posts - query "name" works', async () => {
     const response = await helpers.req('GET', '/community/1/posts?title=um');
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(
       response.body.posts.filter((post: { title: string }) =>
         post.title.includes('um'),
@@ -116,7 +116,7 @@ describe('search posts', () => {
     ).toEqual(response.body.posts);
     // best
     response = await helpers.req('GET', '/community/1/posts?sort=best');
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(
       [...response.body.posts].sort(
         (
@@ -132,7 +132,7 @@ describe('search posts', () => {
       'GET',
       '/community/1/posts?sort=controversial',
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(
       [...response.body.posts].sort(
         (
@@ -225,7 +225,7 @@ describe('create, see, and edit a post', () => {
           { ...correctInputs, ...wrongInputs },
           await helpers.getToken('admin'),
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
         expect(response.body.errors.length).toBe(1);
       }),
@@ -241,7 +241,7 @@ describe('create, see, and edit a post', () => {
       correctInputs,
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body).toHaveProperty('postId');
     const post = await queries.findPost(response.body.postId);
     expect(post).not.toBeNull();
@@ -253,23 +253,23 @@ describe('create, see, and edit a post', () => {
 
   test('GET /post/:postId - 404 if post does not exist', async () => {
     const response = await helpers.req('GET', `/post/owo`);
-    expect(response.status).toBe(404);
+    helpers.check(response, 404, 'Post could not be found.');
   });
 
   test('GET /post/:postId - 404 if post is hidden', async () => {
     const response = await helpers.req('GET', `/post/${hiddenPostId}`);
-    expect(response.status).toBe(404);
+    helpers.check(response, 404, 'Post could not be found.');
   });
 
   test('GET /post/:postId - 200 and shows post data', async () => {
     const response = await helpers.req('GET', `/post/${postId}`);
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     // console.dir(response.body, { depth: null });
   });
 
   test('GET /post/:postId - 200 even if post is frozen', async () => {
     const response = await helpers.req('GET', `/post/${frozenPostId}`);
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
   });
 
   test('PUT /post/:postId - 403 if post not yours', async () => {
@@ -279,7 +279,7 @@ describe('create, see, and edit a post', () => {
       null,
       await helpers.getToken('basic'),
     );
-    expect(response.status).toBe(403);
+    helpers.check(response, 403, 'You are not the author of this post.');
   });
 
   test('PUT /post/:postId - 403 if post is frozen', async () => {
@@ -289,7 +289,7 @@ describe('create, see, and edit a post', () => {
       null,
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(403);
+    helpers.check(response, 403, 'This post is frozen.');
   });
 
   test('PUT /post/:postId - 400 and errors', async () => {
@@ -301,7 +301,7 @@ describe('create, see, and edit a post', () => {
           { ...correctInputs, ...wrongInputs },
           await helpers.getToken('admin'),
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
         expect(response.body.errors.length).toBe(1);
       }),
@@ -315,7 +315,7 @@ describe('create, see, and edit a post', () => {
       { ...correctInputs, title: 'Another Post, but Different Title' },
       await helpers.getToken('admin'),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     // make sure edit date was updated
     const post = await queries.findPost(postId);
     expect(post?.title).toEqual('Another Post, but Different Title');
@@ -356,7 +356,7 @@ describe('vote on posts', () => {
         { upvote: true },
         await helpers.getToken('admin'),
       );
-      expect(response.status).toBe(403);
+      helpers.check(response, 403, 'You cannot vote on your own content.');
     });
 
     test('POST /post/:post/upvote - 403 if frozen', async () => {
@@ -366,7 +366,7 @@ describe('vote on posts', () => {
         { upvote: true },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(403);
+      helpers.check(response, 403, 'This post is frozen.');
     });
 
     test('POST /post/:post/upvote - 403 if removing upvote, but never upvoted', async () => {
@@ -376,7 +376,11 @@ describe('vote on posts', () => {
         { upvote: false },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(403);
+      helpers.check(
+        response,
+        403,
+        'You cannot double-vote or remove a nonexistent vote.',
+      );
     });
 
     test('POST /post/:post/upvote - 200 and adds upvote', async () => {
@@ -386,7 +390,7 @@ describe('vote on posts', () => {
         { upvote: true },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(200);
+      helpers.check(response, 200);
     });
 
     test('POST /post/:post/upvote - 403 if already upvoted', async () => {
@@ -396,7 +400,11 @@ describe('vote on posts', () => {
         { upvote: true },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(403);
+      helpers.check(
+        response,
+        403,
+        'You cannot double-vote or remove a nonexistent vote.',
+      );
     });
 
     test('POST /post/:post/upvote - 200 and removes upvote', async () => {
@@ -406,7 +414,7 @@ describe('vote on posts', () => {
         { upvote: false },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(200);
+      helpers.check(response, 200);
     });
   });
 
@@ -418,7 +426,7 @@ describe('vote on posts', () => {
         { downvote: true },
         await helpers.getToken('admin'),
       );
-      expect(response.status).toBe(403);
+      helpers.check(response, 403, 'You cannot vote on your own content.');
     });
 
     test('POST /post/:post/downvote - 403 if frozen', async () => {
@@ -428,7 +436,7 @@ describe('vote on posts', () => {
         { downvote: true },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(403);
+      helpers.check(response, 403, 'This post is frozen.');
     });
 
     test('POST /post/:post/downvote - 403 if removing downvote, but never downvoted', async () => {
@@ -438,7 +446,11 @@ describe('vote on posts', () => {
         { downvote: false },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(403);
+      helpers.check(
+        response,
+        403,
+        'You cannot double-vote or remove a nonexistent vote.',
+      );
     });
 
     test('POST /post/:post/downvote - 200 and adds downvote', async () => {
@@ -448,7 +460,7 @@ describe('vote on posts', () => {
         { downvote: true },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(200);
+      helpers.check(response, 200);
     });
 
     test('POST /post/:post/downvote - 403 if already downvoted', async () => {
@@ -458,7 +470,11 @@ describe('vote on posts', () => {
         { downvote: true },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(403);
+      helpers.check(
+        response,
+        403,
+        'You cannot double-vote or remove a nonexistent vote.',
+      );
     });
 
     test('POST /post/:post/downvote - 200 and removes downvote', async () => {
@@ -468,7 +484,7 @@ describe('vote on posts', () => {
         { downvote: false },
         await helpers.getToken('basic'),
       );
-      expect(response.status).toBe(200);
+      helpers.check(response, 200);
     });
   });
 });
@@ -508,7 +524,11 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       { freeze: true },
       await helpers.getToken(users[2]),
     );
-    expect(response.status).toBe(403);
+    helpers.check(
+      response,
+      403,
+      'Only the post author or a community moderator can perform this action.',
+    );
   });
 
   test('POST /post/:post/freeze - 200 and freezes post (author)', async () => {
@@ -518,7 +538,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       { freeze: true },
       await helpers.getToken(users[1]),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const post = await queries.findPost(postId);
     expect(post?.status).toBe('FROZEN');
   });
@@ -530,7 +550,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       { freeze: true },
       await helpers.getToken(users[0]),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const post = await queries.findPost(postId);
     expect(post?.status).toBe('FROZEN');
   });
@@ -542,7 +562,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       { freeze: false },
       await helpers.getToken(users[1]),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const post = await queries.findPost(postId);
     expect(post?.status).toBe('ACTIVE');
   });
@@ -554,7 +574,11 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       { freeze: true },
       await helpers.getToken(users[2]),
     );
-    expect(response.status).toBe(403);
+    helpers.check(
+      response,
+      403,
+      'Only the post author or a community moderator can perform this action.',
+    );
   });
 
   test('POST /post/:post/hide - 200 and hides post (yourself)', async () => {
@@ -564,7 +588,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       { hide: true },
       await helpers.getToken(users[1]),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const post = await queries.findPost(postId);
     expect(post?.status).toBe('HIDDEN');
   });
@@ -576,7 +600,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       { hide: true },
       await helpers.getToken(users[0]),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const post = await queries.findPost(postId);
     expect(post?.status).toBe('HIDDEN');
   });
@@ -588,7 +612,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       { hide: false },
       await helpers.getToken(users[1]),
     );
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const post = await queries.findPost(postId);
     expect(post?.status).toBe('ACTIVE');
   });

@@ -27,7 +27,7 @@ describe('logging in', () => {
           { ...correctInputs, ...wrongInputs },
           null,
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
         expect(response.body.errors.length).toEqual(1);
       }),
@@ -36,7 +36,7 @@ describe('logging in', () => {
 
   test('POST /login - 200 and token', async () => {
     const response = await helpers.req('POST', '/login', correctInputs, null);
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     expect(response.body).toHaveProperty('token');
   });
 });
@@ -67,7 +67,7 @@ describe('signing up', () => {
           { ...correctInputs, ...wrongInputs },
           null,
         );
-        expect(response.status).toBe(400);
+        helpers.check(response, 400);
         expect(response.body).toHaveProperty('errors');
         expect(response.body.errors.length).toEqual(1);
       }),
@@ -76,7 +76,7 @@ describe('signing up', () => {
 
   test('POST /signup - 200 and new user details returned', async () => {
     const response = await helpers.req('POST', '/signup', correctInputs, null);
-    expect(response.status).toBe(200);
+    helpers.check(response, 200);
     const user = await queries.findUser({ username: correctInputs.username });
     expect(user).toBeDefined();
   });
