@@ -104,7 +104,24 @@ export const get = [
   exists,
   isNotHiddenOrMod,
   asyncHandler(async (req, res) => {
-    res.json(req.thisPost);
+    let voting: { upvoted: boolean; downvoted: boolean } | null = null;
+    if (req.user) {
+      voting = {
+        upvoted: req.thisPost.upvotes.some(
+          (voter: { id: number }) => voter.id === req.user.id,
+        ),
+        downvoted: req.thisPost.downvotes.some(
+          (voter: { id: number }) => voter.id === req.user.id,
+        ),
+      };
+    }
+
+    delete req.thisPost.upvotes;
+    delete req.thisPost.downvotes;
+    res.json({
+      ...req.thisPost,
+      voting,
+    });
   }),
 ];
 

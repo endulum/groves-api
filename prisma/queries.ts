@@ -37,6 +37,8 @@ export async function findPost(id: string) {
   return client.post.findUnique({
     where: { id },
     include: {
+      upvotes: { select: { id: true } },
+      downvotes: { select: { id: true } },
       author: {
         select: {
           id: true,
@@ -63,6 +65,12 @@ export async function findPost(id: string) {
       communityId: true,
     },
   });
+  // if (!post) return { post: null, upvoted: null, downvoted: null };
+  // const upvoted = post?.upvotes.find((voter) => voter.id === userId);
+  // const downvoted = post?.downvotes.find((voter) => voter.id === userId);
+  // // delete post.upvotes;
+  // // delete post.downvotes;
+  // return { post, upvoted, downvoted };
 }
 
 // middleware-specific

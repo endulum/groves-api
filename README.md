@@ -26,7 +26,6 @@ Groves uses JSON Web Tokens to authenticate users for protected :key: routes. Wh
 
 - In the server error handler, discern between API and database/Prisma errors
 - For Communities, add logic for counting total votes made on all content in the Community
-- For Posts and Replies, have the API reflect whether the viewing User has voted on a Post or Reply, or not
 - Handle replies
 - Handle actions
 
@@ -225,7 +224,11 @@ Returns a paginated list of Posts under the identified Community. A post must ha
         		replies: 50,
         		upvotes: 100,
         		downvotes: 20
-        	}
+        	},
+            voted: {
+                upvoted: true,
+                voted: false
+            }
         }
 	],
 	links: {
@@ -234,6 +237,8 @@ Returns a paginated list of Posts under the identified Community. A post must ha
 	}
 }
 ```
+
+The `voted` property represents how the authenticated User voted on this post. It will be `null` if there is no authenticated User.
 
 This endpoint accepts query parameters:
 

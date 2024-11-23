@@ -267,6 +267,23 @@ describe('create, see, and edit a post', () => {
     // console.dir(response.body, { depth: null });
   });
 
+  test("GET /post/:postId - 200 and reflects user's vote", async () => {
+    await queries.votePost(postId, 2, 'upvote', 'true');
+    const response = await helpers.req(
+      'GET',
+      `/post/${postId}`,
+      null,
+      await helpers.getToken('basic'),
+    );
+    helpers.check(response, 200);
+    expect(response.body).toHaveProperty('voting');
+    expect(response.body.voting).toEqual({
+      upvoted: true,
+      downvoted: false,
+    });
+    // console.dir(response.body, { depth: null });
+  });
+
   test('GET /post/:postId - 200 even if post is frozen', async () => {
     const response = await helpers.req('GET', `/post/${frozenPostId}`);
     helpers.check(response, 200);
