@@ -72,7 +72,16 @@ export function check(
       text: response.text,
     }).toEqual({ code: expectedCode, text: expectedText });
   } else {
-    expect(response.status).toBe(expectedCode);
+    try {
+      expect(response.status).toBe(expectedCode);
+    } catch {
+      throw {
+        wanted: { code: expectedCode, text: expectedText ?? '' },
+        received: { code: response.status, text: response.text },
+        // deliberately differently named from 'expected' and 'actual' properties
+        // because those show up as stringified, more difficult for me to read
+      };
+    }
   }
 }
 
