@@ -8,6 +8,7 @@ declare global {
       thisUser: Prisma.User;
       thisCommunity: Prisma.Community;
       thisPost: Prisma.Post;
+      thisReply: Prisma.Reply;
     }
   }
 }

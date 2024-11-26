@@ -8,7 +8,9 @@ The units of interaction in Groves are Communities (likened to "groves"), Posts 
 
 - A user can "vote" positively or negatively on a Post or Reply. A user's "verdancy" is a cumulation of positive votes, countered by negative votes, the content they authored has earned in total.
 - Communities are managed by singular Admins with a variable team of Moderators.
+
   - Moderators can:
+
     - Freeze, hide, and pin Posts and Replies
     - Edit the Community Wiki
     - Mute users
@@ -26,8 +28,12 @@ Groves uses JSON Web Tokens to authenticate users for protected :key: routes. Wh
 
 - In the server error handler, discern between API and database/Prisma errors
 - For Communities, add logic for counting total votes made on all content in the Community
-- Handle replies
+- ~~Handle replies~~ Quite a mess was made when implementing replies. Clean that all up and possibly divide up the `queries` file as well into multiple queries.
 - Handle actions
+- Handle Verdancy
+- Handle admin/mod dashboards
+- Handle personal and global feeds
+- Include whether the Community or Post was frozen in Reply view (or not, just store that as context in the frontend)
 
 ## Endpoint Overview
 
@@ -159,9 +165,9 @@ Returns the identity of the Community identified by the `:community` parameter, 
   created: '2024-11-18T06:41:53.162Z',
   lastActivity: '2024-11-18T06:41:53.162Z',
   admin: { id: 1, username: 'admin' },
-  moderators: [ 
-      { id: 2, username: 'demo-1' }, 
-      { id: 3, username: 'demo-2' } 
+  moderators: [
+      { id: 2, username: 'demo-1' },
+      { id: 3, username: 'demo-2' }
   ],
   _count: {
       followers: 75,
@@ -171,7 +177,7 @@ Returns the identity of the Community identified by the `:community` parameter, 
 }
 ```
 
- `PUT /community/:community` :shield:
+`PUT /community/:community` :shield:
 
 Edits the identity of the identified Community. Accepts the same form inputs and follows the same validation rules as `POST /communities`. The Community must be `ACTIVE` and the authenticated user must have admin privileges over the Community.
 
@@ -183,11 +189,11 @@ Returns a `content` string representing the Community's Wiki.
 
 Edits the Community's Wiki. Accepts a form input `content`, which can be a blank string, but cannot exceed 10,000 characters in length. The Community must be `ACTIVE` and the authenticated user must have moderator privileges over this Community.
 
-`POST /community/:community/follow` :key: 
+`POST /community/:community/follow` :key:
 
 Adds or removes the authenticated User to the "followers" list of the identified Community. Accepts a form input `follow` which must be `true` (having the User follow the Community) or `false` (having the User unfollow the Community). The Community must be `ACTIVE`.
 
-`POST /community/:community/promote`​ :shield: 
+`POST /community/:community/promote`​ :shield:
 
 Grants a User moderator privileges over the identified Community. The Community must be `ACTIVE` and the authenticated User must have admin privileges over the Community.
 
@@ -243,13 +249,13 @@ The `voted` property represents how the authenticated User voted on this post. I
 This endpoint accepts query parameters:
 
 - `sort`: sorts by:
+
   - `=new`: the date of post creation.
   - `=comments`: the count of comments under this post.
   - `=hot`: voting popularity, relative to time.
   - `=top`: highest upvotes, countered by downvotes.
   - `=best`: specially rated "best" posts.
   - `=controversial`: highest vote count with the closest ratio of upvotes to downvotes.
-
 
 - `name`: filters for any posts whose `title` includes the string provided.
 - `take`: how many results to show at once. By default, 20 results are shown.
@@ -317,4 +323,3 @@ Sets the `status` of the identified Post to `ACTIVE` or `FROZEN`. The authentica
 Sets the `status` of the identified Post to `ACTIVE` or `HIDDEN`. The authenticated User must either be the original author of this Post or have moderator privileges over the root Community of this post. The root Community of this post must be `ACTIVE`.
 
 - `freeze`: Required. Must be a boolean. `true` hides the Post, `false` unhides it.
-

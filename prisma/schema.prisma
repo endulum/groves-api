@@ -24,6 +24,8 @@ model User {
   postsUpvoted           Post[]      @relation("postUpvotes")
   postsDownvoted         Post[]      @relation("postDownvotes")
   replies                Reply[]     @relation("replyAuthor")
+  repliesUpvoted         Reply[]     @relation("replyUpvotes")
+  repliesDownvoted       Reply[]     @relation("replyDownvotes")
 }
 
 model Community {
@@ -51,7 +53,7 @@ model Community {
 }
 
 model Post {
-  id String @id @default(cuid())
+  id String @id @default(nanoid(10))
   // a Post is a document with content and a tree of replies.
 
   title      String    @db.VarChar(64)
@@ -84,13 +86,11 @@ view PostRating {
 }
 
 model Reply {
-  id String @id @default(cuid())
+  id String @id @default(nanoid(10))
   // a Reply is a string of content that is attached to a Post.
 
   content    String // string with limited markdown
   datePosted DateTime @default(now())
-  upvotes    Int
-  downvotes  Int
   status     Status   @default(ACTIVE)
   // "ACTIVE": anyone can see and reply
   // "FROZEN": anyone can see, but replies and votes are locked
@@ -106,6 +106,8 @@ model Reply {
   parent      Reply?    @relation("replyParent", fields: [parentId], references: [id])
   parentId    String?
   children    Reply[]   @relation("replyParent")
+  upvotes     User[]    @relation("replyUpvotes")
+  downvotes   User[]    @relation("replyDownvotes")
 }
 
 model Action {

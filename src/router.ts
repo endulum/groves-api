@@ -3,6 +3,7 @@ import * as auth from './controllers/auth';
 import * as user from './controllers/user';
 import * as community from './controllers/community';
 import * as post from './controllers/post';
+import * as reply from './controllers/reply';
 
 const router = express.Router();
 
@@ -68,5 +69,11 @@ router.route('/post/:post/downvote').post(user.authenticate, post.downvote);
 router.route('/post/:post/freeze').post(user.authenticate, post.freeze);
 
 router.route('/post/:post/hide').post(user.authenticate, post.hide);
+
+// replies
+
+router.route('/post/:post/replies').get(user.deserialize, reply.getForPost);
+
+router.route('/reply/:reply').get(user.deserialize, reply.get);
 
 export { router };
