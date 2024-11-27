@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { client } from '../prisma/client';
-import * as queries from '../prisma/queries';
+import * as devQueries from '../prisma/queries/dev';
 import * as helpers from './helpers';
 import { populate } from '../prisma/populate';
 
@@ -12,7 +12,7 @@ async function generateRepliesEvenly(opts: {
   repliesFirstLevel?: number;
   callbackToRepliesPerLevel?: (repliesPerLevel: number) => number;
 }) {
-  await queries.truncateTable('Reply');
+  await devQueries.truncateTable('Reply');
   let repliesPerLevel = opts.repliesPerLevel;
   let steps = opts.levels;
   const queue: Array<null | string> = [null];

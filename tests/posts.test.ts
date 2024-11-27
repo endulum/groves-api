@@ -1,5 +1,8 @@
 import * as helpers from './helpers';
-import * as queries from '../prisma/queries';
+import * as devQueries from '../prisma/queries/dev';
+import * as userQueries from '../prisma/queries/user';
+import * as commQueries from '../prisma/queries/community';
+import * as postQueries from '../prisma/queries/post';
 import { populate } from '../prisma/populate';
 import wilson from 'wilson-score-interval';
 
@@ -25,9 +28,9 @@ const controversyScore = (upvotes: number, downvotes: number) => {
 };
 
 beforeAll(async () => {
-  await queries.truncateTable('User');
-  await queries.createAdmin();
-  await queries.createCommunity({
+  await devQueries.truncateTable('User');
+  await devQueries.createAdmin();
+  await commQueries.create({
     urlName: 'comm',
     canonicalName: 'Community',
     description: 'This is an ordinary community.',
@@ -195,21 +198,21 @@ describe('create, see, and edit a post', () => {
   ];
 
   beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    await queries.createUser('basic');
-    await queries.createCommunity({
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    await userQueries.create({ username: 'basic' });
+    await commQueries.create({
       urlName: 'comm',
       canonicalName: 'Community',
       description: 'This is an ordinary community.',
       adminId: 1,
     });
-    frozenPostId = await queries.createPost(1, 1, {
+    frozenPostId = await postQueries.create(1, 1, {
       title: 'Frozen Post',
       content: 'You can see, but not edit, this one.',
       status: 'FROZEN',
     });
-    hiddenPostId = await queries.createPost(1, 1, {
+    hiddenPostId = await postQueries.create(1, 1, {
       title: 'Hidden Post',
       content: 'You should not be able to retireve this one.',
       status: 'HIDDEN',
@@ -233,7 +236,7 @@ describe('create, see, and edit a post', () => {
   });
 
   test('POST /community/:communityId/posts - 200 and creates post', async () => {
-    let comm = await queries.findCommunity({ id: 1 });
+    let comm = await commQueries.find({ id: 1 });
     const lastActivity = comm?.lastActivity;
     const response = await helpers.req(
       'POST',
@@ -243,11 +246,11 @@ describe('create, see, and edit a post', () => {
     );
     helpers.check(response, 200);
     expect(response.body).toHaveProperty('postId');
-    const post = await queries.findPost(response.body.postId);
+    const post = await postQueries.find(response.body.postId);
     expect(post).not.toBeNull();
     postId = response.body.postId;
     // make sure lastActive date was updated
-    comm = await queries.findCommunity({ id: 1 });
+    comm = await commQueries.find({ id: 1 });
     expect(comm?.lastActivity).not.toEqual(lastActivity);
   });
 
@@ -268,7 +271,7 @@ describe('create, see, and edit a post', () => {
   });
 
   test("GET /post/:postId - 200 and reflects user's vote", async () => {
-    await queries.votePost(postId, 2, 'upvote', 'true');
+    await postQueries.vote(postId, 2, 'upvote', 'true');
     const response = await helpers.req(
       'GET',
       `/post/${postId}`,
@@ -334,7 +337,7 @@ describe('create, see, and edit a post', () => {
     );
     helpers.check(response, 200);
     // make sure edit date was updated
-    const post = await queries.findPost(postId);
+    const post = await postQueries.find(postId);
     expect(post?.title).toEqual('Another Post, but Different Title');
     expect(post?.lastEdited).not.toBeNull();
   });
@@ -345,20 +348,20 @@ describe('vote on posts', () => {
   let frozenPostId: string = '';
 
   beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    await queries.createUser('basic');
-    await queries.createCommunity({
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    await userQueries.create({ username: 'basic' });
+    await commQueries.create({
       urlName: 'comm',
       canonicalName: 'Community',
       description: 'This is an ordinary community.',
       adminId: 1,
     });
-    postId = await queries.createPost(1, 1, {
+    postId = await postQueries.create(1, 1, {
       title: 'Post',
       content: 'Vote on me.',
     });
-    frozenPostId = await queries.createPost(1, 1, {
+    frozenPostId = await postQueries.create(1, 1, {
       title: 'Frozen Post',
       content: 'You can see, but not edit, this one.',
       status: 'FROZEN',
@@ -511,24 +514,24 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
   let users: number[] = [];
 
   beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    await queries.createCommunity({
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    await commQueries.create({
       urlName: 'comm',
       canonicalName: 'Community',
       description: 'This is an ordinary community.',
       adminId: 1,
     });
-    users = await queries.createBulkUsers([
+    users = await devQueries.createBulkUsers([
       { username: 'demo-1' },
       { username: 'demo-2' },
       { username: 'demo-3' },
     ]);
-    await queries.distributeCommModerators(1, [users[0]]);
+    await devQueries.distributeCommModerators(1, [users[0]]);
     // users[0] is mod
     // users[1] is post author
     // users[2] is neither mod nor post author
-    postId = await queries.createPost(1, users[1], {
+    postId = await postQueries.create(1, users[1], {
       title: 'Title of Post',
       content: 'This is a post. Lorem ipsum dolor sit amet.',
     });
@@ -556,7 +559,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       await helpers.getToken(users[1]),
     );
     helpers.check(response, 200);
-    const post = await queries.findPost(postId);
+    const post = await postQueries.find(postId);
     expect(post?.status).toBe('FROZEN');
   });
 
@@ -568,7 +571,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       await helpers.getToken(users[0]),
     );
     helpers.check(response, 200);
-    const post = await queries.findPost(postId);
+    const post = await postQueries.find(postId);
     expect(post?.status).toBe('FROZEN');
   });
 
@@ -580,7 +583,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       await helpers.getToken(users[1]),
     );
     helpers.check(response, 200);
-    const post = await queries.findPost(postId);
+    const post = await postQueries.find(postId);
     expect(post?.status).toBe('ACTIVE');
   });
 
@@ -606,7 +609,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       await helpers.getToken(users[1]),
     );
     helpers.check(response, 200);
-    const post = await queries.findPost(postId);
+    const post = await postQueries.find(postId);
     expect(post?.status).toBe('HIDDEN');
   });
 
@@ -618,7 +621,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       await helpers.getToken(users[0]),
     );
     helpers.check(response, 200);
-    const post = await queries.findPost(postId);
+    const post = await postQueries.find(postId);
     expect(post?.status).toBe('HIDDEN');
   });
 
@@ -630,7 +633,7 @@ describe('hide and unhide, freeze and unfreeze a post', () => {
       await helpers.getToken(users[1]),
     );
     helpers.check(response, 200);
-    const post = await queries.findPost(postId);
+    const post = await postQueries.find(postId);
     expect(post?.status).toBe('ACTIVE');
   });
 });

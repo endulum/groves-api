@@ -2,7 +2,8 @@ import asyncHandler from 'express-async-handler';
 import { body } from 'express-validator';
 
 import { validate } from '../middleware/validate';
-import * as queries from '../../prisma/queries';
+import * as postQueries from '../../prisma/queries/post';
+import * as commQueries from '../../prisma/queries/community';
 import * as community from './community';
 
 export const search = [
@@ -13,7 +14,7 @@ export const search = [
       string | undefined
     >;
 
-    const { results, nextCursor, prevCursor } = await queries.searchPosts({
+    const { results, nextCursor, prevCursor } = await postQueries.search({
       before: before ?? undefined,
       after: after ?? undefined,
       take: take ? (parseInt(take, 10) ?? 20) : 20,
@@ -71,7 +72,7 @@ export const create = [
   ...validation,
   validate,
   asyncHandler(async (req, res) => {
-    const postId = await queries.createPost(
+    const postId = await postQueries.create(
       req.thisCommunity.id,
       req.user.id,
       req.body,
@@ -81,9 +82,12 @@ export const create = [
 ];
 
 export const exists = asyncHandler(async (req, res, next) => {
-  const post = await queries.findPost(req.params.post);
+  const post = await postQueries.find(req.params.post);
   if (post) {
     req.thisPost = post;
+    req.thisCommunity = await commQueries.find({
+      id: req.thisPost.community.id,
+    });
     next();
   } else res.status(404).send('Post could not be found.');
 });
@@ -92,8 +96,8 @@ export const isNotHiddenOrMod = asyncHandler(async (req, res, next) => {
   if (req.thisPost.status !== 'HIDDEN') next();
   else if (
     req.user &&
-    (await queries.findCommMods(req.thisPost.community.id)).find(
-      (mod) => mod.id === req.user.id,
+    req.thisCommunity.moderators.find(
+      (mod: { id: number }) => mod.id === req.user.id,
     )
   )
     next();
@@ -141,10 +145,7 @@ export const isNotFrozen = asyncHandler(async (req, res, next) => {
 });
 
 export const rootCommunityIsActive = asyncHandler(async (req, res, next) => {
-  const community = await queries.findCommunity({
-    id: req.thisPost.community.id,
-  });
-  if (community && community.status === 'ACTIVE') next();
+  if (req.thisCommunity.status === 'ACTIVE') next();
   else res.status(403).send('The root community of this post is frozen.');
 });
 
@@ -157,7 +158,7 @@ export const edit = [
   ...validation,
   validate,
   asyncHandler(async (req, res) => {
-    await queries.editPost(req.thisPost.id, req.body);
+    await postQueries.edit(req.thisPost.id, req.body);
     res.sendStatus(200);
   }),
 ];
@@ -176,7 +177,7 @@ export const upvote = [
   body('upvote').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    const voted = await queries.didUserVote(req.thisPost.id, req.user.id);
+    const voted = await postQueries.didUserVote(req.thisPost.id, req.user.id);
     if (
       // you voted and you want to vote again
       (voted && req.body.upvote === 'true') ||
@@ -187,7 +188,7 @@ export const upvote = [
         .status(403)
         .send('You cannot double-vote or remove a nonexistent vote.');
     } else {
-      await queries.votePost(
+      await postQueries.vote(
         req.thisPost.id,
         req.user.id,
         'upvote',
@@ -207,7 +208,7 @@ export const downvote = [
   body('downvote').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    const voted = await queries.didUserVote(req.thisPost.id, req.user.id);
+    const voted = await postQueries.didUserVote(req.thisPost.id, req.user.id);
     if (
       // you voted and you want to vote again
       (voted && req.body.downvote === 'true') ||
@@ -218,7 +219,7 @@ export const downvote = [
         .status(403)
         .send('You cannot double-vote or remove a nonexistent vote.');
     } else {
-      await queries.votePost(
+      await postQueries.vote(
         req.thisPost.id,
         req.user.id,
         'downvote',
@@ -230,10 +231,11 @@ export const downvote = [
 ];
 
 export const isAuthorOrMod = asyncHandler(async (req, res, next) => {
-  const moderators = await queries.findCommMods(req.thisPost.community.id);
   if (
     req.thisPost.author.id === req.user.id ||
-    moderators.find((mod) => mod.id === req.user.id)
+    req.thisCommunity.moderators.find(
+      (mod: { id: number }) => mod.id === req.user.id,
+    )
   )
     next();
   else
@@ -252,7 +254,7 @@ export const freeze = [
   body('freeze').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await queries.freezePost(
+    await postQueries.freeze(
       req.thisPost.id,
       req.thisPost.status,
       req.body.freeze,
@@ -268,7 +270,7 @@ export const hide = [
   body('hide').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await queries.hidePost(req.thisPost.id, req.thisPost.status, req.body.hide);
+    await postQueries.hide(req.thisPost.id, req.thisPost.status, req.body.hide);
     res.sendStatus(200);
   }),
 ];

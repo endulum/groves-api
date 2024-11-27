@@ -1,9 +1,10 @@
 import * as helpers from './helpers';
-import * as queries from '../prisma/queries';
+import * as devQueries from '../prisma/queries/dev';
+import * as userQueries from '../prisma/queries/user';
 
 beforeAll(async () => {
-  await queries.truncateTable('User');
-  await queries.createAdmin();
+  await devQueries.truncateTable('User');
+  await devQueries.createAdmin();
 });
 
 describe('get user', () => {
@@ -51,7 +52,7 @@ describe('change account details of self', () => {
   };
 
   beforeAll(async () => {
-    await queries.createUser('basic', 'password');
+    await userQueries.create({ username: 'basic' });
   });
 
   test('PUT /me - 401 without token', async () => {

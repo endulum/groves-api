@@ -2,7 +2,7 @@ import asyncHandler from 'express-async-handler';
 import { body } from 'express-validator';
 import jwt from 'jsonwebtoken';
 
-import * as queries from '../../prisma/queries';
+import * as userQueries from '../../prisma/queries/user';
 import { usernameValidation } from './auth';
 import { validate } from '../middleware/validate';
 
@@ -16,7 +16,7 @@ export const deserialize = asyncHandler(async (req, _res, next) => {
     const { id } = jwt.verify(bearerToken, process.env.TOKEN_SECRET) as {
       id: number;
     };
-    const user = await queries.findUser({ id });
+    const user = await userQueries.find({ id });
     req.user = user;
   } catch (err) {
     console.error(err);
@@ -70,20 +70,23 @@ export const edit = [
           throw new Error(
             'Please enter your current password in order to change it.',
           );
-        const match = await queries.comparePassword(req.user, value);
+        const match = await userQueries.comparePassword({
+          userData: req.user,
+          password: value,
+        });
         if (!match) throw new Error('Incorrect password.');
       }
     })
     .escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await queries.updateUser({ username: req.user.username }, req.body);
+    await userQueries.update({ userData: req.user, body: req.body });
     res.sendStatus(200);
   }),
 ];
 
 export const exists = asyncHandler(async (req, res, next) => {
-  const user = await queries.findUser({
+  const user = await userQueries.find({
     username: req.params.user,
     id: parseInt(req.params.user, 10),
   });

@@ -1,9 +1,10 @@
 import * as helpers from './helpers';
-import * as queries from '../prisma/queries';
+import * as devQueries from '../prisma/queries/dev';
+import * as userQueries from '../prisma/queries/user';
 
 beforeAll(async () => {
-  await queries.truncateTable('User');
-  await queries.createAdmin();
+  await devQueries.truncateTable('User');
+  await devQueries.createAdmin();
 });
 
 describe('logging in', () => {
@@ -77,7 +78,9 @@ describe('signing up', () => {
   test('POST /signup - 200 and new user details returned', async () => {
     const response = await helpers.req('POST', '/signup', correctInputs, null);
     helpers.check(response, 200);
-    const user = await queries.findUser({ username: correctInputs.username });
+    const user = await userQueries.find({
+      username: correctInputs.username,
+    });
     expect(user).toBeDefined();
   });
 });

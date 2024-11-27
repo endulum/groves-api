@@ -2,7 +2,7 @@ import asyncHandler from 'express-async-handler';
 import { body } from 'express-validator';
 import jwt from 'jsonwebtoken';
 
-import * as queries from '../../prisma/queries';
+import * as userQueries from '../../prisma/queries/user';
 import { validate } from '../middleware/validate';
 
 // is imported at user controller for username changing
@@ -20,7 +20,7 @@ export const usernameValidation = body('username')
   .custom(async (value, { req }) => {
     if (parseInt(value, 10) % 1 === 0)
       throw new Error('Usernames cannot be made solely of numbers.');
-    const existingUser = await queries.findUser({ username: value });
+    const existingUser = await userQueries.find({ username: value });
     if (existingUser && !('user' in req && existingUser.id === req.user.id)) {
       throw new Error(
         'A user with this username already exists. Usernames must be unique.',
@@ -52,7 +52,10 @@ export const signup = [
     .escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await queries.createUser(req.body.username, req.body.password);
+    await userQueries.create({
+      username: req.body.username,
+      password: req.body.password,
+    });
     res.sendStatus(200);
   }),
 ];
@@ -70,9 +73,12 @@ export const login = [
     .bail()
     .custom(async (value, { req }) => {
       if (!req.body.username) return;
-      const user = await queries.findUser({ username: req.body.username });
+      const user = await userQueries.find({ username: req.body.username });
       if (!user) throw new Error('Incorrect username or password.');
-      const match = await queries.comparePassword(user, value);
+      const match = await userQueries.comparePassword({
+        userData: user,
+        password: value,
+      });
       if (!match) throw new Error('Incorrect username or password.');
       req.user = user;
     })

@@ -1,5 +1,7 @@
 import * as helpers from './helpers';
-import * as queries from '../prisma/queries';
+import * as devQueries from '../prisma/queries/dev';
+import * as userQueries from '../prisma/queries/user';
+import * as commQueries from '../prisma/queries/community';
 import { populate } from '../prisma/populate';
 
 describe('search communities', () => {
@@ -132,9 +134,9 @@ describe('create, see, and edit a community', () => {
   ];
 
   beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    await queries.createCommunity({
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    await commQueries.create({
       urlName: 'bestofgroves',
       canonicalName: 'Best of Groves',
       description: 'The funniest and most memorable happenings.',
@@ -176,7 +178,7 @@ describe('create, see, and edit a community', () => {
       await helpers.getToken('admin'),
     );
     helpers.check(response, 200);
-    const newCommunity = await queries.findCommunity({
+    const newCommunity = await commQueries.find({
       urlName: correctInputs.urlName,
     });
     expect(newCommunity).toBeDefined();
@@ -204,7 +206,7 @@ describe('create, see, and edit a community', () => {
   });
 
   test('PUT /community/:community - 403 if not mod', async () => {
-    await queries.createUser('basic');
+    await userQueries.create({ username: 'basic' });
     const response = await helpers.req(
       'PUT',
       `/community/${correctInputs.urlName}`,
@@ -249,17 +251,17 @@ describe('see and edit the wiki', () => {
   const wiki = { content: 'This is some wiki content.' };
 
   beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    const userId = await queries.createUser('demo-1');
-    const commId = await queries.createCommunity({
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    const userId = await userQueries.create({ username: 'demo-1' });
+    const commId = await commQueries.create({
       urlName: 'comm',
       canonicalName: 'Community',
       description: 'This is an ordinary community.',
       adminId: 1,
     });
-    await queries.distributeCommModerators(commId, [userId]);
-    await queries.createUser('demo-2');
+    await devQueries.distributeCommModerators(commId, [userId]);
+    await userQueries.create({ username: 'demo-2' });
   });
 
   test('PUT /community/:community/wiki - 403 if not mod', async () => {
@@ -284,7 +286,7 @@ describe('see and edit the wiki', () => {
       await helpers.getToken('demo-1'),
     );
     helpers.check(response, 200);
-    const comm = await queries.findCommunity({ id: 1 });
+    const comm = await commQueries.find({ id: 1 });
     expect(comm?.wiki).toEqual(wiki.content);
   });
 
@@ -303,7 +305,7 @@ describe('see and edit the wiki', () => {
       await helpers.getToken('demo-1'),
     );
     helpers.check(response, 200);
-    const comm = await queries.findCommunity({ id: 1 });
+    const comm = await commQueries.find({ id: 1 });
     expect(comm?.wiki).toBeNull();
   });
 });
@@ -311,10 +313,10 @@ describe('see and edit the wiki', () => {
 describe('follow and unfollow a community', async () => {
   let commId: number = 0;
   beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    await queries.createUser('basic');
-    commId = await queries.createCommunity({
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    await userQueries.create({ username: 'basic' });
+    commId = await commQueries.create({
       urlName: 'bestofgroves',
       canonicalName: 'Best of Groves',
       description: 'The funniest and most memorable happenings.',
@@ -330,7 +332,7 @@ describe('follow and unfollow a community', async () => {
       await helpers.getToken('basic'),
     );
     helpers.check(response, 200);
-    const followers = await queries.findCommFollowers(commId);
+    const followers = await commQueries.findFollowers(commId);
     expect(followers.length).toBe(1);
   });
 
@@ -342,7 +344,7 @@ describe('follow and unfollow a community', async () => {
       await helpers.getToken('basic'),
     );
     helpers.check(response, 403, 'You are already following this community.');
-    const followers = await queries.findCommFollowers(commId);
+    const followers = await commQueries.findFollowers(commId);
     expect(followers.length).toBe(1);
   });
 
@@ -354,7 +356,7 @@ describe('follow and unfollow a community', async () => {
       await helpers.getToken('basic'),
     );
     helpers.check(response, 200);
-    const followers = await queries.findCommFollowers(commId);
+    const followers = await commQueries.findFollowers(commId);
     expect(followers.length).toBe(0);
   });
 
@@ -366,7 +368,7 @@ describe('follow and unfollow a community', async () => {
       await helpers.getToken('basic'),
     );
     helpers.check(response, 403, 'You are not following this community.');
-    const followers = await queries.findCommFollowers(commId);
+    const followers = await commQueries.findFollowers(commId);
     expect(followers.length).toBe(0);
   });
 });
@@ -375,17 +377,17 @@ describe('moderator promotion and demotion', async () => {
   let commId: number = 0;
 
   beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    const userId = await queries.createUser('demo-1');
-    commId = await queries.createCommunity({
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    const userId = await userQueries.create({ username: 'demo-1' });
+    commId = await commQueries.create({
       urlName: 'comm',
       canonicalName: 'Community',
       description: 'This is an ordinary community.',
       adminId: 1,
     });
-    await queries.distributeCommModerators(commId, [userId]);
-    await queries.createBulkUsers([
+    await devQueries.distributeCommModerators(commId, [userId]);
+    await devQueries.createBulkUsers([
       { username: 'demo-2' },
       { username: 'demo-3' },
     ]);
@@ -430,15 +432,19 @@ describe('moderator promotion and demotion', async () => {
   });
 
   test('POST /community/:community/promote - 200 and adds user', async () => {
-    const response = await helpers.req(
+    let response = await helpers.req(
       'POST',
       '/community/comm/promote',
       { username: 'demo-2' },
       await helpers.getToken('admin'),
     );
     helpers.check(response, 200);
-    const moderators = await queries.findCommMods(commId);
-    expect(moderators.find((m) => m.username === 'demo-2')).toBeDefined();
+    response = await helpers.req('GET', '/community/comm');
+    expect(
+      response.body.moderators.find(
+        (m: { username: string }) => m.username === 'demo-2',
+      ),
+    ).toBeDefined();
   });
 
   // demo-1 and demo-2 are mods, demo-3 is not mod, admin wants to demote demo-2
@@ -480,24 +486,28 @@ describe('moderator promotion and demotion', async () => {
   });
 
   test('POST /community/:community/demote - 200 and removes user', async () => {
-    const response = await helpers.req(
+    let response = await helpers.req(
       'POST',
       '/community/comm/demote',
       { username: 'demo-2' },
       await helpers.getToken('admin'),
     );
     helpers.check(response, 200);
-    const moderators = await queries.findCommMods(commId);
-    expect(moderators.find((m) => m.username === 'demo-2')).not.toBeDefined();
+    response = await helpers.req('GET', '/community/comm');
+    expect(
+      response.body.moderators.find(
+        (m: { username: string }) => m.username === 'demo-2',
+      ),
+    ).not.toBeDefined();
   });
 });
 
 describe('freeze and unfreeze a community', async () => {
   beforeAll(async () => {
-    await queries.truncateTable('User');
-    await queries.createAdmin();
-    await queries.createUser('basic');
-    await queries.createCommunity({
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    await userQueries.create({ username: 'basic' });
+    await commQueries.create({
       urlName: 'comm',
       canonicalName: 'Community',
       adminId: 1,
@@ -527,7 +537,7 @@ describe('freeze and unfreeze a community', async () => {
     );
     helpers.check(response, 200);
 
-    const comm = await queries.findCommunity({ id: 1 });
+    const comm = await commQueries.find({ id: 1 });
     expect(comm?.status).toBe('FROZEN');
 
     await Promise.all(
@@ -560,7 +570,7 @@ describe('freeze and unfreeze a community', async () => {
       await helpers.getToken('admin'),
     );
     helpers.check(response, 200);
-    const comm = await queries.findCommunity({ id: 1 });
+    const comm = await commQueries.find({ id: 1 });
     expect(comm?.status).not.toBe('FROZEN');
   });
 });

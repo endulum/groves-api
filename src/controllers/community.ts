@@ -1,7 +1,8 @@
 import asyncHandler from 'express-async-handler';
 import { body } from 'express-validator';
 
-import * as queries from '../../prisma/queries';
+import * as userQueries from '../../prisma/queries/user';
+import * as commQueries from '../../prisma/queries/community';
 import { validate } from '../middleware/validate';
 
 export const search = asyncHandler(async (req, res) => {
@@ -10,7 +11,7 @@ export const search = asyncHandler(async (req, res) => {
     string | undefined
   >;
 
-  const { results, nextCursor, prevCursor } = await queries.searchCommunities({
+  const { results, nextCursor, prevCursor } = await commQueries.search({
     before: before ? (parseInt(before, 10) ?? undefined) : undefined,
     after: after ? (parseInt(after, 10) ?? undefined) : undefined,
     take: take ? (parseInt(take, 10) ?? 15) : 15,
@@ -55,7 +56,7 @@ const validation = [
     .custom(async (value, { req }) => {
       if (parseInt(value, 10) > 0)
         throw new Error('Community URLs cannot be made solely of numbers.');
-      const existingCommunity = await queries.findCommunity({ urlName: value });
+      const existingCommunity = await commQueries.find({ urlName: value });
       if (
         existingCommunity && // a community exists
         !(
@@ -93,7 +94,7 @@ export const create = [
   ...validation,
   validate,
   asyncHandler(async (req, res) => {
-    await queries.createCommunity({
+    await commQueries.create({
       urlName: req.body.urlName,
       canonicalName: req.body.canonicalName,
       description: req.body.description,
@@ -104,7 +105,7 @@ export const create = [
 ];
 
 export const exists = asyncHandler(async (req, res, next) => {
-  const community = await queries.findCommunity({
+  const community = await commQueries.find({
     urlName: req.params.community,
     id: parseInt(req.params.community),
   });
@@ -145,7 +146,7 @@ export const edit = [
   ...validation,
   validate,
   asyncHandler(async (req, res) => {
-    await queries.editCommunity(req.thisCommunity.id, {
+    await commQueries.edit(req.thisCommunity.id, {
       urlName: req.body.urlName,
       canonicalName: req.body.canonicalName,
       description: req.body.description,
@@ -183,9 +184,8 @@ export const editWiki = [
   validate,
   asyncHandler(async (req, res) => {
     if (req.body.content === '')
-      await queries.editCommunityWiki(req.thisCommunity.id, null);
-    else
-      await queries.editCommunityWiki(req.thisCommunity.id, req.body.content);
+      await commQueries.editWiki(req.thisCommunity.id, null);
+    else await commQueries.editWiki(req.thisCommunity.id, req.body.content);
     res.sendStatus(200);
   }),
 ];
@@ -196,7 +196,7 @@ export const follow = [
   body('follow').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    const followers = await queries.findCommFollowers(req.thisCommunity.id);
+    const followers = await commQueries.findFollowers(req.thisCommunity.id);
     if (
       req.body.follow === 'true' &&
       followers.find(({ id }) => id === req.user.id)
@@ -208,7 +208,7 @@ export const follow = [
     ) {
       res.status(403).send('You are not following this community.');
     } else {
-      await queries.followCommunity(
+      await commQueries.follow(
         req.thisCommunity.id,
         req.user.id,
         req.body.follow,
@@ -228,15 +228,18 @@ export const promote = [
     .withMessage('Please enter a username.')
     .bail()
     .custom(async (value, { req }) => {
-      const existingUser = await queries.findUser({ username: value });
+      const existingUser = await userQueries.find({ username: value });
       if (!existingUser) {
         throw new Error('No user exists with this username.');
       }
       if (existingUser.id === req.user.id) {
         throw new Error('You cannot promote yourself.');
       }
-      const moderators = await queries.findCommMods(req.thisCommunity.id);
-      if (moderators.find(({ id }) => id === existingUser.id)) {
+      if (
+        req.thisCommunity.moderators.find(
+          ({ id }: { id: number }) => id === existingUser.id,
+        )
+      ) {
         throw new Error('This user is already a moderator of this community.');
       }
       req.thisUser = existingUser;
@@ -244,7 +247,7 @@ export const promote = [
     .escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await queries.promoteModerator(req.thisCommunity.id, req.thisUser.id);
+    await commQueries.promoteModerator(req.thisCommunity.id, req.thisUser.id);
     res.sendStatus(200);
   }),
 ];
@@ -259,15 +262,18 @@ export const demote = [
     .withMessage('Please enter a username.')
     .bail()
     .custom(async (value, { req }) => {
-      const existingUser = await queries.findUser({ username: value });
+      const existingUser = await userQueries.find({ username: value });
       if (!existingUser) {
         throw new Error('No user exists with this username.');
       }
       if (existingUser.id === req.user.id) {
         throw new Error('You cannot demote yourself.');
       }
-      const moderators = await queries.findCommMods(req.thisCommunity.id);
-      if (!moderators.find(({ id }) => id === existingUser.id)) {
+      if (
+        !req.thisCommunity.moderators.find(
+          ({ id }: { id: number }) => id === existingUser.id,
+        )
+      ) {
         throw new Error('This user is not a moderator of this community.');
       }
       req.thisUser = existingUser;
@@ -275,7 +281,7 @@ export const demote = [
     .escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await queries.demoteModerator(req.thisCommunity.id, req.thisUser.id);
+    await commQueries.demoteModerator(req.thisCommunity.id, req.thisUser.id);
     res.sendStatus(200);
   }),
 ];
@@ -286,7 +292,7 @@ export const freeze = [
   body('freeze').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await queries.freezeCommunity(
+    await commQueries.freeze(
       req.thisCommunity.id,
       req.thisCommunity.status,
       req.body.freeze,

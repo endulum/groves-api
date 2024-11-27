@@ -28,12 +28,13 @@ Groves uses JSON Web Tokens to authenticate users for protected :key: routes. Wh
 
 - In the server error handler, discern between API and database/Prisma errors
 - For Communities, add logic for counting total votes made on all content in the Community
-- ~~Handle replies~~ Quite a mess was made when implementing replies. Clean that all up and possibly divide up the `queries` file as well into multiple queries.
 - Handle actions
 - Handle Verdancy
 - Handle admin/mod dashboards
 - Handle personal and global feeds
 - Include whether the Community or Post was frozen in Reply view (or not, just store that as context in the frontend)
+- Finish handling Replies
+- Fine-tune the `populate` function into a proper `seed` function
 
 ## Endpoint Overview
 
