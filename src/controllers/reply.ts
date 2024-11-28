@@ -31,7 +31,9 @@ const exists = asyncHandler(async (req, res, next) => {
   });
   if (reply) {
     req.thisPost = await postQueries.find(reply.postId);
-    req.thisCommunity = await commQueries.find({ id: reply.communityId });
+    req.thisCommunity = await commQueries.find({
+      id: req.thisPost.community.id,
+    });
     req.thisReply = reply;
     next();
   } else res.status(404).send('Reply not found.');
