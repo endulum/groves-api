@@ -3,7 +3,7 @@ import * as devQueries from '../prisma/queries/dev';
 import * as userQueries from '../prisma/queries/user';
 import * as commQueries from '../prisma/queries/community';
 import * as postQueries from '../prisma/queries/post';
-import { populate } from '../prisma/populate';
+import { seed } from '../prisma/seed';
 import wilson from 'wilson-score-interval';
 
 const hotScore = (upvotes: number, downvotes: number) => {
@@ -41,12 +41,15 @@ beforeAll(async () => {
 describe('search posts', () => {
   const postCount = 50;
   beforeAll(async () => {
-    await populate({
+    await seed({
+      logging: false,
       userCount: 200,
-      commCount: 1,
-      postCount,
-      replies: { max: 50 },
-      votes: { max: 250 },
+      comms: { count: 1 },
+      posts: {
+        perComm: { min: postCount, max: postCount },
+        votesPer: { max: 250 },
+      },
+      replies: { perPost: { max: 50 } },
     });
   });
 

@@ -2,19 +2,17 @@ import * as helpers from './helpers';
 import * as devQueries from '../prisma/queries/dev';
 import * as userQueries from '../prisma/queries/user';
 import * as commQueries from '../prisma/queries/community';
-import { populate } from '../prisma/populate';
+import { seed } from '../prisma/seed';
 
 describe('search communities', () => {
   const commCount = 100;
 
   beforeAll(async () => {
-    await populate({
+    await seed({
+      logging: false,
       userCount: 250,
-      commCount,
-      postCount: 1000,
-      followers: {
-        max: 250,
-      },
+      comms: { count: commCount, followers: { max: 250 } },
+      posts: { perComm: { min: 0, max: 100 } },
     });
   });
 

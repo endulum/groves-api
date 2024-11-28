@@ -2,7 +2,7 @@
 import { client } from '../prisma/client';
 import * as devQueries from '../prisma/queries/dev';
 import * as helpers from './helpers';
-import { populate } from '../prisma/populate';
+import { seed } from '../prisma/seed';
 
 async function generateRepliesEvenly(opts: {
   postId: string;
@@ -30,7 +30,6 @@ async function generateRepliesEvenly(opts: {
           data: {
             parentId,
             postId: opts.postId,
-            communityId: opts.communityId,
             authorId: 1,
             content: 'Lorem ipsum dolor sit amet...',
           },
@@ -86,10 +85,11 @@ describe('gets a tree of replies', () => {
   let communityId: number = 0;
 
   beforeAll(async () => {
-    const { postIds, commIds } = await populate({
+    const { postIds, commIds } = await seed({
+      logging: false,
       userCount: 1,
-      commCount: 1,
-      postCount: 1,
+      comms: { count: 1 },
+      posts: { perComm: { min: 1, max: 1 } },
     });
     postId = postIds[0];
     communityId = commIds[0];

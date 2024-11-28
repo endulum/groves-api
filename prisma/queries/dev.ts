@@ -88,27 +88,54 @@ export async function distributeCommModerators(
 }
 
 export async function distributeVotes(
-  postId: string,
-  upvoterIds: number[],
-  downvoterIds: number[],
+  {
+    type,
+    id,
+    upvoterIds,
+    downvoterIds,
+  }: {
+    type: 'post' | 'reply';
+    id: string;
+    upvoterIds: number[];
+    downvoterIds: number[];
+  },
+  // postId: string,
+  // upvoterIds: number[],
+  // downvoterIds: number[],
 ) {
   // todo: upvoters and downvoters should have no overlap.
   // test against this.
   if (upvoterIds.length > 0) {
-    await client.post.update({
-      where: { id: postId },
-      data: {
-        upvotes: { connect: upvoterIds.map((id) => ({ id })) },
-      },
-    });
+    if (type === 'post')
+      await client.post.update({
+        where: { id },
+        data: {
+          upvotes: { connect: upvoterIds.map((id) => ({ id })) },
+        },
+      });
+    else if (type === 'reply')
+      await client.reply.update({
+        where: { id },
+        data: {
+          upvotes: { connect: upvoterIds.map((id) => ({ id })) },
+        },
+      });
   }
   if (downvoterIds.length > 0) {
-    await client.post.update({
-      where: { id: postId },
-      data: {
-        downvotes: { connect: downvoterIds.map((id) => ({ id })) },
-      },
-    });
+    if (type === 'post')
+      await client.post.update({
+        where: { id },
+        data: {
+          downvotes: { connect: downvoterIds.map((id) => ({ id })) },
+        },
+      });
+    else if (type === 'reply')
+      await client.reply.update({
+        where: { id },
+        data: {
+          downvotes: { connect: downvoterIds.map((id) => ({ id })) },
+        },
+      });
   }
 }
 
@@ -184,7 +211,6 @@ export async function createBulkPosts(
 
 export async function createBulkReplies(
   replyData: Array<fakes.BulkReplyData>,
-  communityId: number | number[],
   postId: string | string[],
   authorId: number | number[],
 ) {
@@ -194,10 +220,6 @@ export async function createBulkReplies(
       const reply = await client.reply.create({
         data: {
           content: rd.content,
-          communityId:
-            typeof communityId === 'number'
-              ? communityId
-              : communityId[Math.floor(Math.random() * communityId.length)],
           postId:
             typeof postId === 'string'
               ? postId

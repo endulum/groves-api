@@ -30,16 +30,12 @@ model User {
 
 model Community {
   id Int @id @default(autoincrement())
-  // a Community is a collection of posts.
 
-  urlName       String   @unique @db.VarChar(32) // to have the community accessible by url
-  canonicalName String   @db.VarChar(64) // less formal/restricted version of the community name, for show
-  description   String?  @db.VarChar(256) // short description of community's purpose
-  wiki          String? // markdown string representing a "document" of info about the community
+  urlName       String   @unique @db.VarChar(32)
+  canonicalName String   @db.VarChar(64)
+  description   String?  @db.VarChar(256)
+  wiki          String?
   status        Status   @default(ACTIVE)
-  // "ACTIVE": anyone can post and reply, the community is visible on global search and profiles
-  // "FROZEN": "read-only" mode, no posting/replying/editing/voting, not visible on global search
-  // "HIDDEN": same as above, but only admin can see comm (do we need this?)
   created       DateTime @default(now())
   lastActivity  DateTime @default(now())
 
@@ -48,23 +44,18 @@ model Community {
   adminId    Int
   moderators User[]   @relation("communityModerators")
   posts      Post[]   @relation("postCommunity")
-  replies    Reply[]  @relation("replyCommunity")
   actions    Action[] @relation("actionCommunity")
 }
 
 model Post {
   id String @id @default(nanoid(10))
-  // a Post is a document with content and a tree of replies.
 
   title      String    @db.VarChar(64)
-  content    String // string with markdown
+  content    String
   datePosted DateTime  @default(now())
   lastEdited DateTime?
   status     Status    @default(ACTIVE)
-  // "ACTIVE": anyone can see and reply
-  // "FROZEN": anyone can see, but replies and votes are locked
-  // "HIDDEN": same as above, but the author and content is rendered blank, and is excluded from author's content history
-  pinned     Boolean   @default(false) // if true, goes to the top of the Community post listing on index view
+  pinned     Boolean   @default(false)
 
   author      User        @relation(fields: [authorId], references: [id])
   authorId    Int
@@ -87,37 +78,25 @@ view PostRating {
 
 model Reply {
   id String @id @default(nanoid(10))
-  // a Reply is a string of content that is attached to a Post.
 
-  content    String // string with limited markdown
+  content    String
   datePosted DateTime @default(now())
   status     Status   @default(ACTIVE)
-  // "ACTIVE": anyone can see and reply
-  // "FROZEN": anyone can see, but replies and votes are locked
-  // "HIDDEN": same as above, but the author and content is rendered blank, and is excluded from author's content history
-  pinned     Boolean  @default(false) // if true, goes to the top of the Post reply listing on primary view
+  pinned     Boolean  @default(false)
 
-  author      User      @relation("replyAuthor", fields: [authorId], references: [id])
-  authorId    Int
-  community   Community @relation("replyCommunity", fields: [communityId], references: [id])
-  communityId Int
-  post        Post      @relation("replyPost", fields: [postId], references: [id])
-  postId      String
-  parent      Reply?    @relation("replyParent", fields: [parentId], references: [id])
-  parentId    String?
-  children    Reply[]   @relation("replyParent")
-  upvotes     User[]    @relation("replyUpvotes")
-  downvotes   User[]    @relation("replyDownvotes")
+  author    User    @relation("replyAuthor", fields: [authorId], references: [id])
+  authorId  Int
+  post      Post    @relation("replyPost", fields: [postId], references: [id])
+  postId    String
+  parent    Reply?  @relation("replyParent", fields: [parentId], references: [id])
+  parentId  String?
+  children  Reply[] @relation("replyParent")
+  upvotes   User[]  @relation("replyUpvotes")
+  downvotes User[]  @relation("replyDownvotes")
 }
 
 model Action {
   id Int @id @default(autoincrement())
-  // an Action is a string that reflects something done in a Community. Communities maintain public action logs.
-  // examples: 
-  // - Admin `(username)` appointed user `(username)` to Moderator.
-  // - Moderator `(username)` froze reply `(reply id)` in post `(post id)`
-  // - User `(username)` created post `(post id)`
-  // - User `(username)` edited reply `(reply id)` in post `(post id)`
 
   date     DateTime @default(now())
   activity String
