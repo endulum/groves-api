@@ -1,5 +1,6 @@
 import request, { Response } from 'supertest';
 import jwt from 'jsonwebtoken';
+import wilson from 'wilson-score-interval';
 
 import app from './app';
 import { client } from '../prisma/client';
@@ -139,3 +140,25 @@ export async function testPaginationStability({
     ).toEqual(results[pageCount]);
   }
 }
+
+export const scores = {
+  hot: (upvotes: number, downvotes: number) => {
+    const order = Math.log10(Math.max(Math.abs(upvotes - downvotes), 1));
+    const sign: number =
+      upvotes - downvotes > 0 ? 1 : upvotes - downvotes < 0 ? -1 : 0;
+    const seconds = Date.now();
+    return sign * order + seconds / 100000;
+  },
+  top: (upvotes: number, downvotes: number) => upvotes - downvotes,
+  best: (upvotes: number, downvotes: number) => {
+    if (upvotes + downvotes === 0) return 0;
+    return wilson(upvotes, upvotes + downvotes);
+  },
+
+  controversy: (upvotes: number, downvotes: number) => {
+    if (upvotes + downvotes === 0) return 0;
+    const power =
+      upvotes > downvotes ? downvotes / upvotes : upvotes / downvotes;
+    return Math.pow(upvotes + downvotes, power);
+  },
+};

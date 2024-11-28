@@ -4,28 +4,6 @@ import * as userQueries from '../prisma/queries/user';
 import * as commQueries from '../prisma/queries/community';
 import * as postQueries from '../prisma/queries/post';
 import { seed } from '../prisma/seed';
-import wilson from 'wilson-score-interval';
-
-const hotScore = (upvotes: number, downvotes: number) => {
-  const order = Math.log10(Math.max(Math.abs(upvotes - downvotes), 1));
-  const sign: number =
-    upvotes - downvotes > 0 ? 1 : upvotes - downvotes < 0 ? -1 : 0;
-  const seconds = Date.now();
-  return sign * order + seconds / 100000;
-};
-
-const topScore = (upvotes: number, downvotes: number) => upvotes - downvotes;
-
-const bestScore = (upvotes: number, downvotes: number) => {
-  if (upvotes + downvotes === 0) return 0;
-  return wilson(upvotes, upvotes + downvotes);
-};
-
-const controversyScore = (upvotes: number, downvotes: number) => {
-  if (upvotes + downvotes === 0) return 0;
-  const power = upvotes > downvotes ? downvotes / upvotes : upvotes / downvotes;
-  return Math.pow(upvotes + downvotes, power);
-};
 
 beforeAll(async () => {
   await devQueries.truncateTable('User');
@@ -64,8 +42,8 @@ describe('search posts', () => {
           post_a: { _count: { upvotes: number; downvotes: number } },
           post_b: { _count: { upvotes: number; downvotes: number } },
         ) =>
-          hotScore(post_b._count.upvotes, post_b._count.downvotes) -
-          hotScore(post_a._count.upvotes, post_a._count.downvotes),
+          helpers.scores.hot(post_b._count.upvotes, post_b._count.downvotes) -
+          helpers.scores.hot(post_a._count.upvotes, post_a._count.downvotes),
       ),
     ).toEqual(response.body.posts);
     // console.dir(response.body, { depth: null });
@@ -116,8 +94,8 @@ describe('search posts', () => {
           post_a: { _count: { upvotes: number; downvotes: number } },
           post_b: { _count: { upvotes: number; downvotes: number } },
         ) =>
-          topScore(post_b._count.upvotes, post_b._count.downvotes) -
-          topScore(post_a._count.upvotes, post_a._count.downvotes),
+          helpers.scores.top(post_b._count.upvotes, post_b._count.downvotes) -
+          helpers.scores.top(post_a._count.upvotes, post_a._count.downvotes),
       ),
     ).toEqual(response.body.posts);
     // best
@@ -129,8 +107,8 @@ describe('search posts', () => {
           post_a: { _count: { upvotes: number; downvotes: number } },
           post_b: { _count: { upvotes: number; downvotes: number } },
         ) =>
-          bestScore(post_b._count.upvotes, post_b._count.downvotes) -
-          bestScore(post_a._count.upvotes, post_a._count.downvotes),
+          helpers.scores.best(post_b._count.upvotes, post_b._count.downvotes) -
+          helpers.scores.best(post_a._count.upvotes, post_a._count.downvotes),
       ),
     ).toEqual(response.body.posts);
     // controversial
@@ -145,8 +123,14 @@ describe('search posts', () => {
           post_a: { _count: { upvotes: number; downvotes: number } },
           post_b: { _count: { upvotes: number; downvotes: number } },
         ) =>
-          controversyScore(post_b._count.upvotes, post_b._count.downvotes) -
-          controversyScore(post_a._count.upvotes, post_a._count.downvotes),
+          helpers.scores.controversy(
+            post_b._count.upvotes,
+            post_b._count.downvotes,
+          ) -
+          helpers.scores.controversy(
+            post_a._count.upvotes,
+            post_a._count.downvotes,
+          ),
       ),
     ).toEqual(response.body.posts);
   });
@@ -174,8 +158,14 @@ describe('search posts', () => {
               post_a: { _count: { upvotes: number; downvotes: number } },
               post_b: { _count: { upvotes: number; downvotes: number } },
             ) =>
-              bestScore(post_b._count.upvotes, post_b._count.downvotes) -
-              bestScore(post_a._count.upvotes, post_a._count.downvotes),
+              helpers.scores.best(
+                post_b._count.upvotes,
+                post_b._count.downvotes,
+              ) -
+              helpers.scores.best(
+                post_a._count.upvotes,
+                post_a._count.downvotes,
+              ),
           ),
         ).toEqual(response.body.posts);
       },
