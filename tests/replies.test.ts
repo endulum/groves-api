@@ -6,7 +6,6 @@ import { seed } from '../prisma/seed';
 
 async function generateRepliesEvenly(opts: {
   postId: string;
-  communityId: number;
   levels: number;
   repliesPerLevel: number;
   repliesFirstLevel?: number;
@@ -53,7 +52,7 @@ const checkChildOverflow = (children: any, callback?: (child: any) => void) => {
       if (child.children.length < child.totalChildCount)
         expect(child).toHaveProperty('loadMoreChildren');
       else expect(child).not.toHaveProperty('loadMoreChildren');
-      checkChildOverflow(child.children);
+      checkChildOverflow(child.children, callback);
     } else {
       if (child.totalChildCount > 0)
         expect(child).toHaveProperty('loadChildren');
@@ -81,23 +80,24 @@ const gatherChildrenIds = (children: any): string[] => {
 };
 
 describe('gets a tree of replies', () => {
+  const userCount = 250;
+  let users: number[] = [];
   let postId: string = '';
-  let communityId: number = 0;
+  let replyIds: string[] = [];
 
   beforeAll(async () => {
-    const { postIds, commIds } = await seed({
+    const { userIds, postIds } = await seed({
       logging: false,
-      userCount: 1,
+      userCount,
       comms: { count: 1 },
       posts: { perComm: { min: 1, max: 1 } },
     });
+    users = userIds;
     postId = postIds[0];
-    communityId = commIds[0];
     // create an even tree of replies for one post that goes four levels deep and has four replies per level
     // 4 + 4^2 + 4^3 + 4^4 + 4^5 = 1364 replies on this post
-    await generateRepliesEvenly({
+    replyIds = await generateRepliesEvenly({
       postId,
-      communityId,
       levels: 4,
       repliesPerLevel: 4,
     });
@@ -171,6 +171,58 @@ describe('gets a tree of replies', () => {
     });
   });
 
-  test.todo('GET /post/:post/replies - uses and maintains sort query');
+  test('GET /post/:post/replies - uses and maintains sort query', async () => {
+    await Promise.all(
+      replyIds.map(async (id) => {
+        const totalVotes = Math.floor(Math.random() * userCount);
+        const votingUsers = [...users]
+          .sort(() => 0.5 - Math.random())
+          .slice(0, Math.floor(Math.random() * totalVotes));
+        const middle = Math.floor(Math.random() * votingUsers.length);
+        const upvoterIds = votingUsers.slice(0, middle);
+        const downvoterIds = votingUsers.slice(middle + 1, votingUsers.length);
+        await devQueries.distributeVotes({
+          type: 'reply',
+          id,
+          upvoterIds,
+          downvoterIds,
+        });
+      }),
+    );
+
+    const response = await helpers.req(
+      'GET',
+      `/post/${postId}/replies?sort=top`,
+    );
+    helpers.check(response, 200);
+    checkChildOverflow(response.body.children, (child) => {
+      if (child.loadChildren)
+        expect(child.loadChildren.endsWith('?sort=top')).toBeTruthy();
+      if (child.loadMoreChildren)
+        expect(child.loadMoreChildren.endsWith('&sort=top')).toBeTruthy();
+      if ('children' in child) {
+        expect(
+          [...child.children]
+            .map((c: { votes: { upvotes: number; downvotes: number } }) => ({
+              upvotes: c.votes.upvotes,
+              downvotes: c.votes.downvotes,
+            }))
+            .sort(
+              (reply_a, reply_b) =>
+                helpers.scores.top(reply_b.upvotes, reply_b.downvotes) -
+                helpers.scores.top(reply_a.upvotes, reply_a.downvotes),
+            ),
+        ).toEqual(
+          child.children.map(
+            (c: { votes: { upvotes: number; downvotes: number } }) => ({
+              upvotes: c.votes.upvotes,
+              downvotes: c.votes.downvotes,
+            }),
+          ),
+        );
+      }
+    });
+  });
+
   test.todo("GET /post/:post/replies - reflects auth user's vote if present");
 });

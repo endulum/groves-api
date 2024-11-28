@@ -31,7 +31,7 @@ export function formatReplyResults(
   opts: {
     takePerLevel: number; // for turning the extra 1 result into the next cursor
     userId?: number; // for checking against the vote list of each reply
-    rebuiltQuery: string;
+    rebuiltQuery: string | null; // for preserving sort (and what else?)
   },
 ) {
   return results.map((result) => {
@@ -70,11 +70,14 @@ export function formatReplyResults(
         const { id } = result.children.pop();
         reply.loadMoreChildren = `/reply/${reply.id}?cursor=${id}`;
         // todo: i added a slash and it got me an html error. suppress that, this is a json-only api
+        if (opts.rebuiltQuery)
+          reply.loadMoreChildren += `&${opts.rebuiltQuery}`;
       }
       reply.children = formatReplyResults(result.children, opts);
     } else {
       if (result._count.children > 0) {
         reply.loadChildren = `/reply/${reply.id}`;
+        if (opts.rebuiltQuery) reply.loadChildren += `?${opts.rebuiltQuery}`;
       }
     }
 

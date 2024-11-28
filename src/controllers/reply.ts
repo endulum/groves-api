@@ -9,7 +9,7 @@ import * as post from './post';
 export const getForPost = [
   post.exists,
   asyncHandler(async (req, res) => {
-    const { parentId, cursor, levels, takePerLevel, takeAtRoot } =
+    const { parentId, cursor, levels, takePerLevel, takeAtRoot, sort } =
       req.query as Record<string, string | undefined>;
 
     const replies = await replyQueries.getTree({
@@ -19,6 +19,7 @@ export const getForPost = [
       levels: levels ? (parseInt(levels, 10) ?? 3) : 3,
       takePerLevel: takePerLevel ? (parseInt(takePerLevel, 10) ?? 10) : 3,
       takeAtRoot: takeAtRoot ? (parseInt(takeAtRoot, 10) ?? 5) : null,
+      sort: sort ?? 'best',
     });
 
     res.json({ children: replies });
@@ -42,10 +43,8 @@ const exists = asyncHandler(async (req, res, next) => {
 export const get = [
   exists,
   asyncHandler(async (req, res) => {
-    const { cursor, levels, takePerLevel, takeAtRoot } = req.query as Record<
-      string,
-      string | undefined
-    >;
+    const { cursor, levels, takePerLevel, takeAtRoot, sort } =
+      req.query as Record<string, string | undefined>;
 
     const replies = await replyQueries.getTree({
       postId: req.thisPost.id,
@@ -54,6 +53,7 @@ export const get = [
       levels: levels ? (parseInt(levels, 10) ?? 3) : 3,
       takePerLevel: takePerLevel ? (parseInt(takePerLevel, 10) ?? 10) : 3,
       takeAtRoot: takeAtRoot ? (parseInt(takeAtRoot, 10) ?? 5) : null,
+      sort: sort ?? 'best',
     });
 
     res.json({ children: replies });

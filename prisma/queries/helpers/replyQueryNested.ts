@@ -27,6 +27,7 @@ export function replyQueryNested(opts: {
   orderBy?: Prisma.CommunityOrderByWithRelationInput[];
 }) {
   const startingQuery: Query = {
+    orderBy: opts.orderBy ?? [],
     take: opts.take + 1,
     select: {
       id: true,
@@ -48,7 +49,7 @@ export function replyQueryNested(opts: {
 
   const query = JSON.parse(JSON.stringify(startingQuery)) as Query;
 
-  if (opts.orderBy) query.orderBy = opts.orderBy;
+  // if (opts.orderBy) query.orderBy = opts.orderBy;
 
   // the magic occurs here
   let pointer = query.select;
