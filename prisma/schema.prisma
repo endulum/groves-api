@@ -84,15 +84,25 @@ model Reply {
   status     Status   @default(ACTIVE)
   pinned     Boolean  @default(false)
 
-  author    User    @relation("replyAuthor", fields: [authorId], references: [id])
+  author    User         @relation("replyAuthor", fields: [authorId], references: [id])
   authorId  Int
-  post      Post    @relation("replyPost", fields: [postId], references: [id])
+  post      Post         @relation("replyPost", fields: [postId], references: [id])
   postId    String
-  parent    Reply?  @relation("replyParent", fields: [parentId], references: [id])
+  parent    Reply?       @relation("replyParent", fields: [parentId], references: [id])
   parentId  String?
-  children  Reply[] @relation("replyParent")
-  upvotes   User[]  @relation("replyUpvotes")
-  downvotes User[]  @relation("replyDownvotes")
+  children  Reply[]      @relation("replyParent")
+  upvotes   User[]       @relation("replyUpvotes")
+  downvotes User[]       @relation("replyDownvotes")
+  rating    ReplyRating? @relation("replyRating")
+}
+
+view ReplyRating {
+  reply            Reply  @relation("replyRating", fields: [replyId], references: [id])
+  replyId          String @unique
+  topScore         Int
+  bestScore        Float
+  hotScore         Float
+  controversyScore Float
 }
 
 model Action {
