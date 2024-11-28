@@ -30,7 +30,7 @@ export function formatReplyResults(
   results: any[], // i do not have the brainpower now to tighten this
   opts: {
     takePerLevel: number; // for turning the extra 1 result into the next cursor
-    userId?: number; // for checking against the vote list of each reply
+    userId: number | null; // for checking against the vote list of each reply
     rebuiltQuery: string | null; // for preserving sort (and what else?)
   },
 ) {

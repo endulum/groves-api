@@ -4,6 +4,7 @@ import { replyQueryNested } from './helpers/replyQueryNested';
 import { formatReplyResults } from './helpers/formatReplyResults';
 
 export async function getTree(opts: {
+  userId: number | null;
   postId: string;
   parentId?: string | null;
   cursor?: string;
@@ -49,6 +50,7 @@ export async function getTree(opts: {
   // return replies.slice(0, rootTake);
   return formatReplyResults(replies.slice(0, rootTake), {
     takePerLevel: take,
+    userId: opts.userId ?? null,
     rebuiltQuery: opts.sort ? `sort=${opts.sort}` : null,
   });
 }

@@ -13,6 +13,7 @@ export const getForPost = [
       req.query as Record<string, string | undefined>;
 
     const replies = await replyQueries.getTree({
+      userId: req.user ? req.user.id : null,
       postId: req.thisPost.id,
       parentId: parentId ? (parentId === 'null' ? null : parentId) : null,
       cursor: cursor ?? undefined,
@@ -47,6 +48,7 @@ export const get = [
       req.query as Record<string, string | undefined>;
 
     const replies = await replyQueries.getTree({
+      userId: req.user ? req.user.id : null,
       postId: req.thisPost.id,
       parentId: req.thisReply.id,
       cursor: cursor ?? undefined,

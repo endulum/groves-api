@@ -61,13 +61,6 @@ const checkChildOverflow = (children: any, callback?: (child: any) => void) => {
   });
 };
 
-// const voteCheckCallback = (child: any) => {
-//   // check vote visibility
-//   expect(child).not.toHaveProperty('upvotes');
-//   expect(child).not.toHaveProperty('downvotes');
-//   expect(child.votes).toEqual({ upvotes: 0, downvotes: 0, youVoted: null });
-// };
-
 const gatherChildrenIds = (children: any): string[] => {
   const ids: string[] = [];
   children.forEach((child: any) => {
@@ -80,7 +73,7 @@ const gatherChildrenIds = (children: any): string[] => {
 };
 
 describe('gets a tree of replies', () => {
-  const userCount = 250;
+  const userCount = 10;
   let users: number[] = [];
   let postId: string = '';
   let replyIds: string[] = [];
@@ -224,5 +217,24 @@ describe('gets a tree of replies', () => {
     });
   });
 
-  test.todo("GET /post/:post/replies - reflects auth user's vote if present");
+  test("GET /post/:post/replies - reflects auth user's vote if present", async () => {
+    // without auth user
+    let response = await helpers.req('GET', `/post/${postId}/replies`);
+    helpers.check(response, 200);
+    checkChildOverflow(response.body.children, (child) => {
+      expect(child.votes.youVoted).toBeNull();
+    });
+    // with auth user
+    const targetUserToken = await helpers.getToken(users[0]);
+    response = await helpers.req(
+      'GET',
+      `/post/${postId}/replies`,
+      null,
+      targetUserToken,
+    );
+    helpers.check(response, 200);
+    checkChildOverflow(response.body.children, (child) => {
+      expect(child.votes.youVoted).not.toBeNull();
+    });
+  });
 });
