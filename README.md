@@ -26,15 +26,17 @@ Groves uses JSON Web Tokens to authenticate users for protected :key: routes. Wh
 
 ### Todo
 
-- In the server error handler, discern between API and database/Prisma errors
-- For Communities, add logic for counting total votes made on all content in the Community
-- Handle actions
-- Handle Verdancy
-- Handle admin/mod dashboards
-- Handle personal and global feeds
-- Include whether the Community or Post was frozen in Reply view (or not, just store that as context in the frontend)
-- Finish handling Replies
-- Fine-tune the `populate` function into a proper `seed` function
+Major
+
+- Finish missing Reply routes
+- Personal and global feed
+- Verdancy dashboard (look into caching calculations)
+- Community moderation/administration dashboard
+
+Minor
+
+- In the error handler, discern between API and db errors
+- Have Communities tally up all votes ever made on its content (look into caching calculations)
 
 ## Endpoint Overview
 
@@ -62,6 +64,24 @@ On routes requiring form input, if the input does not pass validation, the route
   ];
 }
 ```
+
+### Voting
+
+On routes showing Post or Reply data, there is a property `voted` that represents how the authenticated User has voted on the content.
+
+```js
+{
+    //...
+    voted: {
+        upvoted: true,
+        downvoted: false
+    }
+}
+```
+
+`voted` will be `null` instead of an object if there is no authenticated User present in the request.
+
+Where the `voted` property exists, the `status` property should also exist, to assist in determining whether the authenticated User can still add or remove a vote.
 
 ### Account
 
@@ -223,19 +243,8 @@ Returns a paginated list of Posts under the identified Community. A post must ha
             id: 'cm3qc9dfs0004b1at6p5sdlqh',
             title: 'Lorem Ipsum',
             datePosted: '2024-10-17T03:34:27.290Z',
-            author: {
-                id: 1,
-                username: 'demo-user'
-            },
-        	_count: {
-        		replies: 50,
-        		upvotes: 100,
-        		downvotes: 20
-        	},
-            voted: {
-                upvoted: true,
-                voted: false
-            }
+            author: { id: 1, username: 'demo-user' },
+        	_count: { replies: 50, upvotes: 100, downvotes: 20 },
         }
 	],
 	links: {
@@ -244,8 +253,6 @@ Returns a paginated list of Posts under the identified Community. A post must ha
 	}
 }
 ```
-
-The `voted` property represents how the authenticated User voted on this post. It will be `null` if there is no authenticated User.
 
 This endpoint accepts query parameters:
 
@@ -289,11 +296,8 @@ Returns the identity of the Post identified by `:post`, if a Post exists with an
   pinned: false,
   author: { id: 1, username: 'admin' },
   community: { id: 1, urlName: 'comm', canonicalName: 'Community' },
-  _count: {
-      upvotes: 100,
-      downvotes: 50,
-      replies: 10
-  }
+  _count: { upvotes: 100, downvotes: 50, replies: 10 },
+  voted: { upvoted: true, downvoted: false }
 }
 ```
 
@@ -317,10 +321,97 @@ Adds or removes the authenticated User to the downvotes of the identified Post. 
 
 Sets the `status` of the identified Post to `ACTIVE` or `FROZEN`. The authenticated User must either be the original author of this Post or have moderator privileges over the root Community of this post. The root Community of this post must be `ACTIVE`.
 
-- `freeze`: Required. Must be a boolean. `true` freezes the Post `false` unfreezes it.
+- `freeze`: Required. Must be a boolean. `true` freezes the Post, `false` unfreezes it.
 
 `POST /post/:postId/hide` :shield:
 
 Sets the `status` of the identified Post to `ACTIVE` or `HIDDEN`. The authenticated User must either be the original author of this Post or have moderator privileges over the root Community of this post. The root Community of this post must be `ACTIVE`.
 
-- `freeze`: Required. Must be a boolean. `true` hides the Post, `false` unhides it.
+- `hide`: Required. Must be a boolean. `true` hides the Post, `false` unhides it.
+
+### Replies
+
+`GET /post/:post/replies` :eye:
+
+Returns an array of of Reply trees under the identified Post. The Replies at the root of each tree have a `parentId` of `null`.
+
+```js
+{
+  children: [
+    {
+      id: 'UymifHTwQl',
+      author: { id: 1, username: 'admin' },
+      datePosted: '2024-11-29T19:39:21.531Z',
+      content: 'Lorem ipsum dolor sit amet...',
+      status: 'ACTIVE',
+      _count: { children: 4, upvotes: 18, downvotes: 2 },
+      voted: { upvoted: false, downvoted: false }
+      children: [
+        {
+          id: 'cYYV083Nl-',
+          author: { id: 1, username: 'admin' },
+          datePosted: '2024-11-29T19:39:21.645Z',
+          content: 'Lorem ipsum dolor sit amet...',
+          status: 'ACTIVE',
+          _count: { children: 4, upvotes: 13, downvotes: 2 },
+          voted: { upvoted: false, downvoted: false },
+          loadChildren: '/reply/cYYV083Nl-/replies'
+        },
+        // ...
+      ],
+      loadMoreChildren: '/reply/UymifHTwQl/replies?cursor=k2JNdDC6lR'
+    },
+    // ...
+  ],
+  loadMoreChildren: '/post/8BOgFoddLf/replies?cursor=AogkklIuj5'
+}
+```
+
+This endpoint accepts query parameters:
+
+- `sort`: sorts by:
+  - `=new`: the date of Reply creation.
+  - `=hot`: voting popularity, relative to time.
+  - `=top`: highest upvotes, countered by downvotes.
+  - `=best`: specially rated "best" Replies.
+  - `=controversial`: highest vote count with the closest ratio of upvotes to downvotes.
+- `level`: how many levels deep to show. Any Replies at the final level that still have more children will not render those children, but will render a `loadChildren` link.
+- `takePerLevel`: how many Reply children to show per level. If a child has an array of children whose length is cut off by this limit, it will render a `loadMoreChildren` link.
+- `takeAtRoot`: how many Reply children to show at the first level, or in other words, how many Reply trees to show. By default it is the same as `takePerLevel`.
+
+If any Reply in any tree has a status of `HIDDEN`, the `author` and `content` will render as `null`. 
+
+`GET /reply/:reply/replies` :eye:
+
+Similarly to `GET post/:post/replies`, returns an array of Reply trees whose root parent is the identified Reply. It also accepts the same query parameters.
+
+`POST /post/:post/replies`​ :key:
+
+Creates a new Reply under the identified Post. Both the identified Post and the root Community must be `ACTIVE`.
+
+- `content`: Required. Must be no longer than 10,000 characters in length.
+- `parentId`: Not required - if left blank, this Reply will have no parent Reply and exist among the root Replies. If not blank, there must be a Reply under this Post with the given value as its `id`.
+
+`POST /reply/:reply/upvote` :key:
+
+Adds or removes the authenticated User to the upvotes of the identified Reply. The Reply, its root Post and its root Community must both be `ACTIVE`.
+
+- `upvote`: Required. Must be a boolean. `true` adds an upvote if the User has not already done so, `false` removes the upvote if the User has upvoted.
+
+`POST /reply/:reply/downvote` :key:
+
+Adds or removes the authenticated User to the downvotes of the identified Reply. The Reply, root Post and its root Community must both be `ACTIVE`.
+
+- `downvote`: Required. Must be a boolean. `true` adds a downvote if the User has not already done so, `false` removes the downvote if the User has downvoted.
+
+`POST /reply/:replyId/freeze` :shield:
+
+Sets the `status` of the identified Reply to `ACTIVE` or `FROZEN`. The authenticated User must either be the original author of this Reply or have moderator privileges over the root Community of this Reply's root Post. The root Post and its root Community must be `ACTIVE`.
+
+- `freeze`: Required. Must be a boolean. `true` freezes the Reply, `false` unfreezes it.
+
+`POST /reply/:replyId/hide` :shield:
+
+Sets the `status` of the identified Reply to `ACTIVE` or `HIDDEN`. The authenticated User must either be the original author of this Reply or have moderator privileges over the root Community of this Reply's root Post. The root Post and its root Community must be `ACTIVE`.
+
+- `hide`: Required. Must be a boolean. `true` hides the Reply, `false` unhides it.

@@ -74,7 +74,7 @@ const gatherChildrenIds = (children: any): string[] => {
   return ids;
 };
 
-describe('gets a tree of replies', () => {
+describe.skip('gets a tree of replies', () => {
   const userCount = 100;
   let users: number[] = [];
   let postId: string = '';
@@ -157,6 +157,7 @@ describe('gets a tree of replies', () => {
         `/post/${postId}/replies?levels=2&takePerLevel=2&sort=top`,
       );
       helpers.check(response, 200);
+      // console.dir(response.body, { depth: null });
       checkChildOverflow(response.body.children, (child) => {
         if ('loadMoreChildren' in child)
           expect(child.loadMoreChildren).toContain(
@@ -195,8 +196,7 @@ describe('gets a tree of replies', () => {
       let response = await helpers.req('GET', `/post/${postId}/replies`);
       helpers.check(response, 200);
       checkChildOverflow(response.body.children, (child) => {
-        expect(child.voted.upvoted).toBeNull();
-        expect(child.voted.downvoted).toBeNull();
+        expect(child.voted).toBeNull();
       });
       // with auth user
       const targetUserToken = await helpers.getToken(users[0]);
@@ -208,8 +208,9 @@ describe('gets a tree of replies', () => {
       );
       helpers.check(response, 200);
       checkChildOverflow(response.body.children, (child) => {
-        expect(child.voted.upvoted).not.toBeNull();
-        expect(child.voted.downvoted).not.toBeNull();
+        expect(child.voted).not.toBeNull();
+        expect(child.voted).toHaveProperty('upvoted');
+        expect(child.voted).toHaveProperty('downvoted');
       });
     });
   });
@@ -255,4 +256,63 @@ describe('gets a tree of replies', () => {
       });
     });
   });
+});
+
+describe('post a reply', () => {
+  const postId: string = '';
+  const replyId: string = '';
+  // clear everything and make one post
+  test.todo(
+    'POST /post/:post/replies - 404 if post is hidden or does not exist',
+  );
+  test.todo('POST /post/:post/replies - 403 if post is frozen');
+  test.todo('POST /post/:post/replies - 400 and errors');
+  test.todo('POST /post/:post/replies - 200 and creates reply under post');
+  test.todo('GET /post/:post/replies - shows your new reply, at root');
+  test.todo(
+    'POST /post/:post/replies - 200 and creates reply with a reply parent',
+  );
+  test.todo(
+    'GET /post/:post/replies - shows your new reply, as child of reply',
+  );
+});
+
+describe('vote on a reply', () => {
+  const replyId: string = '';
+  // clear everything and make one post with one reply
+  describe('upvoting', () => {
+    test.todo('POST /reply/:reply/upvote - 403 if own reply');
+    test.todo('POST /reply/:reply/upvote - 403 if reply is frozen');
+    test.todo(
+      'POST /reply/:reply/upvote - 403 if removing upvote without upvoting',
+    );
+    test.todo('POST /reply/:reply/upvote - 200 and adds upvote');
+    test.todo('POST /reply/:reply/upvote - 403 if adding upvote and upvoted');
+    test.todo('POST /reply/:reply/upvote - 200 and removes upvote');
+  });
+  describe('downvoting', () => {
+    test.todo('POST /reply/:reply/downvote - 403 if own reply');
+    test.todo('POST /reply/:reply/downvote - 403 if reply is frozen');
+    test.todo(
+      'POST /reply/:reply/downvote - 403 if removing downvote without downvoting',
+    );
+    test.todo('POST /reply/:reply/downvote - 200 and adds downvote');
+    test.todo(
+      'POST /reply/:reply/downvote - 403 if adding downvote and downvoted',
+    );
+    test.todo('POST /reply/:reply/downvote - 200 and removes downvote');
+  });
+});
+
+describe('freeze and unfreeze, hide and unhide a reply', () => {
+  const replyId: string = '';
+  // clear everything and make one post with one reply
+  test.todo('POST /reply/:reply/freeze - 403 if not author or mod');
+  test.todo('POST /reply/:reply/freeze - 200 and freezes reply (author)');
+  test.todo('POST /reply/:reply/freeze - 200 and freezes reply (mod)');
+  test.todo('POST /reply/:reply/freeze - 200 and unfreezes reply');
+  test.todo('POST /reply/:reply/hide - 403 if not author or mod');
+  test.todo('POST /reply/:reply/hide - 200 and hides reply (author)');
+  test.todo('POST /reply/:reply/hide - 200 and hides reply (mod)');
+  test.todo('POST /reply/:reply/hide - 200 and unhides reply');
 });

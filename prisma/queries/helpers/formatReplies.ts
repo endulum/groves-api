@@ -31,10 +31,7 @@ export function formatReplies({
           undefined,
       };
     } else {
-      reply.voted = {
-        upvoted: null,
-        downvoted: null,
-      };
+      reply.voted = null;
     }
 
     // handle pagination links
@@ -62,7 +59,7 @@ export function formatReplies({
     // handle status
     if (reply.status === 'HIDDEN') {
       reply.content = null;
-      reply.author = { id: null, username: null };
+      reply.author = null;
     }
 
     const { upvotes, downvotes, ...newReply } = reply;
