@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { client } from '../prisma/client';
 import * as devQueries from '../prisma/queries/dev';
+import * as userQueries from '../prisma/queries/user';
 import * as helpers from './helpers';
 import { seed } from '../prisma/seed';
 
@@ -333,29 +334,140 @@ describe('post a reply', () => {
 });
 
 describe('vote on a reply', () => {
-  const replyId: string = '';
+  let userId: number = 0;
+  let replyId: string = '';
+
+  beforeAll(async () => {
+    const { userIds, replyIds } = await seed({
+      logging: false,
+      userCount: 1,
+      comms: { count: 1 },
+      posts: { perComm: { min: 1, max: 1 } },
+      replies: { perPost: { min: 1, max: 1 } },
+    });
+    userId = userIds[0];
+    replyId = replyIds[0];
+    // await userQueries.create({ username: 'basic' });
+  });
   // clear everything and make one post with one reply
   describe('upvoting', () => {
-    test.todo('POST /reply/:reply/upvote - 403 if own reply');
-    test.todo('POST /reply/:reply/upvote - 403 if reply is frozen');
-    test.todo(
-      'POST /reply/:reply/upvote - 403 if removing upvote without upvoting',
-    );
-    test.todo('POST /reply/:reply/upvote - 200 and adds upvote');
-    test.todo('POST /reply/:reply/upvote - 403 if adding upvote and upvoted');
-    test.todo('POST /reply/:reply/upvote - 200 and removes upvote');
+    test('POST /reply/:reply/upvote - 403 if own reply', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/upvote`,
+        { upvote: true },
+        await helpers.getToken(userId),
+      );
+      helpers.check(response, 403, 'You cannot vote on your own content.');
+    });
+
+    test('POST /reply/:reply/upvote - 403 if removing upvote, but never upvoted', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/upvote`,
+        { upvote: false },
+        await helpers.getToken('admin'),
+      );
+      helpers.check(
+        response,
+        403,
+        'You cannot double-vote or remove a nonexistent vote.',
+      );
+    });
+
+    test('POST /reply/:reply/upvote - 200 and adds upvote', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/upvote`,
+        { upvote: true },
+        await helpers.getToken('admin'),
+      );
+      helpers.check(response, 200);
+    });
+
+    test('POST /reply/:reply/upvote - 403 if already upvoted', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/upvote`,
+        { upvote: true },
+        await helpers.getToken('admin'),
+      );
+      helpers.check(
+        response,
+        403,
+        'You cannot double-vote or remove a nonexistent vote.',
+      );
+    });
+
+    test('POST /reply/:reply/upvote - 200 and removes upvote', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/upvote`,
+        { upvote: false },
+        await helpers.getToken('admin'),
+      );
+      helpers.check(response, 200);
+    });
   });
+
   describe('downvoting', () => {
-    test.todo('POST /reply/:reply/downvote - 403 if own reply');
-    test.todo('POST /reply/:reply/downvote - 403 if reply is frozen');
-    test.todo(
-      'POST /reply/:reply/downvote - 403 if removing downvote without downvoting',
-    );
-    test.todo('POST /reply/:reply/downvote - 200 and adds downvote');
-    test.todo(
-      'POST /reply/:reply/downvote - 403 if adding downvote and downvoted',
-    );
-    test.todo('POST /reply/:reply/downvote - 200 and removes downvote');
+    test('POST /reply/:reply/downvote - 403 if own reply', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/downvote`,
+        { downvote: true },
+        await helpers.getToken(userId),
+      );
+      helpers.check(response, 403, 'You cannot vote on your own content.');
+    });
+
+    test('POST /reply/:reply/downvote - 403 if removing downvote, but never downvoted', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/downvote`,
+        { downvote: false },
+        await helpers.getToken('admin'),
+      );
+      helpers.check(
+        response,
+        403,
+        'You cannot double-vote or remove a nonexistent vote.',
+      );
+    });
+
+    test('POST /reply/:reply/downvote - 200 and adds downvote', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/downvote`,
+        { downvote: true },
+        await helpers.getToken('admin'),
+      );
+      helpers.check(response, 200);
+    });
+
+    test('POST /reply/:reply/downvote - 403 if already downvoted', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/downvote`,
+        { downvote: true },
+        await helpers.getToken('admin'),
+      );
+      helpers.check(
+        response,
+        403,
+        'You cannot double-vote or remove a nonexistent vote.',
+      );
+    });
+
+    test('POST /reply/:reply/downvote - 200 and removes downvote', async () => {
+      const response = await helpers.req(
+        'POST',
+        `/reply/${replyId}/downvote`,
+        { downvote: false },
+        await helpers.getToken('admin'),
+      );
+      helpers.check(response, 200);
+    });
   });
 });
 

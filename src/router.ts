@@ -79,4 +79,7 @@ router
 
 router.route('/reply/:reply/replies').get(user.deserialize, reply.getForReply);
 
+router.route('/reply/:reply/upvote').post(user.authenticate, reply.upvote);
+router.route('/reply/:reply/downvote').post(user.authenticate, reply.downvote);
+
 export { router };

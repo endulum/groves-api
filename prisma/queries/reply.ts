@@ -80,3 +80,45 @@ export async function create(
   });
   // todo: record adtion
 }
+
+export async function didUserVote(replyId: string, userId: number) {
+  const user = await client.user.findUnique({
+    where: {
+      id: userId,
+      OR: [
+        { repliesUpvoted: { some: { id: replyId } } },
+        { repliesDownvoted: { some: { id: replyId } } },
+      ],
+    },
+  });
+  return user !== null;
+}
+
+export async function vote(
+  replyId: string,
+  userId: number,
+  voteType: 'upvote' | 'downvote',
+  vote: 'true' | 'false',
+) {
+  if (voteType === 'upvote') {
+    await client.reply.update({
+      where: { id: replyId },
+      data: {
+        upvotes:
+          vote === 'true'
+            ? { connect: { id: userId } }
+            : { disconnect: { id: userId } },
+      },
+    });
+  } else if (voteType === 'downvote') {
+    await client.reply.update({
+      where: { id: replyId },
+      data: {
+        downvotes:
+          vote === 'true'
+            ? { connect: { id: userId } }
+            : { disconnect: { id: userId } },
+      },
+    });
+  }
+}

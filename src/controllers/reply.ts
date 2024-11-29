@@ -8,6 +8,7 @@ import * as replyQueries from '../../prisma/queries/reply';
 import * as postQueries from '../../prisma/queries/post';
 import * as commQueries from '../../prisma/queries/community';
 import * as post from './post';
+import * as community from './community';
 import { formatReplies } from '../../prisma/queries/helpers/formatReplies';
 
 export const getForPost = [
@@ -55,6 +56,7 @@ export const getForPost = [
 const exists = asyncHandler(async (req, res, next) => {
   const reply = await client.reply.findUnique({
     where: { id: req.params.reply },
+    include: { author: { select: { id: true, username: true } } },
   });
   if (reply) {
     req.thisPost = await postQueries.find(reply.postId);
@@ -112,6 +114,7 @@ export const create = [
   post.exists,
   post.isNotHidden,
   post.isNotFrozen,
+  community.isNotFrozen,
   body('content')
     .trim()
     .notEmpty()
@@ -139,5 +142,72 @@ export const create = [
       req.body.content,
     );
     res.sendStatus(200);
+  }),
+];
+
+export const isNotOwnReply = asyncHandler(async (req, res, next) => {
+  if (req.thisReply.author.id !== req.user.id) next();
+  else res.status(403).send('You cannot vote on your own content.');
+});
+
+export const upvote = [
+  exists,
+  post.isNotHidden,
+  post.isNotFrozen,
+  community.isNotFrozen,
+  isNotOwnReply,
+  body('upvote').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    const voted = await replyQueries.didUserVote(req.thisReply.id, req.user.id);
+    if (
+      // you voted and you want to vote again
+      (voted && req.body.upvote === 'true') ||
+      // you never voted and you want to remove your vote
+      (!voted && req.body.upvote === 'false')
+    ) {
+      res
+        .status(403)
+        .send('You cannot double-vote or remove a nonexistent vote.');
+    } else {
+      await replyQueries.vote(
+        req.thisReply.id,
+        req.user.id,
+        'upvote',
+        req.body.upvote,
+      );
+      res.sendStatus(200);
+    }
+  }),
+];
+
+export const downvote = [
+  exists,
+  post.isNotHidden,
+  post.isNotFrozen,
+  community.isNotFrozen,
+  isNotOwnReply,
+  body('downvote').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    const voted = await replyQueries.didUserVote(req.thisReply.id, req.user.id);
+    if (
+      // you voted and you want to vote again
+      (voted && req.body.downvote === 'true') ||
+      // you never voted and you want to remove your vote
+      (!voted && req.body.downvote === 'false')
+    ) {
+      res
+        .status(403)
+        .send('You cannot double-vote or remove a nonexistent vote.');
+    } else {
+      await replyQueries.vote(
+        req.thisReply.id,
+        req.user.id,
+        'downvote',
+        req.body.downvote,
+      );
+      res.sendStatus(200);
+    }
   }),
 ];
