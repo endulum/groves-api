@@ -1,24 +1,19 @@
 import { Prisma } from '@prisma/client';
 import { client } from '../client';
 import { replyQueryNested } from './helpers/replyQueryNested';
-import { formatReplyResults } from './helpers/formatReplyResults';
 
-export async function getTree(opts: {
-  userId: number | null;
+export async function get(query: {
   postId: string;
-  parentId?: string | null;
+  parentId?: string;
   cursor?: string;
-  levels?: number;
-  takePerLevel?: number;
-  takeAtRoot?: number | null;
-  sort: string;
+  levels: number;
+  takePerLevel: number;
+  takeAtRoot: number | null;
+  sort?: string;
+  queryString: string;
 }) {
-  const levels = opts.levels ?? 3;
-  const take = opts.takePerLevel ?? 3;
-  const rootTake = opts.takeAtRoot ?? take;
-
   const orderBy: Prisma.ReplyOrderByWithRelationInput[] = [{ id: 'desc' }];
-  switch (opts.sort) {
+  switch (query.sort) {
     case 'newest':
       orderBy.unshift({ datePosted: 'desc' });
       break;
@@ -37,20 +32,33 @@ export async function getTree(opts: {
 
   const replies = await client.reply.findMany({
     where: {
-      postId: opts.postId,
-      parentId: opts.parentId ?? null,
+      postId: query.postId,
+      parentId: query.parentId ?? null,
     },
-    ...replyQueryNested({ take, levels, orderBy }),
-    cursor: opts.cursor ? { id: opts.cursor } : undefined,
-    take: rootTake + 1,
+    ...replyQueryNested({
+      take: query.takePerLevel,
+      levels: query.levels,
+      orderBy,
+    }),
+    cursor: query.cursor ? { id: query.cursor } : undefined,
+    take: (query.takeAtRoot ?? query.takePerLevel) + 1,
   });
 
-  // const nextCursor = replies.length > rootTake ? replies.at(-1)?.id : undefined;
+  const cursor =
+    replies.length > (query.takeAtRoot ?? query.takePerLevel)
+      ? replies.at(-1)?.id
+      : undefined;
 
-  // return replies.slice(0, rootTake);
-  return formatReplyResults(replies.slice(0, rootTake), {
-    takePerLevel: take,
-    userId: opts.userId ?? null,
-    rebuiltQuery: opts.sort ? `sort=${opts.sort}` : null,
-  });
+  return {
+    children: replies.slice(0, query.takeAtRoot ?? query.takePerLevel),
+    ...(cursor && {
+      loadMoreChildren: query.parentId
+        ? `/reply/${query.parentId}/replies?cursor=${cursor}${
+            query.queryString ? '&' + query.queryString : ''
+          }`
+        : `/post/${query.postId}/replies?cursor=${cursor}${
+            query.queryString ? '&' + query.queryString : ''
+          }`,
+    }),
+  };
 }

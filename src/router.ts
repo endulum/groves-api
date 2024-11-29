@@ -74,6 +74,6 @@ router.route('/post/:post/hide').post(user.authenticate, post.hide);
 
 router.route('/post/:post/replies').get(user.deserialize, reply.getForPost);
 
-router.route('/reply/:reply').get(user.deserialize, reply.get);
+router.route('/reply/:reply/replies').get(user.deserialize, reply.getForReply);
 
 export { router };

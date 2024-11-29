@@ -8,6 +8,7 @@ type Query = {
     author: { select: { id: true; username: true } };
     datePosted: true;
     content: boolean;
+    status: true;
     _count: {
       select: {
         children: true;
@@ -34,6 +35,7 @@ export function replyQueryNested(opts: {
       author: { select: { id: true, username: true } },
       datePosted: true,
       content: true,
+      status: true,
       _count: {
         select: {
           children: true,

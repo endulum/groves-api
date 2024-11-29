@@ -45,16 +45,18 @@ async function generateRepliesEvenly(opts: {
   return replyIds;
 }
 
+// check that the properties `loadMoreChildren` and `loadChildren`
+// show only when they need to
 const checkChildOverflow = (children: any, callback?: (child: any) => void) => {
   children.forEach((child: any) => {
     if (callback) callback(child);
     if ('children' in child) {
-      if (child.children.length < child.totalChildCount)
+      if (child.children.length < child._count.children)
         expect(child).toHaveProperty('loadMoreChildren');
       else expect(child).not.toHaveProperty('loadMoreChildren');
       checkChildOverflow(child.children, callback);
     } else {
-      if (child.totalChildCount > 0)
+      if (child._count.children > 0)
         expect(child).toHaveProperty('loadChildren');
       else expect(child).not.toHaveProperty('loadChildren');
     }
@@ -73,7 +75,7 @@ const gatherChildrenIds = (children: any): string[] => {
 };
 
 describe('gets a tree of replies', () => {
-  const userCount = 10;
+  const userCount = 100;
   let users: number[] = [];
   let postId: string = '';
   let replyIds: string[] = [];
@@ -96,145 +98,161 @@ describe('gets a tree of replies', () => {
     });
   });
 
-  test('GET /post/:post/replies - default params, correct properties shown', async () => {
-    const response = await helpers.req('GET', `/post/${postId}/replies`);
-    helpers.check(response, 200);
-    // console.dir(response.body, { depth: null });
+  describe('GET /post/:post/replies', () => {
+    test('GET /post/:post/replies - default params, correct properties shown', async () => {
+      const response = await helpers.req(
+        'GET',
+        `/post/${postId}/replies?sort=top`,
+      );
+      helpers.check(response, 200);
+      // without params, the reply tree query goes three levels deep and shows three replies per level
+      // 3 + 3^2 + 3^3 + 3^4 = 120 max replies shown with defaults
+      const ids = gatherChildrenIds(response.body.children);
+      expect(ids.length).toBe(120);
+      expect(new Set(ids).size).toBe(ids.length); // all unique
 
-    // without params, the reply tree query goes three levels deep and shows three replies per level
-    // 3 + 3^2 + 3^3 + 3^4 = 120 replies shown
-    const ids = gatherChildrenIds(response.body.children);
-    expect(ids.length).toBe(120);
-    expect(new Set(ids).size).toBe(ids.length); // all unique
-    checkChildOverflow(response.body.children);
-  });
-
-  test('GET /post/:post/replies - different take and levels params', async () => {
-    const response = await helpers.req(
-      'GET',
-      `/post/${postId}/replies?levels=4&takePerLevel=4`,
-    );
-    helpers.check(response, 200);
-    // 4 + 4^2 + 4^3 + 4^4 = all 1364 replies shown
-    const ids = gatherChildrenIds(response.body.children);
-    expect(ids.length).toBe(1364);
-    expect(new Set(ids).size).toBe(ids.length); // all unique
-    checkChildOverflow(response.body.children);
-  });
-
-  test('GET /reply/:reply - use a cursor from root request to show children', async () => {
-    let response = await helpers.req('GET', `/post/${postId}/replies`);
-    helpers.check(response, 200);
-    const ids = gatherChildrenIds(response.body.children);
-    const loadChildrenLink =
-      response.body.children[0].children[0].children[0].children[0]
-        .loadChildren;
-    response = await helpers.req('GET', loadChildrenLink);
-    helpers.check(response, 200);
-    // none of the children rendered should be in ids
-    response.body.children.forEach((child: any) => {
-      expect(ids.find((id) => id === child.id)).toBeFalsy();
+      checkChildOverflow(response.body.children);
+      expect(response.body).toHaveProperty('loadMoreChildren');
     });
-    checkChildOverflow(response.body.children);
-  });
 
-  test('GET /reply/:reply - use a cursor from root request to show more children', async () => {
-    let response = await helpers.req('GET', `/post/${postId}/replies`);
-    helpers.check(response, 200);
-    const ids = gatherChildrenIds(response.body.children);
+    test('GET /post/:post/replies - different take and levels params', async () => {
+      const response = await helpers.req(
+        'GET',
+        `/post/${postId}/replies?levels=4&takePerLevel=4`,
+      );
+      helpers.check(response, 200);
+      // 4 + 4^2 + 4^3 + 4^4 = all 1364 replies shown
+      const ids = gatherChildrenIds(response.body.children);
+      expect(ids.length).toBe(1364);
+      expect(new Set(ids).size).toBe(ids.length); // all unique
 
-    // target the first comment in the second layer
-    const target = response.body.children[0].children[0].children[0];
-    // console.dir(target, { depth: null });
-    const targetIds = gatherChildrenIds(target.children);
-
-    const loadMoreChildrenLink = target.loadMoreChildren;
-    response = await helpers.req('GET', loadMoreChildrenLink + '&levels=0'); // we'll only check 0th level here
-    helpers.check(response, 200);
-    // console.dir(response.body, { depth: null });
-    const foundIds = gatherChildrenIds(response.body.children);
-    expect(foundIds.length + targetIds.length).toBe(target.totalChildCount);
-
-    // these found ids shouldn't have already been found
-    foundIds.forEach((child: any) => {
-      expect(targetIds.find((id) => id === child)).toBeFalsy();
+      expect(response.body).not.toHaveProperty('loadMoreChildren');
     });
-    foundIds.forEach((child: any) => {
-      expect(ids.find((id) => id === child)).toBeFalsy();
-    });
-  });
 
-  test('GET /post/:post/replies - uses and maintains sort query', async () => {
-    await Promise.all(
-      replyIds.map(async (id) => {
-        const totalVotes = Math.floor(Math.random() * userCount);
-        const votingUsers = [...users]
-          .sort(() => 0.5 - Math.random())
-          .slice(0, Math.floor(Math.random() * totalVotes));
-        const middle = Math.floor(Math.random() * votingUsers.length);
-        const upvoterIds = votingUsers.slice(0, middle);
-        const downvoterIds = votingUsers.slice(middle + 1, votingUsers.length);
-        await devQueries.distributeVotes({
-          type: 'reply',
-          id,
-          upvoterIds,
-          downvoterIds,
-        });
-      }),
-    );
+    test('GET /post/:post/replies - uses and maintains queries', async () => {
+      // distribute votes so we can sort by them
+      await Promise.all(
+        replyIds.map(async (id) => {
+          const totalVotes = Math.floor(Math.random() * userCount);
+          const votingUsers = [...users]
+            .sort(() => 0.5 - Math.random())
+            .slice(0, Math.floor(Math.random() * totalVotes));
+          const middle = Math.floor(Math.random() * votingUsers.length);
+          const upvoterIds = votingUsers.slice(0, middle);
+          const downvoterIds = votingUsers.slice(
+            middle + 1,
+            votingUsers.length,
+          );
+          await devQueries.distributeVotes({
+            type: 'reply',
+            id,
+            upvoterIds,
+            downvoterIds,
+          });
+        }),
+      );
 
-    const response = await helpers.req(
-      'GET',
-      `/post/${postId}/replies?sort=top`,
-    );
-    helpers.check(response, 200);
-    checkChildOverflow(response.body.children, (child) => {
-      if (child.loadChildren)
-        expect(child.loadChildren.endsWith('?sort=top')).toBeTruthy();
-      if (child.loadMoreChildren)
-        expect(child.loadMoreChildren.endsWith('&sort=top')).toBeTruthy();
-      if ('children' in child) {
-        expect(
-          [...child.children]
-            .map((c: { votes: { upvotes: number; downvotes: number } }) => ({
-              upvotes: c.votes.upvotes,
-              downvotes: c.votes.downvotes,
-            }))
-            .sort(
-              (reply_a, reply_b) =>
-                helpers.scores.top(reply_b.upvotes, reply_b.downvotes) -
-                helpers.scores.top(reply_a.upvotes, reply_a.downvotes),
+      const response = await helpers.req(
+        'GET',
+        `/post/${postId}/replies?levels=2&takePerLevel=2&sort=top`,
+      );
+      helpers.check(response, 200);
+      checkChildOverflow(response.body.children, (child) => {
+        if ('loadMoreChildren' in child)
+          expect(child.loadMoreChildren).toContain(
+            'levels=2&takePerLevel=2&sort=top',
+          );
+        if ('loadChildren' in child)
+          expect(child.loadChildren).toContain(
+            'levels=2&takePerLevel=2&sort=top',
+          );
+        if ('children' in child) {
+          expect(
+            [...child.children]
+              .map((c: { _count: { upvotes: number; downvotes: number } }) => ({
+                upvotes: c._count.upvotes,
+                downvotes: c._count.downvotes,
+              }))
+              .sort(
+                (reply_a, reply_b) =>
+                  helpers.scores.top(reply_b.upvotes, reply_b.downvotes) -
+                  helpers.scores.top(reply_a.upvotes, reply_a.downvotes),
+              ),
+          ).toEqual(
+            child.children.map(
+              (c: { _count: { upvotes: number; downvotes: number } }) => ({
+                upvotes: c._count.upvotes,
+                downvotes: c._count.downvotes,
+              }),
             ),
-        ).toEqual(
-          child.children.map(
-            (c: { votes: { upvotes: number; downvotes: number } }) => ({
-              upvotes: c.votes.upvotes,
-              downvotes: c.votes.downvotes,
-            }),
-          ),
-        );
-      }
+          );
+        }
+      });
+    });
+
+    test("GET /post/:post/replies - reflects auth user's vote if present", async () => {
+      // without auth user
+      let response = await helpers.req('GET', `/post/${postId}/replies`);
+      helpers.check(response, 200);
+      checkChildOverflow(response.body.children, (child) => {
+        expect(child.voted.upvoted).toBeNull();
+        expect(child.voted.downvoted).toBeNull();
+      });
+      // with auth user
+      const targetUserToken = await helpers.getToken(users[0]);
+      response = await helpers.req(
+        'GET',
+        `/post/${postId}/replies`,
+        null,
+        targetUserToken,
+      );
+      helpers.check(response, 200);
+      checkChildOverflow(response.body.children, (child) => {
+        expect(child.voted.upvoted).not.toBeNull();
+        expect(child.voted.downvoted).not.toBeNull();
+      });
     });
   });
 
-  test("GET /post/:post/replies - reflects auth user's vote if present", async () => {
-    // without auth user
-    let response = await helpers.req('GET', `/post/${postId}/replies`);
-    helpers.check(response, 200);
-    checkChildOverflow(response.body.children, (child) => {
-      expect(child.votes.youVoted).toBeNull();
+  describe('GET /reply/:reply/replies', () => {
+    test('GET /reply/:reply/replies - use a cursor from root request to show children', async () => {
+      let response = await helpers.req('GET', `/post/${postId}/replies`);
+      helpers.check(response, 200);
+      const ids = gatherChildrenIds(response.body.children);
+      const loadChildrenLink =
+        response.body.children[0].children[0].children[0].children[0]
+          .loadChildren;
+      response = await helpers.req('GET', loadChildrenLink);
+      helpers.check(response, 200);
+      // none of the children rendered should be in ids
+      response.body.children.forEach((child: any) => {
+        expect(ids.find((id) => id === child.id)).toBeFalsy();
+      });
+      checkChildOverflow(response.body.children);
     });
-    // with auth user
-    const targetUserToken = await helpers.getToken(users[0]);
-    response = await helpers.req(
-      'GET',
-      `/post/${postId}/replies`,
-      null,
-      targetUserToken,
-    );
-    helpers.check(response, 200);
-    checkChildOverflow(response.body.children, (child) => {
-      expect(child.votes.youVoted).not.toBeNull();
+
+    test('GET /reply/:reply/replies - use a cursor from root request to show more children', async () => {
+      let response = await helpers.req('GET', `/post/${postId}/replies`);
+      helpers.check(response, 200);
+      const ids = gatherChildrenIds(response.body.children);
+
+      // target the first comment in the second layer
+      const target = response.body.children[0].children[0].children[0];
+      const targetIds = gatherChildrenIds(target.children);
+
+      const loadMoreChildrenLink = target.loadMoreChildren;
+      response = await helpers.req('GET', loadMoreChildrenLink + '&levels=0'); // we'll only check 0th level here
+      helpers.check(response, 200);
+      const foundIds = gatherChildrenIds(response.body.children);
+      expect(foundIds.length + targetIds.length).toBe(target._count.children);
+
+      // these found ids shouldn't have already been found
+      foundIds.forEach((child: any) => {
+        expect(targetIds.find((id) => id === child)).toBeFalsy();
+      });
+      foundIds.forEach((child: any) => {
+        expect(ids.find((id) => id === child)).toBeFalsy();
+      });
     });
   });
 });
