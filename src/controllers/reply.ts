@@ -1,7 +1,9 @@
 import asyncHandler from 'express-async-handler';
+import { body } from 'express-validator';
 import { stringify } from 'querystring';
 
 import { client } from '../../prisma/client';
+import { validate } from '../middleware/validate';
 import * as replyQueries from '../../prisma/queries/reply';
 import * as postQueries from '../../prisma/queries/post';
 import * as commQueries from '../../prisma/queries/community';
@@ -103,5 +105,39 @@ export const getForReply = [
         loadMoreChildren: queryResult.loadMoreChildren,
       }),
     });
+  }),
+];
+
+export const create = [
+  post.exists,
+  post.isNotHidden,
+  post.isNotFrozen,
+  body('content')
+    .trim()
+    .notEmpty()
+    .withMessage('Reply cannot have empty content.')
+    .bail()
+    .isLength({ max: 10000 })
+    .withMessage('Reply content cannot exceed 10000 characters in length.')
+    .escape(),
+  body('parent')
+    .trim()
+    .custom(async (value) => {
+      if (value !== '') {
+        const existingReply = await replyQueries.find(value);
+        if (!existingReply) throw new Error('No Reply exists with this ID.');
+        if (existingReply.status !== 'ACTIVE')
+          throw new Error('This Reply is frozen. You cannot reply to it.');
+      }
+    }),
+  validate,
+  asyncHandler(async (req, res) => {
+    await replyQueries.create(
+      req.user.id,
+      req.thisPost.id,
+      req.body.parent !== '' ? req.body.parent : null,
+      req.body.content,
+    );
+    res.sendStatus(200);
   }),
 ];

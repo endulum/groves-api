@@ -62,3 +62,21 @@ export async function get(query: {
     }),
   };
 }
+
+export async function find(id: string) {
+  return await client.reply.findUnique({
+    where: { id, status: { not: 'HIDDEN' } },
+  });
+}
+
+export async function create(
+  authorId: number,
+  postId: string,
+  parentId: string | null,
+  content: string,
+) {
+  await client.reply.create({
+    data: { authorId, postId, parentId, content },
+  });
+  // todo: record adtion
+}

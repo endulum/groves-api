@@ -259,22 +259,77 @@ describe.skip('gets a tree of replies', () => {
 });
 
 describe('post a reply', () => {
-  const postId: string = '';
-  const replyId: string = '';
-  // clear everything and make one post
-  test.todo(
-    'POST /post/:post/replies - 404 if post is hidden or does not exist',
-  );
-  test.todo('POST /post/:post/replies - 403 if post is frozen');
-  test.todo('POST /post/:post/replies - 400 and errors');
-  test.todo('POST /post/:post/replies - 200 and creates reply under post');
-  test.todo('GET /post/:post/replies - shows your new reply, at root');
-  test.todo(
-    'POST /post/:post/replies - 200 and creates reply with a reply parent',
-  );
-  test.todo(
-    'GET /post/:post/replies - shows your new reply, as child of reply',
-  );
+  let postId: string = '';
+  let replyId: string = '';
+  const correctInputs = { content: 'Lorem ipsum...' };
+
+  beforeAll(async () => {
+    const { postIds } = await seed({
+      logging: false,
+      userCount: 1,
+      comms: { count: 1 },
+      posts: { perComm: { min: 1, max: 1 } },
+    });
+    postId = postIds[0];
+  });
+
+  test('POST /post/:post/replies - 400 and errors', async () => {
+    const wrongInputsArray = [
+      { content: '' },
+      { content: Array(10001).fill('A').join('') },
+      { parent: 'owo' },
+    ];
+
+    await Promise.all(
+      wrongInputsArray.map(async (wrongInputs) => {
+        const response = await helpers.req(
+          'POST',
+          `/post/${postId}/replies`,
+          { ...correctInputs, ...wrongInputs },
+          await helpers.getToken('admin'),
+        );
+        helpers.check(response, 400);
+        expect(response.body).toHaveProperty('errors');
+        expect(response.body.errors.length).toBe(1);
+      }),
+    );
+  });
+
+  test('POST /post/:post/replies - 200 and creates reply under post', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/post/${postId}/replies`,
+      correctInputs,
+      await helpers.getToken('admin'),
+    );
+    helpers.check(response, 200);
+  });
+
+  test('GET /post/:post/replies - shows your new reply, at root', async () => {
+    const response = await helpers.req('GET', `/post/${postId}/replies`);
+    helpers.check(response, 200);
+    const ids = gatherChildrenIds(response.body.children);
+    expect(ids.length).toBe(1);
+    replyId = ids[0];
+  });
+
+  test('POST /post/:post/replies - 200 and creates reply with a reply parent', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/post/${postId}/replies`,
+      { ...correctInputs, parent: replyId },
+      await helpers.getToken('admin'),
+    );
+    helpers.check(response, 200);
+  });
+
+  test('GET /post/:post/replies - shows your new reply, as child of reply', async () => {
+    const response = await helpers.req('GET', `/post/${postId}/replies`);
+    helpers.check(response, 200);
+    // console.dir(response.body, { depth: null });
+    const ids = gatherChildrenIds(response.body.children);
+    expect(ids.length).toBe(2);
+  });
 });
 
 describe('vote on a reply', () => {
