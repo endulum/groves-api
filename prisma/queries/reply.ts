@@ -65,7 +65,7 @@ export async function get(query: {
 
 export async function find(id: string) {
   return await client.reply.findUnique({
-    where: { id, status: { not: 'HIDDEN' } },
+    where: { id },
   });
 }
 
@@ -75,9 +75,10 @@ export async function create(
   parentId: string | null,
   content: string,
 ) {
-  await client.reply.create({
+  const reply = await client.reply.create({
     data: { authorId, postId, parentId, content },
   });
+  return reply.id;
   // todo: record adtion
 }
 
@@ -120,5 +121,45 @@ export async function vote(
             : { disconnect: { id: userId } },
       },
     });
+  }
+}
+
+export async function freeze(
+  replyId: string,
+  replyStatus: string,
+  freeze: 'true' | 'false',
+) {
+  if (replyStatus === 'ACTIVE' && freeze === 'true') {
+    await client.reply.update({
+      where: { id: replyId },
+      data: { status: 'FROZEN' },
+    });
+    // todo: record action
+  } else if (replyStatus === 'FROZEN' && freeze === 'false') {
+    await client.reply.update({
+      where: { id: replyId },
+      data: { status: 'ACTIVE' },
+    });
+    // todo: record action
+  }
+}
+
+export async function hide(
+  replyId: string,
+  replyStatus: string,
+  hide: 'true' | 'false',
+) {
+  if (replyStatus === 'ACTIVE' && hide === 'true') {
+    await client.reply.update({
+      where: { id: replyId },
+      data: { status: 'HIDDEN' },
+    });
+    // todo: record action
+  } else if (replyStatus === 'HIDDEN' && hide === 'false') {
+    await client.reply.update({
+      where: { id: replyId },
+      data: { status: 'ACTIVE' },
+    });
+    // todo: record action
   }
 }

@@ -28,10 +28,10 @@ Groves uses JSON Web Tokens to authenticate users for protected :key: routes. Wh
 
 Major
 
-- Finish missing Reply routes
 - Personal and global feed
 - Verdancy dashboard (look into caching calculations)
 - Community moderation/administration dashboard
+- Many test files are long and unwieldy. Find an alternative to having one test file per controller. Maybe group concerns.
 
 Minor
 

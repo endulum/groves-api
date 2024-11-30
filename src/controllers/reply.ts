@@ -145,6 +145,16 @@ export const create = [
   }),
 ];
 
+export const isNotFrozen = asyncHandler(async (req, res, next) => {
+  if (req.thisReply.status !== 'FROZEN') next();
+  else res.status(403).send('This reply is frozen.');
+});
+
+export const isNotHidden = asyncHandler(async (req, res, next) => {
+  if (req.thisReply.status !== 'HIDDEN') next();
+  else res.status(403).send('This reply is hidden.');
+});
+
 export const isNotOwnReply = asyncHandler(async (req, res, next) => {
   if (req.thisReply.author.id !== req.user.id) next();
   else res.status(403).send('You cannot vote on your own content.');
@@ -209,5 +219,58 @@ export const downvote = [
       );
       res.sendStatus(200);
     }
+  }),
+];
+
+export const isAuthorOrMod = asyncHandler(async (req, res, next) => {
+  if (
+    req.thisReply.author.id === req.user.id ||
+    req.thisCommunity.moderators.find(
+      (mod: { id: number }) => mod.id === req.user.id,
+    )
+  )
+    next();
+  else
+    res
+      .status(403)
+      .send(
+        'Only the reply author or a community moderator can perform this action.',
+      );
+});
+
+export const freeze = [
+  exists,
+  isNotHidden,
+  isAuthorOrMod,
+  post.isNotHidden,
+  post.isNotFrozen,
+  community.isNotFrozen,
+  body('freeze').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    await replyQueries.freeze(
+      req.thisReply.id,
+      req.thisReply.status,
+      req.body.freeze,
+    );
+    res.sendStatus(200);
+  }),
+];
+
+export const hide = [
+  exists,
+  isAuthorOrMod,
+  post.isNotHidden,
+  post.isNotFrozen,
+  community.isNotFrozen,
+  body('hide').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    await replyQueries.hide(
+      req.thisReply.id,
+      req.thisReply.status,
+      req.body.hide,
+    );
+    res.sendStatus(200);
   }),
 ];

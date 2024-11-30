@@ -1,7 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { client } from '../prisma/client';
 import * as devQueries from '../prisma/queries/dev';
-import * as userQueries from '../prisma/queries/user';
+import * as commQueries from '../prisma/queries/community';
+import * as postQueries from '../prisma/queries/post';
+import * as replyQueries from '../prisma/queries/reply';
 import * as helpers from './helpers';
 import { seed } from '../prisma/seed';
 
@@ -472,14 +474,136 @@ describe('vote on a reply', () => {
 });
 
 describe('freeze and unfreeze, hide and unhide a reply', () => {
-  const replyId: string = '';
-  // clear everything and make one post with one reply
-  test.todo('POST /reply/:reply/freeze - 403 if not author or mod');
-  test.todo('POST /reply/:reply/freeze - 200 and freezes reply (author)');
-  test.todo('POST /reply/:reply/freeze - 200 and freezes reply (mod)');
-  test.todo('POST /reply/:reply/freeze - 200 and unfreezes reply');
-  test.todo('POST /reply/:reply/hide - 403 if not author or mod');
-  test.todo('POST /reply/:reply/hide - 200 and hides reply (author)');
-  test.todo('POST /reply/:reply/hide - 200 and hides reply (mod)');
-  test.todo('POST /reply/:reply/hide - 200 and unhides reply');
+  let users: number[] = [];
+  let replyId: string = '';
+
+  beforeAll(async () => {
+    await devQueries.truncateTable('User');
+    await devQueries.createAdmin();
+    await commQueries.create({
+      urlName: 'comm',
+      canonicalName: 'Community',
+      description: 'This is an ordinary community.',
+      adminId: 1,
+    });
+    users = await devQueries.createBulkUsers([
+      { username: 'demo-1' },
+      { username: 'demo-2' },
+      { username: 'demo-3' },
+    ]);
+    await devQueries.distributeCommModerators(1, [users[0]]);
+    // users[0] is mod
+    // users[1] is reply author
+    // users[2] is neither mod nor reply author
+    const postId = await postQueries.create(1, users[1], {
+      title: 'Title of Post',
+      content: 'This is a post. Lorem ipsum dolor sit amet.',
+    });
+    replyId = await replyQueries.create(
+      users[1],
+      postId,
+      null,
+      'This is a reply.',
+    );
+  });
+
+  test('POST /reply/:reply/freeze - 403 if neither author nor mod', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/reply/${replyId}/freeze`,
+      { freeze: true },
+      await helpers.getToken(users[2]),
+    );
+    helpers.check(
+      response,
+      403,
+      'Only the reply author or a community moderator can perform this action.',
+    );
+  });
+
+  test('POST /reply/:reply/freeze - 200 and freezes post (author)', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/reply/${replyId}/freeze`,
+      { freeze: true },
+      await helpers.getToken(users[1]),
+    );
+    helpers.check(response, 200);
+    const reply = await replyQueries.find(replyId);
+    expect(reply?.status).toBe('FROZEN');
+  });
+
+  test('POST /reply/:reply/freeze - 200 and freezes reply (mod)', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/reply/${replyId}/freeze`,
+      { freeze: true },
+      await helpers.getToken(users[0]),
+    );
+    helpers.check(response, 200);
+    const reply = await replyQueries.find(replyId);
+    expect(reply?.status).toBe('FROZEN');
+  });
+
+  test('POST /reply/:reply/freeze - 200 and unfreezes reply', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/reply/${replyId}/freeze`,
+      { freeze: false },
+      await helpers.getToken(users[1]),
+    );
+    helpers.check(response, 200);
+    const reply = await replyQueries.find(replyId);
+    expect(reply?.status).toBe('ACTIVE');
+  });
+
+  test('POST /reply/:reply/hide - 403 if neither author nor mod', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/reply/${replyId}/hide`,
+      { freeze: true },
+      await helpers.getToken(users[2]),
+    );
+    helpers.check(
+      response,
+      403,
+      'Only the reply author or a community moderator can perform this action.',
+    );
+  });
+
+  test('POST /reply/:reply/hide - 200 and hides reply (yourself)', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/reply/${replyId}/hide`,
+      { hide: true },
+      await helpers.getToken(users[1]),
+    );
+    helpers.check(response, 200);
+    const reply = await replyQueries.find(replyId);
+    expect(reply?.status).toBe('HIDDEN');
+  });
+
+  test('POST /reply/:reply/hide - 200 and hides reply (mod)', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/reply/${replyId}/hide`,
+      { hide: true },
+      await helpers.getToken(users[0]),
+    );
+    helpers.check(response, 200);
+    const reply = await replyQueries.find(replyId);
+    expect(reply?.status).toBe('HIDDEN');
+  });
+
+  test('POST /reply/:reply/hide - 200 and unhides reply', async () => {
+    const response = await helpers.req(
+      'POST',
+      `/reply/${replyId}/hide`,
+      { hide: false },
+      await helpers.getToken(users[1]),
+    );
+    helpers.check(response, 200);
+    const reply = await replyQueries.find(replyId);
+    expect(reply?.status).toBe('ACTIVE');
+  });
 });

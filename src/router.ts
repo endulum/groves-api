@@ -81,5 +81,7 @@ router.route('/reply/:reply/replies').get(user.deserialize, reply.getForReply);
 
 router.route('/reply/:reply/upvote').post(user.authenticate, reply.upvote);
 router.route('/reply/:reply/downvote').post(user.authenticate, reply.downvote);
+router.route('/reply/:reply/freeze').post(user.authenticate, reply.freeze);
+router.route('/reply/:reply/hide').post(user.authenticate, reply.hide);
 
 export { router };
