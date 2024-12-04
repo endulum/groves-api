@@ -28,6 +28,7 @@ export type BulkCommunityData = {
 export type BulkPostData = {
   title: string;
   content: string;
+  date?: Date;
 };
 
 /* [
@@ -42,7 +43,12 @@ export type BulkPostData = {
 
 export type BulkReplyData = {
   content: string;
+  date?: Date;
 };
+
+export function randDate() {
+  return faker.date.past({ years: 5 });
+}
 
 export function bulkUsers(count: number): BulkUserData[] {
   const usernames: string[] = [];
@@ -89,7 +95,7 @@ export function bulkCommunities(count: number): BulkCommunityData[] {
         .match(/[a-z0-9]+/g) || []
     ).join('');
     if (urlName.length > 32) continue;
-    const date = faker.date.past({ years: 5 });
+    const date = randDate();
     communities.push({ urlName, canonicalName, date });
   }
 
@@ -97,24 +103,27 @@ export function bulkCommunities(count: number): BulkCommunityData[] {
 }
 
 export function bulkPosts(count: number): BulkPostData[] {
-  const posts: Array<{ title: string; content: string }> = [];
+  const posts: Array<{ title: string; content: string; date: Date }> = [];
 
   while (posts.length < count) {
     const title = faker.lorem.words(Math.ceil(Math.random() * 8));
     const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
-    if (title.length <= 64 && content.length <= 10000)
-      posts.push({ title, content });
+    if (title.length > 64 || content.length > 10000) continue;
+    const date = randDate();
+    posts.push({ title, content, date });
   }
 
   return posts;
 }
 
 export function bulkReplies(count: number): BulkReplyData[] {
-  const replies: Array<{ content: string }> = [];
+  const replies: Array<{ content: string; date: Date }> = [];
 
   while (replies.length < count) {
     const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
-    if (content.length <= 10000) replies.push({ content });
+    if (content.length > 10000) continue;
+    const date = randDate();
+    replies.push({ content, date });
   }
 
   return replies;

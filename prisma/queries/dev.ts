@@ -193,6 +193,7 @@ export async function createBulkPosts(
         data: {
           title: pd.title,
           content: pd.content,
+          datePosted: pd.date,
           communityId:
             typeof communityId === 'number'
               ? communityId
@@ -220,6 +221,7 @@ export async function createBulkReplies(
       const reply = await client.reply.create({
         data: {
           content: rd.content,
+          datePosted: rd.date,
           postId:
             typeof postId === 'string'
               ? postId
@@ -233,5 +235,47 @@ export async function createBulkReplies(
       replyIds.push(reply.id);
     }),
   );
+  return replyIds;
+}
+
+export async function createBulkRepliesEvenly(opts: {
+  postId: string;
+  levels: number;
+  repliesPerLevel: number;
+  repliesFirstLevel?: number;
+  callbackToRepliesPerLevel?: (repliesPerLevel: number) => number;
+}) {
+  await truncateTable('Reply');
+  let repliesPerLevel = opts.repliesPerLevel;
+  let steps = opts.levels;
+  const queue: Array<null | string> = [null];
+  const replyIds: string[] = [];
+  while (steps > -1) {
+    const thisLevelReplyIds: string[] = [];
+    const thisLevelReplyCount =
+      steps === opts.levels && opts.repliesFirstLevel !== undefined
+        ? opts.repliesFirstLevel
+        : repliesPerLevel;
+    while (queue.length > 0) {
+      const parentId = queue.pop();
+      for (let i = 0; i < thisLevelReplyCount; i++) {
+        const reply = await client.reply.create({
+          data: {
+            parentId,
+            postId: opts.postId,
+            authorId: 1,
+            content: 'Lorem ipsum dolor sit amet...',
+            datePosted: fakes.randDate(),
+          },
+        });
+        thisLevelReplyIds.push(reply.id);
+        replyIds.push(reply.id);
+      }
+    }
+    queue.push(...thisLevelReplyIds);
+    if (opts.callbackToRepliesPerLevel)
+      repliesPerLevel = opts.callbackToRepliesPerLevel(repliesPerLevel);
+    steps--;
+  }
   return replyIds;
 }
