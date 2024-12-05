@@ -35,9 +35,9 @@ model Community {
   canonicalName String   @db.VarChar(64)
   description   String?  @db.VarChar(256)
   wiki          String?
-  status        Status   @default(ACTIVE)
   created       DateTime @default(now())
   lastActivity  DateTime @default(now())
+  readonly      Boolean  @default(false)
 
   followers  User[]   @relation("communityFollowers")
   admin      User     @relation("communityAdmin", fields: [adminId], references: [id])
@@ -54,8 +54,8 @@ model Post {
   content    String
   datePosted DateTime  @default(now())
   lastEdited DateTime?
-  status     Status    @default(ACTIVE)
   pinned     Boolean   @default(false)
+  readonly   Boolean   @default(false)
 
   author      User        @relation(fields: [authorId], references: [id])
   authorId    Int
@@ -81,8 +81,8 @@ model Reply {
 
   content    String
   datePosted DateTime @default(now())
-  status     Status   @default(ACTIVE)
   pinned     Boolean  @default(false)
+  hidden     Boolean  @default(false)
 
   author    User         @relation("replyAuthor", fields: [authorId], references: [id])
   authorId  Int
@@ -118,10 +118,4 @@ model Action {
 enum Role {
   BASIC
   ADMIN
-}
-
-enum Status {
-  ACTIVE
-  FROZEN
-  HIDDEN
 }

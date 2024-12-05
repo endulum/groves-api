@@ -37,7 +37,6 @@ FROM (
 		  GROUP BY "Post"."id"
     ) AS d ON d.id = "Post".id
 ) AS "votedPosts"
-WHERE status = 'ACTIVE';
  
 -- https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx
 -- https://old.reddit.com/r/graphql/comments/oczbkb/how_can_i_sort_items_by_custom_value_in_prisma/

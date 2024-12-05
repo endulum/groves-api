@@ -1,9 +1,6 @@
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('BASIC', 'ADMIN');
 
--- CreateEnum
-CREATE TYPE "Status" AS ENUM ('ACTIVE', 'FROZEN', 'HIDDEN');
-
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
@@ -23,9 +20,9 @@ CREATE TABLE "Community" (
     "canonicalName" VARCHAR(64) NOT NULL,
     "description" VARCHAR(256),
     "wiki" TEXT,
-    "status" "Status" NOT NULL DEFAULT 'ACTIVE',
     "created" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastActivity" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "readonly" BOOLEAN NOT NULL DEFAULT false,
     "adminId" INTEGER NOT NULL,
 
     CONSTRAINT "Community_pkey" PRIMARY KEY ("id")
@@ -38,8 +35,8 @@ CREATE TABLE "Post" (
     "content" TEXT NOT NULL,
     "datePosted" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "lastEdited" TIMESTAMP(3),
-    "status" "Status" NOT NULL DEFAULT 'ACTIVE',
     "pinned" BOOLEAN NOT NULL DEFAULT false,
+    "readonly" BOOLEAN NOT NULL DEFAULT false,
     "authorId" INTEGER NOT NULL,
     "communityId" INTEGER NOT NULL,
 
@@ -51,10 +48,9 @@ CREATE TABLE "Reply" (
     "id" TEXT NOT NULL,
     "content" TEXT NOT NULL,
     "datePosted" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "status" "Status" NOT NULL DEFAULT 'ACTIVE',
     "pinned" BOOLEAN NOT NULL DEFAULT false,
+    "hidden" BOOLEAN NOT NULL DEFAULT false,
     "authorId" INTEGER NOT NULL,
-    "communityId" INTEGER NOT NULL,
     "postId" TEXT NOT NULL,
     "parentId" TEXT,
 
@@ -162,9 +158,6 @@ ALTER TABLE "Post" ADD CONSTRAINT "Post_communityId_fkey" FOREIGN KEY ("communit
 ALTER TABLE "Reply" ADD CONSTRAINT "Reply_authorId_fkey" FOREIGN KEY ("authorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Reply" ADD CONSTRAINT "Reply_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "Community"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Reply" ADD CONSTRAINT "Reply_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -209,6 +202,7 @@ ALTER TABLE "_replyDownvotes" ADD CONSTRAINT "_replyDownvotes_A_fkey" FOREIGN KE
 -- AddForeignKey
 ALTER TABLE "_replyDownvotes" ADD CONSTRAINT "_replyDownvotes_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
+-- PostRating
 CREATE OR REPLACE VIEW "PostRating" AS SELECT
   "votedPosts".id as "postId", 
   "votedPosts".upvotes as upvotes, 
@@ -247,5 +241,45 @@ FROM (
 		  JOIN "Post" ON "_postDownvotes"."A" = "Post"."id"
 		  GROUP BY "Post"."id"
     ) AS d ON d.id = "Post".id
-) AS "votedPosts"
-WHERE status = 'ACTIVE';
+) AS "votedPosts";
+
+-- ReplyRating
+CREATE OR REPLACE VIEW "ReplyRating" AS SELECT
+  "votedReplies".id as "replyId", 
+  "votedReplies".upvotes as upvotes, 
+  "votedReplies".downvotes as downvotes,
+  (upvotes - downvotes) as "topScore",
+  (CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
+  	TRUNC(((upvotes + 1.9208) / (upvotes + downvotes) - 1.96 * SQRT(
+    	(upvotes * downvotes) / (upvotes + downvotes) + 0.9604
+  	) / (upvotes + downvotes)) / (1 + 3.8416 / (upvotes + downvotes))::numeric, 3)
+  ) END) AS "bestScore",
+  TRUNC((
+    (CASE WHEN ((upvotes - downvotes) > 0) THEN 1 WHEN (upvotes - downvotes) < 0 THEN -1 ELSE 0 END) 
+    * LOG(GREATEST(ABS((upvotes - downvotes)), 1)) 
+    + ((EXTRACT(EPOCH FROM NOW())) / 100000)
+  )::numeric, 3) AS "hotScore",
+  (CASE WHEN (downvotes = 0 AND upvotes = 0) THEN 0 ELSE (
+  	TRUNC(POWER((upvotes + downvotes), (
+    	CASE WHEN (upvotes > downvotes) 
+    	THEN CAST(downvotes AS DECIMAL)/upvotes 
+    	ELSE CAST(upvotes AS DECIMAL)/downvotes 
+    	END
+  	))::numeric, 3)
+  ) END) AS "controversyScore"
+FROM (
+  SELECT "Reply".*, COALESCE(ups, 0) AS upvotes, COALESCE(downs, 0) AS downvotes
+  FROM "Reply"
+    LEFT JOIN (
+      SELECT "Reply"."id" AS "id", COUNT("_replyUpvotes"."B") AS "ups"
+		  FROM "_replyUpvotes" 
+		  JOIN "Reply" ON "_replyUpvotes"."A" = "Reply"."id"
+		  GROUP BY "Reply"."id"
+    ) AS u ON u.id = "Reply".id
+    LEFT JOIN (
+      SELECT "Reply"."id" AS "id", COUNT("_replyDownvotes"."B") AS "downs"
+		  FROM "_replyDownvotes" 
+		  JOIN "Reply" ON "_replyDownvotes"."A" = "Reply"."id"
+		  GROUP BY "Reply"."id"
+    ) AS d ON d.id = "Reply".id
+) AS "votedReplies";
