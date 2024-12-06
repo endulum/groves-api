@@ -29,7 +29,13 @@ export const usernameValidation = body('username')
   })
   .escape();
 
+const isNotLoggedIn = asyncHandler(async (req, res, next) => {
+  if (!req.user) next();
+  else res.status(403).send('You cannot perform this action when logged in.');
+});
+
 export const signup = [
+  isNotLoggedIn,
   usernameValidation,
   body('password')
     .trim()
@@ -61,6 +67,7 @@ export const signup = [
 ];
 
 export const login = [
+  isNotLoggedIn,
   body('username')
     .trim()
     .notEmpty()

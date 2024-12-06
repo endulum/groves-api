@@ -14,8 +14,8 @@ export async function get(query: {
 }) {
   const orderBy: Prisma.ReplyOrderByWithRelationInput[] = [{ id: 'desc' }];
   switch (query.sort) {
-    case 'newest':
-      orderBy.unshift({ datePosted: 'desc' });
+    case 'hot':
+      orderBy.unshift({ rating: { hotScore: 'desc' } });
       break;
     case 'top':
       orderBy.unshift({ rating: { topScore: 'desc' } });
@@ -27,7 +27,7 @@ export async function get(query: {
       orderBy.unshift({ rating: { controversyScore: 'desc' } });
       break;
     default:
-      orderBy.unshift({ rating: { hotScore: 'desc' } });
+      orderBy.unshift({ datePosted: 'desc' });
   }
 
   const replies = await client.reply.findMany({
@@ -98,25 +98,25 @@ export async function didUserVote(replyId: string, userId: number) {
 export async function vote(
   replyId: string,
   userId: number,
-  voteType: 'upvote' | 'downvote',
-  vote: 'true' | 'false',
+  type: 'upvote' | 'downvote',
+  action: 'add' | 'remove',
 ) {
-  if (voteType === 'upvote') {
+  if (type === 'upvote') {
     await client.reply.update({
       where: { id: replyId },
       data: {
         upvotes:
-          vote === 'true'
+          action === 'add'
             ? { connect: { id: userId } }
             : { disconnect: { id: userId } },
       },
     });
-  } else if (voteType === 'downvote') {
+  } else if (type === 'downvote') {
     await client.reply.update({
       where: { id: replyId },
       data: {
         downvotes:
-          vote === 'true'
+          action === 'add'
             ? { connect: { id: userId } }
             : { disconnect: { id: userId } },
       },
@@ -124,7 +124,22 @@ export async function vote(
   }
 }
 
-export async function freeze(
+export async function toggleHidden(id: string, hidden: 'true' | 'false') {
+  if (hidden === 'true') {
+    await client.reply.update({
+      where: { id },
+      data: { hidden: true },
+    });
+  }
+  if (hidden === 'false') {
+    await client.reply.update({
+      where: { id },
+      data: { hidden: false },
+    });
+  }
+}
+
+/* export async function freeze(
   replyId: string,
   replyStatus: string,
   freeze: 'true' | 'false',
@@ -142,9 +157,9 @@ export async function freeze(
     });
     // todo: record action
   }
-}
+} */
 
-export async function hide(
+/* export async function hide(
   replyId: string,
   replyStatus: string,
   hide: 'true' | 'false',
@@ -162,4 +177,4 @@ export async function hide(
     });
     // todo: record action
   }
-}
+} */

@@ -56,10 +56,11 @@ export function formatReplies({
       }
     }
 
-    // handle status
-    if (reply.status === 'HIDDEN') {
-      reply.content = null;
+    // handle nullifying hidden content
+    if (reply.hidden === true) {
       reply.author = null;
+      reply.content = null;
+      reply.voted = null;
     }
 
     const { upvotes, downvotes, ...newReply } = reply;

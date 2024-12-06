@@ -94,13 +94,13 @@ export const create = [
   ...validation,
   validate,
   asyncHandler(async (req, res) => {
-    await commQueries.create({
+    const id = await commQueries.create({
       urlName: req.body.urlName,
       canonicalName: req.body.canonicalName,
       description: req.body.description,
       adminId: req.user.id,
     });
-    res.sendStatus(200);
+    res.json({ id });
   }),
 ];
 
@@ -109,11 +109,7 @@ export const exists = asyncHandler(async (req, res, next) => {
     urlName: req.params.community,
     id: parseInt(req.params.community),
   });
-  if (
-    community &&
-    (!(community.status === 'HIDDEN') ||
-      (req.user && req.user.id === community.adminId))
-  ) {
+  if (community) {
     req.thisCommunity = community;
     next();
   } else res.status(404).send('Community could not be found.');
@@ -128,9 +124,9 @@ export const get = [
   }),
 ];
 
-export const isNotFrozen = asyncHandler(async (req, res, next) => {
-  if (req.thisCommunity.status !== 'FROZEN') next();
-  else res.status(403).send('This community is frozen.');
+export const isNotReadonly = asyncHandler(async (req, res, next) => {
+  if (req.thisCommunity.readonly === false) next();
+  else res.status(403).send('This community is read-only.');
 });
 
 export const isAdmin = asyncHandler(async (req, res, next) => {
@@ -141,7 +137,7 @@ export const isAdmin = asyncHandler(async (req, res, next) => {
 
 export const edit = [
   exists,
-  isNotFrozen,
+  isNotReadonly,
   isAdmin,
   ...validation,
   validate,
@@ -171,14 +167,14 @@ export const getWiki = [
   exists,
   asyncHandler(async (req, res) => {
     res.json({
-      content: req.thisCommunity.wiki,
+      wiki: req.thisCommunity.wiki,
     });
   }),
 ];
 
 export const editWiki = [
   exists,
-  isNotFrozen,
+  isNotReadonly,
   isAdminOrMod,
   body('content').trim().escape(),
   validate,
@@ -192,7 +188,7 @@ export const editWiki = [
 
 export const follow = [
   exists,
-  isNotFrozen,
+  isNotReadonly,
   body('follow').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
@@ -201,12 +197,12 @@ export const follow = [
       req.body.follow === 'true' &&
       followers.find(({ id }) => id === req.user.id)
     ) {
-      res.status(403).send('You are already following this community.');
+      res.status(400).send('You are already following this community.');
     } else if (
       req.body.follow === 'false' &&
       !followers.find(({ id }) => id === req.user.id)
     ) {
-      res.status(403).send('You are not following this community.');
+      res.status(400).send('You are not following this community.');
     } else {
       await commQueries.follow(
         req.thisCommunity.id,
@@ -218,10 +214,18 @@ export const follow = [
   }),
 ];
 
-export const promote = [
+export const editModerators = [
   exists,
-  isNotFrozen,
+  isNotReadonly,
   isAdmin,
+  body('type')
+    .trim()
+    .notEmpty()
+    .withMessage('Please choose a promotion or demotion.')
+    .bail()
+    .isIn(['promote', 'demote'])
+    .withMessage('Invalid type.')
+    .escape(),
   body('username')
     .trim()
     .notEmpty()
@@ -233,70 +237,51 @@ export const promote = [
         throw new Error('No user exists with this username.');
       }
       if (existingUser.id === req.user.id) {
-        throw new Error('You cannot promote yourself.');
+        throw new Error('You cannot promote or demote yourself.');
       }
       if (
+        req.body.type === 'promote' &&
         req.thisCommunity.moderators.find(
           ({ id }: { id: number }) => id === existingUser.id,
         )
-      ) {
+      )
         throw new Error('This user is already a moderator of this community.');
-      }
-      req.thisUser = existingUser;
-    })
-    .escape(),
-  validate,
-  asyncHandler(async (req, res) => {
-    await commQueries.promoteModerator(req.thisCommunity.id, req.thisUser.id);
-    res.sendStatus(200);
-  }),
-];
-
-export const demote = [
-  exists,
-  isNotFrozen,
-  isAdmin,
-  body('username')
-    .trim()
-    .notEmpty()
-    .withMessage('Please enter a username.')
-    .bail()
-    .custom(async (value, { req }) => {
-      const existingUser = await userQueries.find({ username: value });
-      if (!existingUser) {
-        throw new Error('No user exists with this username.');
-      }
-      if (existingUser.id === req.user.id) {
-        throw new Error('You cannot demote yourself.');
-      }
       if (
+        req.body.type === 'demote' &&
         !req.thisCommunity.moderators.find(
           ({ id }: { id: number }) => id === existingUser.id,
         )
-      ) {
+      )
         throw new Error('This user is not a moderator of this community.');
-      }
       req.thisUser = existingUser;
     })
     .escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await commQueries.demoteModerator(req.thisCommunity.id, req.thisUser.id);
+    if (req.body.type === 'demote')
+      await commQueries.demoteModerator(req.thisCommunity.id, req.thisUser.id);
+    if (req.body.type === 'promote')
+      await commQueries.promoteModerator(req.thisCommunity.id, req.thisUser.id);
     res.sendStatus(200);
   }),
 ];
 
-export const freeze = [
+export const editStatus = [
   exists,
   isAdmin,
-  body('freeze').trim().isBoolean().escape(),
+  body('readonly').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await commQueries.freeze(
-      req.thisCommunity.id,
-      req.thisCommunity.status,
-      req.body.freeze,
-    );
-    res.sendStatus(200);
+    if (req.thisCommunity.readonly === true && req.body.readonly === 'true')
+      res.status(400).send('This community is already readonly.');
+    else if (
+      req.thisCommunity.readonly === false &&
+      req.body.readonly === 'false'
+    )
+      res.status(400).send('This community is not readonly.');
+    else {
+      await commQueries.toggleReadonly(req.thisCommunity.id, req.body.readonly);
+      res.sendStatus(200);
+    }
   }),
 ];

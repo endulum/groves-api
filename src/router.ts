@@ -9,9 +9,9 @@ const router = express.Router();
 
 // account
 
-router.route('/login').post(auth.login);
+router.route('/login').post(user.deserialize, auth.login);
 
-router.route('/signup').post(auth.signup);
+router.route('/signup').post(user.deserialize, auth.signup);
 
 router.route('/me').get(user.me).put(user.edit);
 
@@ -30,25 +30,21 @@ router
   .put(user.authenticate, community.edit);
 
 router
+  .route('/community/:community/moderators')
+  .put(user.authenticate, community.editModerators);
+
+router
   .route('/community/:community/wiki')
   .get(community.getWiki)
   .put(user.authenticate, community.editWiki);
 
 router
-  .route('/community/:community/follow')
-  .post(user.authenticate, community.follow);
+  .route('/community/:community/followers')
+  .put(user.authenticate, community.follow);
 
 router
-  .route('/community/:community/promote')
-  .post(user.authenticate, community.promote);
-
-router
-  .route('/community/:community/demote')
-  .post(user.authenticate, community.demote);
-
-router
-  .route('/community/:community/freeze')
-  .post(user.authenticate, community.freeze);
+  .route('/community/:community/status')
+  .put(user.authenticate, community.editStatus);
 
 // posts
 
@@ -62,13 +58,9 @@ router
   .get(user.deserialize, post.get)
   .put(user.authenticate, post.edit);
 
-router.route('/post/:post/upvote').post(user.authenticate, post.upvote);
+router.route('/post/:post/vote').put(user.authenticate, post.vote);
 
-router.route('/post/:post/downvote').post(user.authenticate, post.downvote);
-
-router.route('/post/:post/freeze').post(user.authenticate, post.freeze);
-
-router.route('/post/:post/hide').post(user.authenticate, post.hide);
+router.route('/post/:post/status').put(user.authenticate, post.editStatus);
 
 // replies
 
@@ -77,11 +69,12 @@ router
   .get(user.deserialize, reply.getForPost)
   .post(user.authenticate, reply.create);
 
+router.route('/reply/:reply').get(user.deserialize, reply.get);
+
 router.route('/reply/:reply/replies').get(user.deserialize, reply.getForReply);
 
-router.route('/reply/:reply/upvote').post(user.authenticate, reply.upvote);
-router.route('/reply/:reply/downvote').post(user.authenticate, reply.downvote);
-router.route('/reply/:reply/freeze').post(user.authenticate, reply.freeze);
-router.route('/reply/:reply/hide').post(user.authenticate, reply.hide);
+router.route('/reply/:reply/vote').put(user.authenticate, reply.vote);
+
+router.route('/reply/:reply/status').put(user.authenticate, reply.editStatus);
 
 export { router };

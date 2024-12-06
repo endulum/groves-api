@@ -69,7 +69,7 @@ export async function search(opts: {
 
   const posts = await client.post.findMany({
     where: {
-      status: 'ACTIVE',
+      readonly: false,
       title: { contains: opts.title ?? '' },
     },
     orderBy,
@@ -108,7 +108,6 @@ export async function create(
   body: {
     title: string;
     content: string;
-    status?: 'ACTIVE' | 'HIDDEN' | 'FROZEN';
   },
 ) {
   const post = await client.post.create({
@@ -116,10 +115,6 @@ export async function create(
       ...body,
       communityId,
       authorId,
-    },
-    include: {
-      community: true,
-      author: true,
     },
   });
 
@@ -164,25 +159,25 @@ export async function didUserVote(postId: string, userId: number) {
 export async function vote(
   postId: string,
   userId: number,
-  voteType: 'upvote' | 'downvote',
-  vote: 'true' | 'false',
+  type: 'upvote' | 'downvote',
+  action: 'add' | 'remove',
 ) {
-  if (voteType === 'upvote') {
+  if (type === 'upvote') {
     await client.post.update({
       where: { id: postId },
       data: {
         upvotes:
-          vote === 'true'
+          action === 'add'
             ? { connect: { id: userId } }
             : { disconnect: { id: userId } },
       },
     });
-  } else if (voteType === 'downvote') {
+  } else if (type === 'downvote') {
     await client.post.update({
       where: { id: postId },
       data: {
         downvotes:
-          vote === 'true'
+          action === 'add'
             ? { connect: { id: userId } }
             : { disconnect: { id: userId } },
       },
@@ -190,42 +185,18 @@ export async function vote(
   }
 }
 
-export async function freeze(
-  postId: string,
-  postStatus: string,
-  freeze: 'true' | 'false',
-) {
-  if (postStatus === 'ACTIVE' && freeze === 'true') {
+export async function toggleReadonly(id: string, readonly: 'true' | 'false') {
+  if (readonly === 'true') {
     await client.post.update({
-      where: { id: postId },
-      data: { status: 'FROZEN' },
+      where: { id },
+      data: { readonly: true },
     });
-    // todo: record action
-  } else if (postStatus === 'FROZEN' && freeze === 'false') {
-    await client.post.update({
-      where: { id: postId },
-      data: { status: 'ACTIVE' },
-    });
-    // todo: record action
   }
-}
-
-export async function hide(
-  postId: string,
-  postStatus: string,
-  hide: 'true' | 'false',
-) {
-  if (postStatus === 'ACTIVE' && hide === 'true') {
+  if (readonly === 'false') {
     await client.post.update({
-      where: { id: postId },
-      data: { status: 'HIDDEN' },
+      where: { id },
+      data: { readonly: false },
     });
-    // todo: record action
-  } else if (postStatus === 'HIDDEN' && hide === 'false') {
-    await client.post.update({
-      where: { id: postId },
-      data: { status: 'ACTIVE' },
-    });
-    // todo: record action
   }
+  // todo: record action
 }

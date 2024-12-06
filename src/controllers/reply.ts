@@ -13,7 +13,6 @@ import { formatReplies } from '../../prisma/queries/helpers/formatReplies';
 
 export const getForPost = [
   post.exists,
-  post.isNotHidden,
   asyncHandler(async (req, res) => {
     const { parentId, cursor, levels, takePerLevel, takeAtRoot, sort } =
       req.query as Record<string, string | undefined>;
@@ -56,21 +55,42 @@ export const getForPost = [
 const exists = asyncHandler(async (req, res, next) => {
   const reply = await client.reply.findUnique({
     where: { id: req.params.reply },
-    include: { author: { select: { id: true, username: true } } },
+    include: {
+      author: { select: { id: true, username: true } },
+      post: { select: { id: true, title: true } },
+      _count: { select: { children: true, upvotes: true, downvotes: true } },
+    },
+    omit: {
+      postId: true,
+      authorId: true,
+    },
   });
   if (reply) {
-    req.thisPost = await postQueries.find(reply.postId);
+    req.thisPost = await postQueries.find(reply.post.id);
     req.thisCommunity = await commQueries.find({
       id: req.thisPost.community.id,
     });
     req.thisReply = reply;
     next();
-  } else res.status(404).send('Reply not found.');
+  } else res.status(404).send('Reply could not be found.');
 });
+
+export const isNotHidden = asyncHandler(async (req, res, next) => {
+  if (req.thisReply.hidden === false) next();
+  else res.status(404).send('Reply could not be found.');
+});
+
+export const get = [
+  exists,
+  isNotHidden,
+  asyncHandler(async (req, res) => {
+    res.json(req.thisReply);
+  }),
+];
 
 export const getForReply = [
   exists,
-  post.isNotHidden,
+  isNotHidden,
   asyncHandler(async (req, res) => {
     const { cursor, levels, takePerLevel, takeAtRoot, sort } =
       req.query as Record<string, string | undefined>;
@@ -110,167 +130,97 @@ export const getForReply = [
   }),
 ];
 
+const validation = body('content')
+  .trim()
+  .notEmpty()
+  .withMessage('Reply cannot have empty content.')
+  .bail()
+  .isLength({ max: 10000 })
+  .withMessage('Reply content cannot exceed 10000 characters in length.')
+  .escape();
+
 export const create = [
   post.exists,
-  post.isNotHidden,
-  post.isNotFrozen,
-  community.isNotFrozen,
-  body('content')
-    .trim()
-    .notEmpty()
-    .withMessage('Reply cannot have empty content.')
-    .bail()
-    .isLength({ max: 10000 })
-    .withMessage('Reply content cannot exceed 10000 characters in length.')
-    .escape(),
+  post.isNotReadonly,
+  community.isNotReadonly,
+  validation,
   body('parent')
     .trim()
     .custom(async (value) => {
       if (value !== '') {
         const existingReply = await replyQueries.find(value);
-        if (!existingReply) throw new Error('No Reply exists with this ID.');
-        if (existingReply.status !== 'ACTIVE')
-          throw new Error('This Reply is frozen. You cannot reply to it.');
+        if (!existingReply) throw new Error('No reply exists with this ID.');
+        if (existingReply.hidden === true)
+          throw new Error('This reply is hidden. You cannot reply to it.');
       }
     }),
   validate,
   asyncHandler(async (req, res) => {
-    await replyQueries.create(
+    const id = await replyQueries.create(
       req.user.id,
       req.thisPost.id,
       req.body.parent !== '' ? req.body.parent : null,
       req.body.content,
     );
-    res.sendStatus(200);
+    res.json({ id });
   }),
 ];
 
-export const isNotFrozen = asyncHandler(async (req, res, next) => {
-  if (req.thisReply.status !== 'FROZEN') next();
-  else res.status(403).send('This reply is frozen.');
+export const isAuthor = asyncHandler(async (req, res, next) => {
+  if (req.thisReply.author.id === req.user.id) next();
+  else res.status(403).send('You are not the author of this reply.');
 });
 
-export const isNotHidden = asyncHandler(async (req, res, next) => {
-  if (req.thisReply.status !== 'HIDDEN') next();
-  else res.status(403).send('This reply is hidden.');
-});
-
-export const isNotOwnReply = asyncHandler(async (req, res, next) => {
-  if (req.thisReply.author.id !== req.user.id) next();
-  else res.status(403).send('You cannot vote on your own content.');
-});
-
-export const upvote = [
-  exists,
-  post.isNotHidden,
-  post.isNotFrozen,
-  community.isNotFrozen,
-  isNotOwnReply,
-  body('upvote').trim().isBoolean().escape(),
-  validate,
-  asyncHandler(async (req, res) => {
-    const voted = await replyQueries.didUserVote(req.thisReply.id, req.user.id);
-    if (
-      // you voted and you want to vote again
-      (voted && req.body.upvote === 'true') ||
-      // you never voted and you want to remove your vote
-      (!voted && req.body.upvote === 'false')
-    ) {
-      res
-        .status(403)
-        .send('You cannot double-vote or remove a nonexistent vote.');
-    } else {
-      await replyQueries.vote(
-        req.thisReply.id,
-        req.user.id,
-        'upvote',
-        req.body.upvote,
-      );
-      res.sendStatus(200);
-    }
-  }),
-];
-
-export const downvote = [
-  exists,
-  post.isNotHidden,
-  post.isNotFrozen,
-  community.isNotFrozen,
-  isNotOwnReply,
-  body('downvote').trim().isBoolean().escape(),
-  validate,
-  asyncHandler(async (req, res) => {
-    const voted = await replyQueries.didUserVote(req.thisReply.id, req.user.id);
-    if (
-      // you voted and you want to vote again
-      (voted && req.body.downvote === 'true') ||
-      // you never voted and you want to remove your vote
-      (!voted && req.body.downvote === 'false')
-    ) {
-      res
-        .status(403)
-        .send('You cannot double-vote or remove a nonexistent vote.');
-    } else {
-      await replyQueries.vote(
-        req.thisReply.id,
-        req.user.id,
-        'downvote',
-        req.body.downvote,
-      );
-      res.sendStatus(200);
-    }
-  }),
-];
-
-export const isAuthorOrMod = asyncHandler(async (req, res, next) => {
-  if (
-    req.thisReply.author.id === req.user.id ||
-    req.thisCommunity.moderators.find(
-      (mod: { id: number }) => mod.id === req.user.id,
-    )
-  )
-    next();
-  else
-    res
-      .status(403)
-      .send(
-        'Only the reply author or a community moderator can perform this action.',
-      );
-});
-
-export const freeze = [
+export const vote = [
   exists,
   isNotHidden,
-  isAuthorOrMod,
-  post.isNotHidden,
-  post.isNotFrozen,
-  community.isNotFrozen,
-  body('freeze').trim().isBoolean().escape(),
+  post.isNotReadonly,
+  community.isNotReadonly,
+  asyncHandler(async (req, res, next) => {
+    if (req.thisReply.author.id !== req.user.id) next();
+    else res.status(403).send('You cannot vote on your own content.');
+  }),
+  body('type').trim().isIn(['upvote', 'downvote']).escape(),
+  body('action').trim().isIn(['add', 'remove']).escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await replyQueries.freeze(
-      req.thisReply.id,
-      req.thisReply.status,
-      req.body.freeze,
-    );
-    res.sendStatus(200);
+    const voted = await replyQueries.didUserVote(req.thisReply.id, req.user.id);
+    if (
+      // you voted and you want to vote again
+      (voted && req.body.action === 'add') ||
+      // you never voted and you want to remove your vote
+      (!voted && req.body.action === 'remove')
+    ) {
+      res
+        .status(403)
+        .send('You cannot double-vote or remove a nonexistent vote.');
+    } else {
+      await replyQueries.vote(
+        req.thisReply.id,
+        req.user.id,
+        req.body.type,
+        req.body.action,
+      );
+      res.sendStatus(200);
+    }
   }),
 ];
 
-export const hide = [
+export const editStatus = [
   exists,
-  isAuthorOrMod,
-  post.isNotHidden,
-  post.isNotFrozen,
-  community.isNotFrozen,
-  body('hide').trim().isBoolean().escape(),
+  community.isNotReadonly,
+  community.isAdminOrMod,
+  post.isNotReadonly,
+  body('hidden').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await replyQueries.hide(
-      req.thisReply.id,
-      req.thisReply.status,
-      req.body.hide,
-    );
-    res.sendStatus(200);
+    if (req.thisReply.hidden === true && req.body.hidden === 'true')
+      res.status(400).send('This reply is already hidden.');
+    else if (req.thisReply.hidden === false && req.body.hidden === 'false')
+      res.status(400).send('This reply is not hidden.');
+    else {
+      await replyQueries.toggleHidden(req.thisReply.id, req.body.hidden);
+      res.sendStatus(200);
+    }
   }),
 ];

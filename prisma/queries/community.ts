@@ -11,7 +11,7 @@ export async function find({ id, urlName }: { id?: number; urlName?: string }) {
     include: {
       admin: { select: { id: true, username: true } },
       moderators: { select: { id: true, username: true } },
-      // _count: { select: { followers: true, posts: true } }, // what is this for?
+      _count: { select: { followers: true, posts: true } },
     },
   });
 }
@@ -40,7 +40,7 @@ export async function search(opts: {
 
   const communities = await client.community.findMany({
     where: {
-      status: 'ACTIVE',
+      readonly: false,
       OR: [
         { canonicalName: { contains: opts.name ?? '' } },
         { urlName: { contains: opts.name ?? '' } },
@@ -189,22 +189,18 @@ export async function demoteModerator(id: number, userId: number) {
   // todo: record action
 }
 
-export async function freeze(
-  commId: number,
-  commStatus: 'ACTIVE' | 'FROZEN',
-  freeze: 'true' | 'false',
-) {
-  if (commStatus === 'ACTIVE' && freeze === 'true') {
+export async function toggleReadonly(id: number, readonly: 'true' | 'false') {
+  if (readonly === 'true') {
     await client.community.update({
-      where: { id: commId },
-      data: { status: 'FROZEN' },
+      where: { id },
+      data: { readonly: true },
     });
-    // todo: record action
-  } else if (commStatus === 'FROZEN' && freeze === 'false') {
-    await client.community.update({
-      where: { id: commId },
-      data: { status: 'ACTIVE' },
-    });
-    // todo: record action
   }
+  if (readonly === 'false') {
+    await client.community.update({
+      where: { id },
+      data: { readonly: false },
+    });
+  }
+  // todo: record action
 }

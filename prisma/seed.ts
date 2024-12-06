@@ -5,8 +5,8 @@ const rand = (max: number, min?: number) =>
   (min ?? 0) + Math.floor(Math.random() * (max - (min ?? 0)));
 
 export async function seed(opts: {
-  logging: boolean;
-  userCount: number;
+  logging?: boolean;
+  userCount?: number;
 
   comms?: {
     count: number;

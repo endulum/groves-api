@@ -169,7 +169,6 @@ export async function createBulkCommunities(
           urlName: cd.urlName,
           canonicalName: cd.canonicalName,
           description: `For fans of ${cd.canonicalName}`,
-          status: cd.status,
           created: cd.date ?? new Date(),
           lastActivity: cd.date ?? new Date(),
           adminId,
@@ -278,4 +277,27 @@ export async function createBulkRepliesEvenly(opts: {
     steps--;
   }
   return replyIds;
+}
+
+export async function spreadVotesToReplies(
+  replyIds: string[],
+  userIds: number[],
+) {
+  await Promise.all(
+    replyIds.map(async (id) => {
+      const totalVotes = Math.floor(Math.random() * userIds.length);
+      const votingUsers = [...userIds]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, Math.floor(Math.random() * totalVotes));
+      const middle = Math.floor(Math.random() * votingUsers.length);
+      const upvoterIds = votingUsers.slice(0, middle);
+      const downvoterIds = votingUsers.slice(middle + 1, votingUsers.length);
+      await distributeVotes({
+        type: 'reply',
+        id,
+        upvoterIds,
+        downvoterIds,
+      });
+    }),
+  );
 }

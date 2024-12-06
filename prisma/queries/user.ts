@@ -56,13 +56,13 @@ export async function update({
   body,
 }: {
   userData: { username?: string; id?: number };
-  body: { username: string; password: string; bio: string };
+  body: { username?: string; password?: string; bio?: string };
 }) {
-  const data: Record<string, string> = {
-    username: body.username,
-    bio: body.bio,
+  const data: Record<string, string | null> = {
+    username: body.username ?? null,
+    bio: body.bio ?? null,
   };
-  if (body.password !== '') {
+  if (body.password) {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(body.password, salt);
     data.password = hashedPassword;
