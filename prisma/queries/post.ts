@@ -37,6 +37,7 @@ export async function find(id: string) {
 }
 
 export async function search(opts: {
+  communityUrl: string;
   before?: string;
   after?: string;
   take: number;
@@ -71,6 +72,7 @@ export async function search(opts: {
     where: {
       readonly: false,
       title: { contains: opts.title ?? '' },
+      community: { urlName: opts.communityUrl },
     },
     orderBy,
     select: {

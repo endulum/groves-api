@@ -15,6 +15,7 @@ export const search = [
     >;
 
     const { results, nextCursor, prevCursor } = await postQueries.search({
+      communityUrl: req.thisCommunity.urlName,
       before: before ?? undefined,
       after: after ?? undefined,
       take: take ? (parseInt(take, 10) ?? 20) : 20,
