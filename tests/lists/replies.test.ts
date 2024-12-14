@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { req, assertCode, token } from '../helpers';
+import { req, assertCode, token, logBody } from '../helpers';
 import { assertChildren, scoreTypes } from './_listHelpers';
 import { seed } from '../../prisma/seed';
 import {
@@ -134,6 +134,7 @@ describe('GET /post/:post/replies', () => {
       `GET /post/${postId}/replies?levels=2&takePerLevel=2&sort=top`,
     );
     assertCode(response, 200);
+    // logBody(response);
     assertChildren(response.body.children, overflowAssertion);
     assertChildren(response.body.children, (child) => {
       if ('loadMoreChildren' in child)

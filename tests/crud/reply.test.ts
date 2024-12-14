@@ -117,8 +117,9 @@ describe('PUT reply/:reply/vote', () => {
       { type: 'upvote', action: 'add' },
     );
     assertCode(response, 200);
-    response = await req(`GET /reply/${replyId}`);
+    response = await req(`GET /reply/${replyId}`, await token(userIds[1]));
     expect(response.body._count.upvotes).toBe(2);
+    expect(response.body.voted).toEqual({ upvoted: true, downvoted: false });
   });
 
   test('200 and removes vote', async () => {
@@ -128,8 +129,9 @@ describe('PUT reply/:reply/vote', () => {
       { type: 'upvote', action: 'remove' },
     );
     assertCode(response, 200);
-    response = await req(`GET /reply/${replyId}`);
+    response = await req(`GET /reply/${replyId}`, await token(userIds[1]));
     expect(response.body._count.upvotes).toBe(1);
+    expect(response.body.voted).toEqual({ upvoted: false, downvoted: false });
   });
 });
 

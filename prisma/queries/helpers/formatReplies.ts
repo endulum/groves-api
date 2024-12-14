@@ -5,6 +5,8 @@ export function formatReplies({
   query,
   queryString,
   userId,
+  postReadonly,
+  commReadonly,
 }: {
   replies: any[]; // i promise i know what i'm doing!
   query: {
@@ -18,6 +20,8 @@ export function formatReplies({
   };
   queryString: string;
   userId: number | null;
+  postReadonly: boolean;
+  commReadonly: boolean;
 }) {
   return replies.map((reply) => {
     // handle voting view
@@ -33,6 +37,7 @@ export function formatReplies({
     } else {
       reply.voted = null;
     }
+    reply.canVote = !(postReadonly || commReadonly || reply.hidden);
 
     // handle pagination links
     if ('children' in reply && reply.children.length > 0) {
@@ -48,6 +53,8 @@ export function formatReplies({
         query,
         queryString,
         userId,
+        postReadonly,
+        commReadonly,
       });
     } else {
       if (reply._count.children > 0) {

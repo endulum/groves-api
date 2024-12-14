@@ -4,10 +4,11 @@ type Query = {
   take: number;
   orderBy?: Prisma.CommunityOrderByWithRelationInput[];
   select: {
-    id: boolean;
+    id: true;
+    parentId: true;
     author: { select: { id: true; username: true } };
     datePosted: true;
-    content: boolean;
+    content: true;
     hidden: true;
     _count: {
       select: {
@@ -32,6 +33,7 @@ export function replyQueryNested(opts: {
     take: opts.take + 1,
     select: {
       id: true,
+      parentId: true,
       author: { select: { id: true, username: true } },
       datePosted: true,
       content: true,

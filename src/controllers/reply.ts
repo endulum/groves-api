@@ -41,6 +41,8 @@ export const getForPost = [
       query,
       queryString,
       userId: req.user ? req.user.id : null,
+      postReadonly: req.thisPost.readonly,
+      commReadonly: req.thisCommunity.readonly,
     });
 
     res.json({
@@ -59,6 +61,8 @@ const exists = asyncHandler(async (req, res, next) => {
       author: { select: { id: true, username: true } },
       post: { select: { id: true, title: true } },
       _count: { select: { children: true, upvotes: true, downvotes: true } },
+      upvotes: { select: { id: true } },
+      downvotes: { select: { id: true } },
     },
     omit: {
       postId: true,
@@ -84,7 +88,29 @@ export const get = [
   exists,
   isNotHidden,
   asyncHandler(async (req, res) => {
-    res.json(req.thisReply);
+    const voted = req.user
+      ? {
+          upvoted:
+            req.thisReply.upvotes.find(
+              (u: { id: number }) => u.id === req.user.id,
+            ) !== undefined,
+          downvoted:
+            req.thisReply.downvotes.find(
+              (u: { id: number }) => u.id === req.user.id,
+            ) !== undefined,
+        }
+      : null;
+    delete req.thisReply.upvotes;
+    delete req.thisReply.downvotes;
+    res.json({
+      ...req.thisReply,
+      voted,
+      canVote: !(
+        req.thisPost.readonly ||
+        req.thisCommunity.readonly ||
+        req.thisReply.hidden
+      ),
+    });
   }),
 ];
 
@@ -119,6 +145,8 @@ export const getForReply = [
       query,
       queryString,
       userId: req.user ? req.user.id : null,
+      postReadonly: req.thisPost.readonly,
+      commReadonly: req.thisCommunity.readonly,
     });
 
     res.json({
