@@ -215,25 +215,29 @@ export async function createBulkReplies(
   authorId: number | number[],
 ) {
   const replyIds: string[] = [];
-  await Promise.all(
-    replyData.map(async (rd) => {
-      const reply = await client.reply.create({
-        data: {
-          content: rd.content,
-          datePosted: rd.date,
-          postId:
-            typeof postId === 'string'
-              ? postId
-              : postId[Math.floor(Math.random() * postId.length)],
-          authorId:
-            typeof authorId === 'number'
-              ? authorId
-              : authorId[Math.floor(Math.random() * authorId.length)],
-        },
-      });
-      replyIds.push(reply.id);
-    }),
+  const replies = replyData.sort(
+    (a, b) => Date.parse(a.date.toString()) - Date.parse(b.date.toString()),
   );
+  const parentIds: Array<null | string> = [null];
+  for (const reply of replies) {
+    const { id } = await client.reply.create({
+      data: {
+        content: reply.content,
+        datePosted: reply.date,
+        postId:
+          typeof postId === 'string'
+            ? postId
+            : postId[Math.floor(Math.random() * postId.length)],
+        authorId:
+          typeof authorId === 'number'
+            ? authorId
+            : authorId[Math.floor(Math.random() * authorId.length)],
+        parentId: parentIds[Math.floor(Math.random() * parentIds.length)],
+      },
+    });
+    replyIds.push(id);
+    parentIds.push(id);
+  }
   return replyIds;
 }
 

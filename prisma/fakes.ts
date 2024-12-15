@@ -43,11 +43,11 @@ export type BulkPostData = {
 
 export type BulkReplyData = {
   content: string;
-  date?: Date;
+  date: Date;
 };
 
 export function randDate() {
-  return faker.date.past({ years: 5 });
+  return faker.date.recent({ days: 7 });
 }
 
 export function bulkUsers(count: number): BulkUserData[] {
@@ -120,7 +120,10 @@ export function bulkReplies(count: number): BulkReplyData[] {
   const replies: Array<{ content: string; date: Date }> = [];
 
   while (replies.length < count) {
-    const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
+    const content = faker.lorem.paragraphs(
+      Math.ceil(Math.random() * 5),
+      '  \\n  \\n',
+    );
     if (content.length > 10000) continue;
     const date = randDate();
     replies.push({ content, date });
