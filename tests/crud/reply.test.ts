@@ -96,16 +96,13 @@ describe('PUT reply/:reply/vote', () => {
     let response = await req(
       `PUT /reply/${replyId}/vote`,
       await token(userIds[1]),
-      { type: 'upvote', action: 'remove' },
+      { type: 'downvote', action: 'remove' },
     );
     assertCode(response, 403, text);
     response = await req(
       `PUT /reply/${replyId}/vote`,
       await token(userIds[0]),
-      {
-        type: 'upvote',
-        action: 'add',
-      },
+      { type: 'downvote', action: 'add' },
     );
     assertCode(response, 403, text);
   });

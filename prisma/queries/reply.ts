@@ -77,8 +77,24 @@ export async function create(
 ) {
   const reply = await client.reply.create({
     data: { authorId, postId, parentId, content },
+    select: {
+      id: true,
+      parentId: true,
+      postId: true,
+      author: { select: { id: true, username: true } },
+      datePosted: true,
+      content: true,
+      hidden: true,
+      _count: {
+        select: {
+          children: true,
+          upvotes: true,
+          downvotes: true,
+        },
+      },
+    },
   });
-  return reply.id;
+  return reply;
   // todo: record adtion
 }
 

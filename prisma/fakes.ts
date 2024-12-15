@@ -120,10 +120,7 @@ export function bulkReplies(count: number): BulkReplyData[] {
   const replies: Array<{ content: string; date: Date }> = [];
 
   while (replies.length < count) {
-    const content = faker.lorem.paragraphs(
-      Math.ceil(Math.random() * 5),
-      '  \\n  \\n',
-    );
+    const content = faker.lorem.paragraphs(Math.ceil(Math.random() * 5));
     if (content.length > 10000) continue;
     const date = randDate();
     replies.push({ content, date });

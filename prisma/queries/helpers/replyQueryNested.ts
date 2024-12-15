@@ -6,6 +6,7 @@ type Query = {
   select: {
     id: true;
     parentId: true;
+    postId: true;
     author: { select: { id: true; username: true } };
     datePosted: true;
     content: true;
@@ -34,6 +35,7 @@ export function replyQueryNested(opts: {
     select: {
       id: true,
       parentId: true,
+      postId: true,
       author: { select: { id: true, username: true } },
       datePosted: true,
       content: true,

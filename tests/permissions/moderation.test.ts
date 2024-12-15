@@ -32,7 +32,8 @@ beforeAll(async () => {
     title: 'Post',
     content: 'Post content.',
   });
-  replyId = await createReply(userIds[1], postId, null, 'Reply content.');
+  const reply = await createReply(userIds[1], postId, null, 'Reply content.');
+  replyId = reply.id;
 });
 
 /*

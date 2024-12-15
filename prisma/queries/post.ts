@@ -19,6 +19,8 @@ export async function find(id: string) {
           id: true,
           urlName: true,
           canonicalName: true,
+          moderators: true,
+          adminId: true,
         },
       },
       _count: {

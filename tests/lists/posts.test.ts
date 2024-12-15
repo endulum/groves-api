@@ -81,6 +81,7 @@ describe('GET /community/:community/posts', () => {
       );
 
       // newest
+      // wait! this isn't right! todo: sort by DATE, not posts!
       let response = await req(`GET /community/${commId}/posts?sort=newest`);
       expect(
         [...response.body.posts].sort(
