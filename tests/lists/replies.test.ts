@@ -189,7 +189,7 @@ describe('GET /post/:post/replies', () => {
 });
 
 describe('GET /reply/:reply/replies', () => {
-  test('chow children of a reply', async () => {
+  test('show children of a reply', async () => {
     let response = await req(`GET /post/${postId}/replies`);
     assertCode(response, 200);
     const ids = gatherChildrenIds(response.body.children);

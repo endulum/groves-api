@@ -45,7 +45,15 @@ export const getForPost = [
       commReadonly: req.thisCommunity.readonly,
     });
 
+    const viewingAsMod =
+      req.user !== undefined &&
+      (req.thisCommunity.admin.id === req.user.id ||
+        req.thisCommunity.moderators.find(
+          (mod: { id: number }) => mod.id === req.user.id,
+        ));
+
     res.json({
+      viewingAsMod,
       children: formattedReplies,
       ...(queryResult.loadMoreChildren && {
         loadMoreChildren: queryResult.loadMoreChildren,
@@ -64,10 +72,10 @@ const exists = asyncHandler(async (req, res, next) => {
       upvotes: { select: { id: true } },
       downvotes: { select: { id: true } },
     },
-    omit: {
-      postId: true,
-      authorId: true,
-    },
+    // omit: {
+    //   postId: true,
+    //   authorId: true,
+    // },
   });
   if (reply) {
     req.thisPost = await postQueries.find(reply.post.id);
@@ -84,11 +92,38 @@ export const isNotHidden = asyncHandler(async (req, res, next) => {
   else res.status(404).send('Reply could not be found.');
 });
 
+const consolidateVoting = asyncHandler(async (req, _res, next) => {
+  const voted = req.user
+    ? {
+        upvoted:
+          req.thisReply.upvotes.find(
+            (u: { id: number }) => u.id === req.user.id,
+          ) !== undefined,
+        downvoted:
+          req.thisReply.downvotes.find(
+            (u: { id: number }) => u.id === req.user.id,
+          ) !== undefined,
+      }
+    : null;
+  delete req.thisReply.upvotes;
+  delete req.thisReply.downvotes;
+  req.thisReply.voted = voted;
+
+  req.thisReply.canVote = !(
+    req.thisPost.readonly ||
+    req.thisCommunity.readonly ||
+    req.thisReply.hidden
+  );
+
+  next();
+});
+
 export const get = [
   exists,
   isNotHidden,
+  consolidateVoting,
   asyncHandler(async (req, res) => {
-    const voted = req.user
+    /* const voted = req.user
       ? {
           upvoted:
             req.thisReply.upvotes.find(
@@ -101,15 +136,9 @@ export const get = [
         }
       : null;
     delete req.thisReply.upvotes;
-    delete req.thisReply.downvotes;
+    delete req.thisReply.downvotes; */
     res.json({
       ...req.thisReply,
-      voted,
-      canVote: !(
-        req.thisPost.readonly ||
-        req.thisCommunity.readonly ||
-        req.thisReply.hidden
-      ),
     });
   }),
 ];
@@ -117,6 +146,7 @@ export const get = [
 export const getForReply = [
   exists,
   isNotHidden,
+  consolidateVoting,
   asyncHandler(async (req, res) => {
     const { cursor, levels, takePerLevel, takeAtRoot, sort } =
       req.query as Record<string, string | undefined>;
@@ -149,7 +179,16 @@ export const getForReply = [
       commReadonly: req.thisCommunity.readonly,
     });
 
+    const viewingAsMod =
+      req.user !== undefined &&
+      (req.thisCommunity.admin.id === req.user.id ||
+        req.thisCommunity.moderators.find(
+          (mod: { id: number }) => mod.id === req.user.id,
+        ));
+
     res.json({
+      viewingAsMod,
+      ...req.thisReply,
       children: formattedReplies,
       ...(queryResult.loadMoreChildren && {
         loadMoreChildren: queryResult.loadMoreChildren,
@@ -184,13 +223,21 @@ export const create = [
     }),
   validate,
   asyncHandler(async (req, res) => {
-    const id = await replyQueries.create(
+    const reply = await replyQueries.create(
       req.user.id,
       req.thisPost.id,
       req.body.parent !== '' ? req.body.parent : null,
       req.body.content,
     );
-    res.json({ id });
+    // console.log(reply);
+    res.json({
+      ...reply,
+      voted: {
+        upvoted: false,
+        downvoted: false,
+      },
+      canVote: true,
+    });
   }),
 ];
 
