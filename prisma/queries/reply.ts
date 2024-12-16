@@ -63,6 +63,18 @@ export async function get(query: {
   };
 }
 
+export async function getOne(id: string) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { orderBy, take, ...query } = replyQueryNested({
+    take: 0,
+    levels: 0,
+  });
+  return await client.reply.findUnique({
+    where: { id },
+    ...query,
+  });
+}
+
 export async function find(id: string) {
   return await client.reply.findUnique({
     where: { id },

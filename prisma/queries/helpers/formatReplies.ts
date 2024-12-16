@@ -68,6 +68,8 @@ export function formatReplies({
       reply.author = null;
       reply.content = null;
       reply.voted = null;
+      reply._count.upvotes = null;
+      reply._count.downvotes = null;
     }
 
     const { upvotes, downvotes, ...newReply } = reply;

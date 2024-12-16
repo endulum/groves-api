@@ -2,7 +2,6 @@ import asyncHandler from 'express-async-handler';
 import { body } from 'express-validator';
 import { stringify } from 'querystring';
 
-import { client } from '../../prisma/client';
 import { validate } from '../middleware/validate';
 import * as replyQueries from '../../prisma/queries/reply';
 import * as postQueries from '../../prisma/queries/post';
@@ -63,22 +62,9 @@ export const getForPost = [
 ];
 
 const exists = asyncHandler(async (req, res, next) => {
-  const reply = await client.reply.findUnique({
-    where: { id: req.params.reply },
-    include: {
-      author: { select: { id: true, username: true } },
-      post: { select: { id: true, title: true } },
-      _count: { select: { children: true, upvotes: true, downvotes: true } },
-      upvotes: { select: { id: true } },
-      downvotes: { select: { id: true } },
-    },
-    // omit: {
-    //   postId: true,
-    //   authorId: true,
-    // },
-  });
+  const reply = await replyQueries.getOne(req.params.reply);
   if (reply) {
-    req.thisPost = await postQueries.find(reply.post.id);
+    req.thisPost = await postQueries.find(reply.postId);
     req.thisCommunity = await commQueries.find({
       id: req.thisPost.community.id,
     });
@@ -92,7 +78,8 @@ export const isNotHidden = asyncHandler(async (req, res, next) => {
   else res.status(404).send('Reply could not be found.');
 });
 
-const consolidateVoting = asyncHandler(async (req, _res, next) => {
+const formatReply = asyncHandler(async (req, _res, next) => {
+  // voted status
   const voted = req.user
     ? {
         upvoted:
@@ -109,34 +96,37 @@ const consolidateVoting = asyncHandler(async (req, _res, next) => {
   delete req.thisReply.downvotes;
   req.thisReply.voted = voted;
 
+  // can vote
   req.thisReply.canVote = !(
     req.thisPost.readonly ||
     req.thisCommunity.readonly ||
     req.thisReply.hidden
   );
 
+  // are you a mod
+  req.thisReply.viewingAsMod =
+    req.user !== undefined &&
+    (req.thisCommunity.admin.id === req.user.id ||
+      req.thisCommunity.moderators.find(
+        (mod: { id: number }) => mod.id === req.user.id,
+      ));
+
+  // is it hidden
+  if (req.thisReply.hidden === true) {
+    req.thisReply.author = null;
+    req.thisReply.content = null;
+    req.thisReply.voted = null;
+    req.thisReply._count.upvotes = null;
+    req.thisReply._count.downvotes = null;
+  }
+
   next();
 });
 
 export const get = [
   exists,
-  isNotHidden,
-  consolidateVoting,
+  formatReply,
   asyncHandler(async (req, res) => {
-    /* const voted = req.user
-      ? {
-          upvoted:
-            req.thisReply.upvotes.find(
-              (u: { id: number }) => u.id === req.user.id,
-            ) !== undefined,
-          downvoted:
-            req.thisReply.downvotes.find(
-              (u: { id: number }) => u.id === req.user.id,
-            ) !== undefined,
-        }
-      : null;
-    delete req.thisReply.upvotes;
-    delete req.thisReply.downvotes; */
     res.json({
       ...req.thisReply,
     });
@@ -145,8 +135,7 @@ export const get = [
 
 export const getForReply = [
   exists,
-  isNotHidden,
-  consolidateVoting,
+  formatReply,
   asyncHandler(async (req, res) => {
     const { cursor, levels, takePerLevel, takeAtRoot, sort } =
       req.query as Record<string, string | undefined>;
@@ -179,15 +168,7 @@ export const getForReply = [
       commReadonly: req.thisCommunity.readonly,
     });
 
-    const viewingAsMod =
-      req.user !== undefined &&
-      (req.thisCommunity.admin.id === req.user.id ||
-        req.thisCommunity.moderators.find(
-          (mod: { id: number }) => mod.id === req.user.id,
-        ));
-
     res.json({
-      viewingAsMod,
       ...req.thisReply,
       children: formattedReplies,
       ...(queryResult.loadMoreChildren && {

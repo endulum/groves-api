@@ -1,4 +1,4 @@
-import { req, assertCode, assertInputErrors, token } from '../helpers';
+import { req, assertCode, assertInputErrors, token, logBody } from '../helpers';
 import { seed } from '../../prisma/seed';
 import { create } from '../../prisma/queries/user';
 import { vote } from '../../prisma/queries/reply';
@@ -146,7 +146,12 @@ describe('PUT /reply/:reply/status', () => {
     });
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`);
-    assertCode(response, 404, 'Reply could not be found.');
+    assertCode(response, 200);
+    // logBody(response);
+    expect(response.body.author).toBeNull();
+    expect(response.body.content).toBeNull();
+    expect(response.body._count.upvotes).toBeNull();
+    expect(response.body._count.downvotes).toBeNull();
   });
 
   test('400 if double hide', async () => {
@@ -162,6 +167,8 @@ describe('PUT /reply/:reply/status', () => {
     });
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`);
-    assertCode(response, 200);
+    // logBody(response);
+    expect(response.body.author).not.toBeNull();
+    expect(response.body.content).not.toBeNull();
   });
 });
