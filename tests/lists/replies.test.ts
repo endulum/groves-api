@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { req, assertCode } from '../helpers';
+import { req, assertCode, logBody } from '../helpers';
 import { assertChildren, scoreTypes } from './_listHelpers';
 import { seed } from '../../prisma/seed';
 import {
@@ -182,6 +182,8 @@ describe('GET /reply/:reply/replies', () => {
 
     response = await req(`GET ${loadChildrenLink}`);
     assertCode(response, 200);
+    console.log(loadChildrenLink);
+    logBody(response);
     // none of the children rendered should be in ids
     response.body.children.forEach((child: any) => {
       expect(ids.find((id) => id === child.id)).toBeFalsy();

@@ -70,43 +70,6 @@ export const isNotHidden = asyncHandler(async (req, res, next) => {
   else res.status(404).send('Reply could not be found.');
 });
 
-/* const formatReply = asyncHandler(async (req, _res, next) => {
-  // voted status
-  const voted = req.user
-    ? {
-        upvoted:
-          req.thisReply.upvotes.find(
-            (u: { id: number }) => u.id === req.user.id,
-          ) !== undefined,
-        downvoted:
-          req.thisReply.downvotes.find(
-            (u: { id: number }) => u.id === req.user.id,
-          ) !== undefined,
-      }
-    : null;
-  delete req.thisReply.upvotes;
-  delete req.thisReply.downvotes;
-  req.thisReply.voted = voted;
-
-  // can vote
-  req.thisReply.canVote = !(
-    req.thisPost.readonly ||
-    req.thisCommunity.readonly ||
-    req.thisReply.hidden
-  );
-
-  // is it hidden
-  if (req.thisReply.hidden === true) {
-    req.thisReply.author = null;
-    req.thisReply.content = null;
-    req.thisReply.voted = null;
-    req.thisReply._count.upvotes = null;
-    req.thisReply._count.downvotes = null;
-  }
-
-  next();
-}); */
-
 export const get = [
   exists,
   asyncHandler(async (req, res) => {
@@ -155,7 +118,16 @@ export const getForReply = [
       commAdmin: req.thisCommunity.admin,
     });
 
+    const formattedParent = formatReplies({
+      replies: [req.thisReply],
+      userId: req.user ? req.user.id : null,
+      commMods: req.thisCommunity.moderators,
+      commAdmin: req.thisCommunity.admin,
+    })[0];
+    if (formattedReplies.length > 0) delete formattedParent.loadChildren;
+
     res.json({
+      ...formattedParent,
       children: formattedReplies,
       ...(queryResult.loadMoreChildren && {
         loadMoreChildren: queryResult.loadMoreChildren,
