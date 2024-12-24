@@ -1,4 +1,4 @@
-import { req, assertCode, assertInputErrors, token } from '../helpers';
+import { req, assertCode, assertInputErrors, token, logBody } from '../helpers';
 import { seed } from '../../prisma/seed';
 import { create } from '../../prisma/queries/user';
 import { vote } from '../../prisma/queries/post';
@@ -58,7 +58,8 @@ describe('GET /post/:post', () => {
   test('200 and views a post', async () => {
     const response = await req(`GET /post/${postId}`);
     assertCode(response, 200);
-    // logBody(response);
+    // KEEP
+    logBody(response);
   });
 });
 

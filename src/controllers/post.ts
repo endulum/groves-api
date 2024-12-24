@@ -96,9 +96,13 @@ export const exists = asyncHandler(async (req, res, next) => {
 export const get = [
   exists,
   asyncHandler(async (req, res) => {
-    let voting: { upvoted: boolean; downvoted: boolean } | null = null;
+    let voted: { upvoted: boolean; downvoted: boolean } = {
+      upvoted: false,
+      downvoted: false,
+    };
+
     if (req.user) {
-      voting = {
+      voted = {
         upvoted: req.thisPost.upvotes.some(
           (voter: { id: number }) => voter.id === req.user.id,
         ),
@@ -112,7 +116,23 @@ export const get = [
     delete req.thisPost.downvotes;
     res.json({
       ...req.thisPost,
-      voting,
+      context: {
+        // did the auth'd user vote?
+        voted,
+        // does the auth'd user have mod privileges?
+        isMod:
+          (req.user !== undefined &&
+            req.thisCommunity.admin.id === req.user.id) ||
+          req.thisCommunity.moderators.find(
+            (mod: { id: number }) => mod.id === req.user.id,
+          ) !== undefined,
+        // is the author a mod of this comm?
+        isAuthorMod:
+          req.thisCommunity.moderators.find(
+            (mod: { id: number }) => mod.id === req.thisPost.author.id,
+          ) !== undefined,
+        isAuthorAdmin: req.thisCommunity.admin.id === req.thisPost.author.id,
+      },
     });
   }),
 ];

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { req, assertCode, token, logBody } from '../helpers';
+import { req, assertCode } from '../helpers';
 import { assertChildren, scoreTypes } from './_listHelpers';
 import { seed } from '../../prisma/seed';
 import {
@@ -134,7 +134,6 @@ describe('GET /post/:post/replies', () => {
       `GET /post/${postId}/replies?levels=2&takePerLevel=2&sort=top`,
     );
     assertCode(response, 200);
-    // logBody(response);
     assertChildren(response.body.children, overflowAssertion);
     assertChildren(response.body.children, (child) => {
       if ('loadMoreChildren' in child)
@@ -166,24 +165,6 @@ describe('GET /post/:post/replies', () => {
           ),
         );
       }
-    });
-  });
-
-  test("reflects auth user's vote if present", async () => {
-    // without auth user
-    let response = await req(`GET /post/${postId}/replies`);
-    assertCode(response, 200);
-    assertChildren(response.body.children, (child) => {
-      expect(child.voted).toBeNull();
-    });
-    // with auth user
-    const targetUserToken = await token(users[0]);
-    response = await req(`GET /post/${postId}/replies`, targetUserToken);
-    assertCode(response, 200);
-    assertChildren(response.body.children, (child) => {
-      expect(child.voted).not.toBeNull();
-      expect(child.voted).toHaveProperty('upvoted');
-      expect(child.voted).toHaveProperty('downvoted');
     });
   });
 });

@@ -40,19 +40,11 @@ export const getForPost = [
       query,
       queryString,
       userId: req.user ? req.user.id : null,
-      postReadonly: req.thisPost.readonly,
-      commReadonly: req.thisCommunity.readonly,
+      commMods: req.thisCommunity.moderators,
+      commAdmin: req.thisCommunity.admin,
     });
 
-    const viewingAsMod =
-      req.user !== undefined &&
-      (req.thisCommunity.admin.id === req.user.id ||
-        req.thisCommunity.moderators.find(
-          (mod: { id: number }) => mod.id === req.user.id,
-        ));
-
     res.json({
-      viewingAsMod,
       children: formattedReplies,
       ...(queryResult.loadMoreChildren && {
         loadMoreChildren: queryResult.loadMoreChildren,
@@ -78,7 +70,7 @@ export const isNotHidden = asyncHandler(async (req, res, next) => {
   else res.status(404).send('Reply could not be found.');
 });
 
-const formatReply = asyncHandler(async (req, _res, next) => {
+/* const formatReply = asyncHandler(async (req, _res, next) => {
   // voted status
   const voted = req.user
     ? {
@@ -103,14 +95,6 @@ const formatReply = asyncHandler(async (req, _res, next) => {
     req.thisReply.hidden
   );
 
-  // are you a mod
-  req.thisReply.viewingAsMod =
-    req.user !== undefined &&
-    (req.thisCommunity.admin.id === req.user.id ||
-      req.thisCommunity.moderators.find(
-        (mod: { id: number }) => mod.id === req.user.id,
-      ));
-
   // is it hidden
   if (req.thisReply.hidden === true) {
     req.thisReply.author = null;
@@ -121,21 +105,24 @@ const formatReply = asyncHandler(async (req, _res, next) => {
   }
 
   next();
-});
+}); */
 
 export const get = [
   exists,
-  formatReply,
   asyncHandler(async (req, res) => {
     res.json({
-      ...req.thisReply,
+      ...formatReplies({
+        replies: [req.thisReply],
+        userId: req.user ? req.user.id : null,
+        commMods: req.thisCommunity.moderators,
+        commAdmin: req.thisCommunity.admin,
+      })[0],
     });
   }),
 ];
 
 export const getForReply = [
   exists,
-  formatReply,
   asyncHandler(async (req, res) => {
     const { cursor, levels, takePerLevel, takeAtRoot, sort } =
       req.query as Record<string, string | undefined>;
@@ -164,12 +151,11 @@ export const getForReply = [
       query,
       queryString,
       userId: req.user ? req.user.id : null,
-      postReadonly: req.thisPost.readonly,
-      commReadonly: req.thisCommunity.readonly,
+      commMods: req.thisCommunity.moderators,
+      commAdmin: req.thisCommunity.admin,
     });
 
     res.json({
-      ...req.thisReply,
       children: formattedReplies,
       ...(queryResult.loadMoreChildren && {
         loadMoreChildren: queryResult.loadMoreChildren,

@@ -120,7 +120,14 @@ export const get = [
   asyncHandler(async (req, res) => {
     delete req.thisCommunity.adminId;
     delete req.thisCommunity.wiki;
-    res.json(req.thisCommunity);
+    res.json({
+      ...req.thisCommunity,
+      following: req.user
+        ? (await commQueries.findFollowers(req.thisCommunity.id)).find(
+            (follower) => follower.id === req.user.id,
+          ) !== undefined
+        : null,
+    });
   }),
 ];
 

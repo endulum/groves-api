@@ -5,11 +5,11 @@ export function formatReplies({
   query,
   queryString,
   userId,
-  postReadonly,
-  commReadonly,
+  commMods,
+  commAdmin,
 }: {
   replies: any[]; // i promise i know what i'm doing!
-  query: {
+  query?: {
     postId: string;
     parentId?: string;
     cursor?: string;
@@ -18,29 +18,28 @@ export function formatReplies({
     takeAtRoot: number | null;
     sort?: string;
   };
-  queryString: string;
+  queryString?: string;
   userId: number | null;
-  postReadonly: boolean;
-  commReadonly: boolean;
+  commMods: Array<{ id: number }>;
+  commAdmin: { id: number };
 }) {
   return replies.map((reply) => {
-    // handle voting view
-    if (userId) {
-      reply.voted = {
-        upvoted:
-          reply.upvotes.find((u: { id: number }) => u.id === userId) !==
-          undefined,
-        downvoted:
-          reply.downvotes.find((u: { id: number }) => u.id === userId) !==
-          undefined,
-      };
-    } else {
-      reply.voted = null;
-    }
-    reply.canVote = !(postReadonly || commReadonly || reply.hidden);
+    reply.context = {};
+    // handle context
+    reply.context.youVoted = {
+      upvoted:
+        reply.upvotes.find((u: { id: number }) => u.id === userId) !==
+        undefined,
+      downvoted:
+        reply.downvotes.find((u: { id: number }) => u.id === userId) !==
+        undefined,
+    };
+    reply.context.authorIsMod =
+      commMods.find((mod) => mod.id === reply.author.id) !== undefined;
+    reply.context.authorIsAdmin = commAdmin.id === reply.author.id;
 
     // handle pagination links
-    if ('children' in reply && reply.children.length > 0) {
+    if (query && 'children' in reply && reply.children.length > 0) {
       if (query.takePerLevel < reply._count.children) {
         const cutoffChild = reply.children.pop();
         if (cutoffChild)
@@ -53,8 +52,8 @@ export function formatReplies({
         query,
         queryString,
         userId,
-        postReadonly,
-        commReadonly,
+        commMods,
+        commAdmin,
       });
     } else {
       if (reply._count.children > 0) {
@@ -67,7 +66,6 @@ export function formatReplies({
     if (reply.hidden === true) {
       reply.author = null;
       reply.content = null;
-      reply.voted = null;
       reply._count.upvotes = null;
       reply._count.downvotes = null;
     }

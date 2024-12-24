@@ -1,4 +1,4 @@
-import { req, assertCode, assertInputErrors, token } from '../helpers';
+import { req, assertCode, assertInputErrors, token, logBody } from '../helpers';
 import { seed } from '../../prisma/seed';
 import * as commQueries from '../../prisma/queries/community';
 import * as devQueries from '../../prisma/queries/dev';
@@ -69,7 +69,8 @@ describe('GET /community/:community', () => {
   test('200 and views a community', async () => {
     const response = await req(`GET /community/${commId}`);
     assertCode(response, 200);
-    // logBody(response);
+    // KEEP
+    logBody(response);
   });
 });
 

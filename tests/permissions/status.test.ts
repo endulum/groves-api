@@ -98,7 +98,6 @@ describe('hidden reply', () => {
     const reply = response.body.children[0];
     expect(reply.author).toBeNull();
     expect(reply.content).toBeNull();
-    expect(reply.canVote).toBe(false);
   });
 
   test('no interaction when reply is hidden', async () => {

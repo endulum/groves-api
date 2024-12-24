@@ -26,7 +26,7 @@ router
 
 router
   .route('/community/:community')
-  .get(community.get)
+  .get(user.deserialize, community.get)
   .put(user.authenticate, community.edit);
 
 router

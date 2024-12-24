@@ -19,9 +19,24 @@ export async function find(id: string) {
           id: true,
           urlName: true,
           canonicalName: true,
-          moderators: true,
-          adminId: true,
         },
+        /* select: {
+          id: true,
+          urlName: true,
+          canonicalName: true,
+          moderators: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+          admin: {
+            select: {
+              id: true,
+              username: true,
+            },
+          },
+        }, */
       },
       _count: {
         select: {

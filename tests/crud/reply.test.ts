@@ -64,7 +64,8 @@ describe('GET /reply/:reply', async () => {
   test('200 and views reply, parentless and with child', async () => {
     const response = await req(`GET /reply/${replyId}`);
     assertCode(response, 200);
-    // logBody(response);
+    // KEEP
+    logBody(response);
     expect(response.body.parentId).toBeNull();
     expect(response.body._count.children).toBe(1);
   });
@@ -72,7 +73,6 @@ describe('GET /reply/:reply', async () => {
   test('200 and views reply, with parent id', async () => {
     const response = await req(`GET /reply/${childReplyId}`);
     assertCode(response, 200);
-    // logBody(response);
     expect(response.body.parentId).not.toBeNull();
   });
 });
@@ -116,7 +116,10 @@ describe('PUT reply/:reply/vote', () => {
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`, await token(userIds[1]));
     expect(response.body._count.upvotes).toBe(2);
-    expect(response.body.voted).toEqual({ upvoted: true, downvoted: false });
+    expect(response.body.context.youVoted).toEqual({
+      upvoted: true,
+      downvoted: false,
+    });
   });
 
   test('200 and removes vote', async () => {
@@ -128,7 +131,10 @@ describe('PUT reply/:reply/vote', () => {
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`, await token(userIds[1]));
     expect(response.body._count.upvotes).toBe(1);
-    expect(response.body.voted).toEqual({ upvoted: false, downvoted: false });
+    expect(response.body.context.youVoted).toEqual({
+      upvoted: false,
+      downvoted: false,
+    });
   });
 });
 
@@ -167,7 +173,6 @@ describe('PUT /reply/:reply/status', () => {
     });
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`);
-    // logBody(response);
     expect(response.body.author).not.toBeNull();
     expect(response.body.content).not.toBeNull();
   });
