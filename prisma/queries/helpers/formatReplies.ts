@@ -26,7 +26,7 @@ export function formatReplies({
   return replies.map((reply) => {
     reply.context = {};
     // handle context
-    reply.context.youVoted = {
+    reply.context.isVoted = {
       upvoted:
         reply.upvotes.find((u: { id: number }) => u.id === userId) !==
         undefined,
@@ -34,9 +34,9 @@ export function formatReplies({
         reply.downvotes.find((u: { id: number }) => u.id === userId) !==
         undefined,
     };
-    reply.context.authorIsMod =
+    reply.context.isReplyAuthorMod =
       commMods.find((mod) => mod.id === reply.author.id) !== undefined;
-    reply.context.authorIsAdmin = commAdmin.id === reply.author.id;
+    reply.context.isReplyAuthorAdmin = commAdmin.id === reply.author.id;
 
     // handle pagination links
     if (query && 'children' in reply && reply.children.length > 0) {

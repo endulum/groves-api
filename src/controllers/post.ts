@@ -96,13 +96,13 @@ export const exists = asyncHandler(async (req, res, next) => {
 export const get = [
   exists,
   asyncHandler(async (req, res) => {
-    let voted: { upvoted: boolean; downvoted: boolean } = {
+    let isVoted: { upvoted: boolean; downvoted: boolean } = {
       upvoted: false,
       downvoted: false,
     };
 
     if (req.user) {
-      voted = {
+      isVoted = {
         upvoted: req.thisPost.upvotes.some(
           (voter: { id: number }) => voter.id === req.user.id,
         ),
@@ -118,7 +118,7 @@ export const get = [
       ...req.thisPost,
       context: {
         // did the auth'd user vote?
-        voted,
+        isVoted,
         // does the auth'd user have mod privileges?
         isMod:
           (req.user !== undefined &&
@@ -127,11 +127,13 @@ export const get = [
             (mod: { id: number }) => mod.id === req.user.id,
           ) !== undefined,
         // is the author a mod of this comm?
-        isAuthorMod:
+        isPostAuthorMod:
           req.thisCommunity.moderators.find(
             (mod: { id: number }) => mod.id === req.thisPost.author.id,
           ) !== undefined,
-        isAuthorAdmin: req.thisCommunity.admin.id === req.thisPost.author.id,
+        isPostAuthorAdmin:
+          req.thisCommunity.admin.id === req.thisPost.author.id,
+        isCommReadonly: req.thisCommunity.readonly,
       },
     });
   }),

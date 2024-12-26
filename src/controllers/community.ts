@@ -122,11 +122,13 @@ export const get = [
     delete req.thisCommunity.wiki;
     res.json({
       ...req.thisCommunity,
-      following: req.user
-        ? (await commQueries.findFollowers(req.thisCommunity.id)).find(
+      context: {
+        isFollowing:
+          req.user !== undefined &&
+          (await commQueries.findFollowers(req.thisCommunity.id)).find(
             (follower) => follower.id === req.user.id,
-          ) !== undefined
-        : null,
+          ) !== undefined,
+      },
     });
   }),
 ];

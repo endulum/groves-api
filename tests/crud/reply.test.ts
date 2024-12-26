@@ -116,7 +116,7 @@ describe('PUT reply/:reply/vote', () => {
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`, await token(userIds[1]));
     expect(response.body._count.upvotes).toBe(2);
-    expect(response.body.context.youVoted).toEqual({
+    expect(response.body.context.isVoted).toEqual({
       upvoted: true,
       downvoted: false,
     });
@@ -131,7 +131,7 @@ describe('PUT reply/:reply/vote', () => {
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`, await token(userIds[1]));
     expect(response.body._count.upvotes).toBe(1);
-    expect(response.body.context.youVoted).toEqual({
+    expect(response.body.context.isVoted).toEqual({
       upvoted: false,
       downvoted: false,
     });
