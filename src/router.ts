@@ -46,6 +46,10 @@ router
   .route('/community/:community/status')
   .put(user.authenticate, community.editStatus);
 
+router
+  .route('/community/:community/actions')
+  .get(user.deserialize, community.getActions);
+
 // posts
 
 router

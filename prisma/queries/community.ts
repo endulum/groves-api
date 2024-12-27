@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 
 import { client } from '../client';
+import * as actionQueries from './action';
 
 export async function find({ id, urlName }: { id?: number; urlName?: string }) {
   const OR: Prisma.CommunityWhereInput[] = [];
@@ -98,7 +99,14 @@ export async function create({
       adminId,
     },
   });
-  // todo: record action
+
+  await actionQueries.create({
+    userId: adminId,
+    communityId: id,
+    type: 'CreateCommunity',
+    objectId: null,
+  });
+
   return id;
 }
 
@@ -114,7 +122,7 @@ export async function edit(
     description?: string;
   },
 ) {
-  await client.community.update({
+  const { adminId } = await client.community.update({
     where: { id },
     data: {
       urlName,
@@ -122,15 +130,31 @@ export async function edit(
       description,
     },
   });
-  // todo: record action
+
+  await actionQueries.create({
+    userId: adminId,
+    communityId: id,
+    type: 'EditCommunity',
+    objectId: null,
+  });
 }
 
-export async function editWiki(id: number, content: string | null) {
+export async function editWiki(
+  id: number,
+  content: string | null,
+  editorId: number,
+) {
   await client.community.update({
     where: { id },
     data: { wiki: content },
   });
-  // todo: record action
+
+  await actionQueries.create({
+    userId: editorId,
+    communityId: id,
+    type: 'EditWiki',
+    objectId: null,
+  });
 }
 
 export async function findFollowers(commId: number) {
@@ -166,7 +190,7 @@ export async function follow(
 }
 
 export async function promoteModerator(id: number, userId: number) {
-  await client.community.update({
+  const { adminId } = await client.community.update({
     where: { id },
     data: {
       moderators: {
@@ -174,11 +198,17 @@ export async function promoteModerator(id: number, userId: number) {
       },
     },
   });
-  // todo: record action
+
+  await actionQueries.create({
+    userId: adminId,
+    communityId: id,
+    type: 'PromoteMod',
+    objectId: id.toString(),
+  });
 }
 
 export async function demoteModerator(id: number, userId: number) {
-  await client.community.update({
+  const { adminId } = await client.community.update({
     where: { id },
     data: {
       moderators: {
@@ -186,21 +216,40 @@ export async function demoteModerator(id: number, userId: number) {
       },
     },
   });
-  // todo: record action
+
+  await actionQueries.create({
+    userId: adminId,
+    communityId: id,
+    type: 'DemoteMod',
+    objectId: id.toString(),
+  });
 }
 
 export async function toggleReadonly(id: number, readonly: 'true' | 'false') {
   if (readonly === 'true') {
-    await client.community.update({
+    const { adminId } = await client.community.update({
       where: { id },
       data: { readonly: true },
     });
+
+    await actionQueries.create({
+      userId: adminId,
+      communityId: id,
+      type: 'FreezeCommunity',
+      objectId: null,
+    });
   }
   if (readonly === 'false') {
-    await client.community.update({
+    const { adminId } = await client.community.update({
       where: { id },
       data: { readonly: false },
     });
+
+    await actionQueries.create({
+      userId: adminId,
+      communityId: id,
+      type: 'UnfreezeCommunity',
+      objectId: null,
+    });
   }
-  // todo: record action
 }

@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 
 import * as userQueries from '../../prisma/queries/user';
 import * as commQueries from '../../prisma/queries/community';
+import * as actionQueries from '../../prisma/queries/action';
 import { validate } from '../middleware/validate';
 
 export const search = asyncHandler(async (req, res) => {
@@ -189,8 +190,13 @@ export const editWiki = [
   validate,
   asyncHandler(async (req, res) => {
     if (req.body.content === '')
-      await commQueries.editWiki(req.thisCommunity.id, null);
-    else await commQueries.editWiki(req.thisCommunity.id, req.body.content);
+      await commQueries.editWiki(req.thisCommunity.id, null, req.user.id);
+    else
+      await commQueries.editWiki(
+        req.thisCommunity.id,
+        req.body.content,
+        req.user.id,
+      );
     res.sendStatus(200);
   }),
 ];
@@ -292,5 +298,47 @@ export const editStatus = [
       await commQueries.toggleReadonly(req.thisCommunity.id, req.body.readonly);
       res.sendStatus(200);
     }
+  }),
+];
+
+export const getActions = [
+  exists,
+  asyncHandler(async (req, res) => {
+    const { before, after, take, type } = req.query as Record<
+      string,
+      string | undefined
+    >;
+
+    const { results, nextCursor, prevCursor } = await actionQueries.search(
+      req.thisCommunity.id,
+      {
+        before: before ? (parseInt(before, 10) ?? undefined) : undefined,
+        after: after ? (parseInt(after, 10) ?? undefined) : undefined,
+        take: take ? (parseInt(take, 10) ?? 15) : 30,
+        ...(type && { type }),
+      },
+    );
+
+    const rebuiltQuery: string[] = [];
+    if (take) rebuiltQuery.push(`take=${take}`);
+    if (type) rebuiltQuery.push(`type=${type}`);
+    const queryString =
+      rebuiltQuery.length > 0 ? '&' + rebuiltQuery.join('&') : '';
+
+    const nextPage = nextCursor
+      ? `/community/${
+          req.thisCommunity.urlName
+        }/actions?after=${nextCursor}${queryString}`
+      : null;
+    const prevPage = prevCursor
+      ? `/community/${
+          req.thisCommunity.urlName
+        }/actions?before=${prevCursor}${queryString}`
+      : null;
+
+    res.json({
+      actions: results,
+      links: { nextPage, prevPage },
+    });
   }),
 ];

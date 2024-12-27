@@ -233,7 +233,11 @@ export const editStatus = [
     else if (req.thisReply.hidden === false && req.body.hidden === 'false')
       res.status(400).send('This reply is not hidden.');
     else {
-      await replyQueries.toggleHidden(req.thisReply.id, req.body.hidden);
+      await replyQueries.toggleHidden(
+        req.thisReply.id,
+        req.body.hidden,
+        req.user.id,
+      );
       res.sendStatus(200);
     }
   }),

@@ -140,7 +140,7 @@ export async function distributeVotes(
 }
 
 export async function createBulkUsers(userData: Array<fakes.BulkUserData>) {
-  const userIds: number[] = [];
+  const users: Array<{ username: string; id: number }> = [];
   const password = await testPassword();
   await Promise.all(
     userData.map(async (ud) => {
@@ -151,10 +151,10 @@ export async function createBulkUsers(userData: Array<fakes.BulkUserData>) {
           password,
         },
       });
-      userIds.push(user.id);
+      users.push({ username: user.username, id: user.id });
     }),
   );
-  return userIds;
+  return users;
 }
 
 export async function createBulkCommunities(

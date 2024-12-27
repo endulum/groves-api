@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 
 import { client } from '../client';
+import * as actionQueries from './action';
 
 export async function find(id: string) {
   return client.post.findUnique({
@@ -20,23 +21,6 @@ export async function find(id: string) {
           urlName: true,
           canonicalName: true,
         },
-        /* select: {
-          id: true,
-          urlName: true,
-          canonicalName: true,
-          moderators: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
-          admin: {
-            select: {
-              id: true,
-              username: true,
-            },
-          },
-        }, */
       },
       _count: {
         select: {
@@ -129,7 +113,7 @@ export async function create(
     content: string;
   },
 ) {
-  const post = await client.post.create({
+  const { id } = await client.post.create({
     data: {
       ...body,
       communityId,
@@ -144,22 +128,34 @@ export async function create(
     },
   });
 
-  return post.id;
-  // todo: record action
+  await actionQueries.create({
+    userId: authorId,
+    communityId,
+    type: 'CreatePost',
+    objectId: id,
+  });
+
+  return id;
 }
 
 export async function edit(
   postId: string,
   body: { title: string; content: string },
 ) {
-  await client.post.update({
+  const { authorId, communityId } = await client.post.update({
     where: { id: postId },
     data: {
       ...body,
       lastEdited: new Date(),
     },
   });
-  // todo: record action
+
+  await actionQueries.create({
+    userId: authorId,
+    communityId,
+    type: 'EditPost',
+    objectId: postId,
+  });
 }
 
 export async function didUserVote(postId: string, userId: number) {
@@ -204,18 +200,35 @@ export async function vote(
   }
 }
 
-export async function toggleReadonly(id: string, readonly: 'true' | 'false') {
+export async function toggleReadonly(
+  id: string,
+  readonly: 'true' | 'false',
+  modId: number,
+) {
   if (readonly === 'true') {
-    await client.post.update({
+    const { communityId } = await client.post.update({
       where: { id },
       data: { readonly: true },
     });
+
+    await actionQueries.create({
+      userId: modId,
+      communityId,
+      type: 'FreezePost',
+      objectId: id,
+    });
   }
   if (readonly === 'false') {
-    await client.post.update({
+    const { communityId } = await client.post.update({
       where: { id },
       data: { readonly: false },
     });
+
+    await actionQueries.create({
+      userId: modId,
+      communityId,
+      type: 'UnfreezePost',
+      objectId: id,
+    });
   }
-  // todo: record action
 }

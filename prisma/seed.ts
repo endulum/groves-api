@@ -29,7 +29,7 @@ export async function seed(opts: {
     if (opts.logging) console.log(string);
   };
 
-  const userIds: number[] = [];
+  const users: Array<{ username: string; id: number }> = [];
   const commIds: number[] = [];
   const postIds: string[] = [];
   const replyIds: string[] = [];
@@ -42,7 +42,7 @@ export async function seed(opts: {
 
   if (opts.userCount && opts.userCount > 0) {
     log(`creating ${opts.userCount} dummy user accounts`);
-    userIds.push(
+    users.push(
       ...(await devQueries.createBulkUsers(fakes.bulkUsers(opts.userCount))),
     );
   }
@@ -65,7 +65,7 @@ export async function seed(opts: {
             (min ?? 0) + Math.floor(Math.random() * (max - (min ?? 0)));
           await devQueries.distributeCommModerators(
             commId,
-            [...userIds]
+            [...users.map((u) => u.id)]
               .sort(() => 0.5 - Math.random())
               .slice(0, Math.ceil(Math.random() * totalMods)),
           );
@@ -82,7 +82,7 @@ export async function seed(opts: {
             (min ?? 0) + Math.floor(Math.random() * (max - (min ?? 0)));
           await devQueries.distributeCommFollowers(
             commId,
-            [...userIds]
+            [...users.map((u) => u.id)]
               .sort(() => 0.5 - Math.random())
               .slice(0, Math.ceil(Math.random() * totalFollowers)),
           );
@@ -101,7 +101,7 @@ export async function seed(opts: {
           ...(await devQueries.createBulkPosts(
             fakes.bulkPosts(totalPosts),
             communityId,
-            userIds,
+            users.map((u) => u.id),
           )),
         );
       }),
@@ -114,7 +114,7 @@ export async function seed(opts: {
     await Promise.all(
       postIds.map(async (id) => {
         const totalVotes = rand(max, min);
-        const votingUsers = [...userIds]
+        const votingUsers = [...users.map((u) => u.id)]
           .sort(() => 0.5 - Math.random())
           .slice(0, Math.floor(Math.random() * totalVotes));
         const middle = Math.floor(Math.random() * votingUsers.length);
@@ -140,7 +140,7 @@ export async function seed(opts: {
           ...(await devQueries.createBulkReplies(
             fakes.bulkReplies(totalReplies),
             post,
-            userIds,
+            users.map((u) => u.id),
           )),
         );
       }),
@@ -153,7 +153,7 @@ export async function seed(opts: {
     await Promise.all(
       replyIds.map(async (id) => {
         const totalVotes = rand(max, min);
-        const votingUsers = [...userIds]
+        const votingUsers = [...users.map((u) => u.id)]
           .sort(() => 0.5 - Math.random())
           .slice(0, Math.floor(Math.random() * totalVotes));
         const middle = Math.floor(Math.random() * votingUsers.length);
@@ -169,5 +169,5 @@ export async function seed(opts: {
     );
   }
 
-  return { userIds, commIds, postIds, replyIds };
+  return { users, commIds, postIds, replyIds };
 }

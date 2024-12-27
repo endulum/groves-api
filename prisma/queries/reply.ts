@@ -1,6 +1,7 @@
 import { Prisma } from '@prisma/client';
 import { client } from '../client';
 import { replyQueryNested } from './helpers/replyQueryNested';
+import * as actionQueries from './action';
 
 export async function get(query: {
   postId: string;
@@ -92,7 +93,12 @@ export async function create(
     select: {
       id: true,
       parentId: true,
-      postId: true,
+      post: {
+        select: {
+          id: true,
+          communityId: true,
+        },
+      },
       author: { select: { id: true, username: true } },
       datePosted: true,
       content: true,
@@ -106,8 +112,15 @@ export async function create(
       },
     },
   });
+
+  await actionQueries.create({
+    userId: authorId,
+    communityId: reply.post.communityId,
+    type: 'CreateReply',
+    objectId: reply.id,
+  });
+
   return reply;
-  // todo: record adtion
 }
 
 export async function didUserVote(replyId: string, userId: number) {
@@ -152,57 +165,51 @@ export async function vote(
   }
 }
 
-export async function toggleHidden(id: string, hidden: 'true' | 'false') {
+export async function toggleHidden(
+  replyId: string,
+  hidden: 'true' | 'false',
+  modId: number,
+) {
   if (hidden === 'true') {
-    await client.reply.update({
-      where: { id },
+    const { id, post } = await client.reply.update({
+      where: { id: replyId },
       data: { hidden: true },
+      select: {
+        id: true,
+        post: {
+          select: {
+            communityId: true,
+          },
+        },
+      },
+    });
+
+    await actionQueries.create({
+      userId: modId,
+      communityId: post.communityId,
+      type: 'HideReply',
+      objectId: id,
     });
   }
   if (hidden === 'false') {
-    await client.reply.update({
-      where: { id },
+    const { id, post } = await client.reply.update({
+      where: { id: replyId },
       data: { hidden: false },
+      select: {
+        id: true,
+        post: {
+          select: {
+            communityId: true,
+          },
+        },
+      },
+    });
+
+    await actionQueries.create({
+      userId: modId,
+      communityId: post.communityId,
+      type: 'UnhideReply',
+      objectId: id,
     });
   }
 }
-
-/* export async function freeze(
-  replyId: string,
-  replyStatus: string,
-  freeze: 'true' | 'false',
-) {
-  if (replyStatus === 'ACTIVE' && freeze === 'true') {
-    await client.reply.update({
-      where: { id: replyId },
-      data: { status: 'FROZEN' },
-    });
-    // todo: record action
-  } else if (replyStatus === 'FROZEN' && freeze === 'false') {
-    await client.reply.update({
-      where: { id: replyId },
-      data: { status: 'ACTIVE' },
-    });
-    // todo: record action
-  }
-} */
-
-/* export async function hide(
-  replyId: string,
-  replyStatus: string,
-  hide: 'true' | 'false',
-) {
-  if (replyStatus === 'ACTIVE' && hide === 'true') {
-    await client.reply.update({
-      where: { id: replyId },
-      data: { status: 'HIDDEN' },
-    });
-    // todo: record action
-  } else if (replyStatus === 'HIDDEN' && hide === 'false') {
-    await client.reply.update({
-      where: { id: replyId },
-      data: { status: 'ACTIVE' },
-    });
-    // todo: record action
-  }
-} */

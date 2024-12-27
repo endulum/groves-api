@@ -208,7 +208,11 @@ export const editStatus = [
     else if (req.thisPost.readonly === false && req.body.readonly === 'false')
       res.status(400).send('This post is not readonly.');
     else {
-      await postQueries.toggleReadonly(req.thisPost.id, req.body.readonly);
+      await postQueries.toggleReadonly(
+        req.thisPost.id,
+        req.body.readonly,
+        req.user.id,
+      );
       res.sendStatus(200);
     }
   }),
