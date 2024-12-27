@@ -164,7 +164,7 @@ export async function createBulkCommunities(
   const communityIds: number[] = [];
   await Promise.all(
     communityData.map(async (cd) => {
-      const community = await client.community.create({
+      const { id } = await client.community.create({
         data: {
           urlName: cd.urlName,
           canonicalName: cd.canonicalName,
@@ -174,7 +174,15 @@ export async function createBulkCommunities(
           adminId,
         },
       });
-      communityIds.push(community.id);
+      await client.action.create({
+        data: {
+          date: cd.date ?? new Date(),
+          actorId: adminId,
+          type: 'Community_Create',
+          communityId: id,
+        },
+      });
+      communityIds.push(id);
     }),
   );
   return communityIds;
@@ -188,22 +196,33 @@ export async function createBulkPosts(
   const postIds: string[] = [];
   await Promise.all(
     postData.map(async (pd) => {
-      const post = await client.post.create({
+      const author =
+        typeof authorId === 'number'
+          ? authorId
+          : authorId[Math.floor(Math.random() * authorId.length)];
+      const community =
+        typeof communityId === 'number'
+          ? communityId
+          : communityId[Math.floor(Math.random() * communityId.length)];
+      const { id } = await client.post.create({
         data: {
           title: pd.title,
           content: pd.content,
           datePosted: pd.date,
-          communityId:
-            typeof communityId === 'number'
-              ? communityId
-              : communityId[Math.floor(Math.random() * communityId.length)],
-          authorId:
-            typeof authorId === 'number'
-              ? authorId
-              : authorId[Math.floor(Math.random() * authorId.length)],
+          communityId: community,
+          authorId: author,
         },
       });
-      postIds.push(post.id);
+      await client.action.create({
+        data: {
+          date: pd.date ?? new Date(),
+          actorId: author,
+          type: 'Post_Create',
+          postId: id,
+          communityId: community,
+        },
+      });
+      postIds.push(id);
     }),
   );
   return postIds;
@@ -220,19 +239,38 @@ export async function createBulkReplies(
   );
   const parentIds: Array<null | string> = [null];
   for (const reply of replies) {
-    const { id } = await client.reply.create({
+    const post =
+      typeof postId === 'string'
+        ? postId
+        : postId[Math.floor(Math.random() * postId.length)];
+    const author =
+      typeof authorId === 'number'
+        ? authorId
+        : authorId[Math.floor(Math.random() * authorId.length)];
+    const { id, post: p } = await client.reply.create({
       data: {
         content: reply.content,
         datePosted: reply.date,
-        postId:
-          typeof postId === 'string'
-            ? postId
-            : postId[Math.floor(Math.random() * postId.length)],
-        authorId:
-          typeof authorId === 'number'
-            ? authorId
-            : authorId[Math.floor(Math.random() * authorId.length)],
+        postId: post,
+        authorId: author,
         parentId: parentIds[Math.floor(Math.random() * parentIds.length)],
+      },
+      select: {
+        id: true,
+        post: {
+          select: {
+            communityId: true,
+          },
+        },
+      },
+    });
+    await client.action.create({
+      data: {
+        actorId: author,
+        type: 'Reply_Create',
+        replyId: id,
+        postId: post,
+        communityId: p.communityId,
       },
     });
     replyIds.push(id);
