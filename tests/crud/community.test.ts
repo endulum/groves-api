@@ -5,7 +5,7 @@ import * as devQueries from '../../prisma/queries/dev';
 
 let adminToken: string = '';
 let commId: number = 0;
-const userIds: number[] = [];
+const users: Array<{ username: string; id: number }> = [];
 
 const correctInputs = {
   urlName: 'askgroves',
@@ -39,7 +39,7 @@ beforeAll(async () => {
   });
   // create three demo users *in order* using a for loop
   for (const username of ['demo-1', 'demo-2', 'demo-3']) {
-    userIds.push(...(await devQueries.createBulkUsers([{ username }])));
+    users.push(...(await devQueries.createBulkUsers([{ username }])));
   }
 });
 
@@ -128,7 +128,7 @@ describe('PUT /community/:community/wiki', () => {
 describe('PUT /community/:community/moderators', () => {
   beforeAll(async () => {
     // make demo-1 a mod
-    await devQueries.distributeCommModerators(commId, [userIds[0]]);
+    await devQueries.distributeCommModerators(commId, [users[0].id]);
   });
 
   test('400 and errors', async () => {
@@ -180,7 +180,7 @@ describe('PUT /community/:community/moderators', () => {
 
 describe('PUT /community/:community/followers', async () => {
   beforeAll(async () => {
-    await commQueries.follow(commId, userIds[0], 'true');
+    await commQueries.follow(commId, users[0].id, 'true');
   });
 
   test('400 if double follow', async () => {

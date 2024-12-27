@@ -59,8 +59,8 @@ describe('readonly community', () => {
 });
 
 describe('readonly post', async () => {
-  beforeAll(async () => await togglePostReadonly(postId, 'true'));
-  afterAll(async () => await togglePostReadonly(postId, 'false'));
+  beforeAll(async () => await togglePostReadonly(postId, 'true', 1));
+  afterAll(async () => await togglePostReadonly(postId, 'false', 1));
 
   test('does not show up in community post search', async () => {
     const response = await req(`GET /community/${commId}/posts`);
@@ -89,8 +89,8 @@ describe('readonly post', async () => {
 });
 
 describe('hidden reply', () => {
-  beforeAll(async () => await toggleHidden(replyId, 'true'));
-  afterAll(async () => await toggleHidden(replyId, 'false'));
+  beforeAll(async () => await toggleHidden(replyId, 'true', 1));
+  afterAll(async () => await toggleHidden(replyId, 'false', 1));
 
   test('content nullified in list view', async () => {
     const response = await req(`GET /post/${postId}/replies`);

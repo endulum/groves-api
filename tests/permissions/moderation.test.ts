@@ -28,11 +28,16 @@ beforeAll(async () => {
   for (const username of ['demo-1', 'demo-2', 'demo-3']) {
     tokens[username] = await token(username);
   }
-  postId = await createPost(commId, userIds[0], {
+  postId = await createPost(commId, userIds[0].id, {
     title: 'Post',
     content: 'Post content.',
   });
-  const reply = await createReply(userIds[1], postId, null, 'Reply content.');
+  const reply = await createReply(
+    userIds[1].id,
+    postId,
+    null,
+    'Reply content.',
+  );
   replyId = reply.id;
 });
 

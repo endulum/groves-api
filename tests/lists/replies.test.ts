@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { req, assertCode, logBody } from '../helpers';
+import { req, assertCode } from '../helpers';
 import { assertChildren, scoreTypes } from './_listHelpers';
 import { seed } from '../../prisma/seed';
 import {
@@ -36,10 +36,10 @@ let postId: string = '';
 
 describe('GET /post/:post/replies', () => {
   const replyIds: string[] = [];
-  const users: number[] = [];
+  const users: Array<{ username: string; id: number }> = [];
 
   beforeAll(async () => {
-    const { userIds, postIds } = await seed({
+    const { users: seedUsers, postIds } = await seed({
       userCount: 100,
       comms: { count: 1 },
       posts: { perComm: { min: 1, max: 1 } },
@@ -54,7 +54,7 @@ describe('GET /post/:post/replies', () => {
         repliesPerLevel: 4,
       })),
     );
-    users.push(...userIds);
+    users.push(...seedUsers);
   });
 
   test('3 levels with 3 replies per level sorted by latest, by default', async () => {
@@ -102,7 +102,10 @@ describe('GET /post/:post/replies', () => {
     });
 
     test('sort', async () => {
-      await spreadVotesToReplies(replyIds, users);
+      await spreadVotesToReplies(
+        replyIds,
+        users.map((u) => u.id),
+      );
       await Promise.all(
         ['hot', 'top', 'best', 'controversial'].map(async (scoreName) => {
           const response = await req(
@@ -182,8 +185,8 @@ describe('GET /reply/:reply/replies', () => {
 
     response = await req(`GET ${loadChildrenLink}`);
     assertCode(response, 200);
-    console.log(loadChildrenLink);
-    logBody(response);
+    // console.log(loadChildrenLink);
+    // logBody(response);
     // none of the children rendered should be in ids
     response.body.children.forEach((child: any) => {
       expect(ids.find((id) => id === child.id)).toBeFalsy();
