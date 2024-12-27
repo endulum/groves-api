@@ -11,3 +11,9 @@ Viewing paginated and queryable lists of things.
 ### Replies
 
 - [x] View and sort trees of replies
+
+### Actions
+
+- [x] Filter and paginate actions:
+  - [x] by action type
+  - [ ] by `replyId`, `postId`, or `userId`

@@ -29,9 +29,3 @@ Creating, viewing, and editing one thing at a time.
 - - [x] Edit vote list (upvote and downvote replies)
 - - [ ] Edit reply pin status (pin and unpin a reply)
 - - [x] Edit reply status (put reply in and out of hidden mode)
-
-### Action
-
-Special case, these can only be created and searched. Need client itself to test with.
-
-- [x] Some activity create actions, cross-check with declared enum in schema
