@@ -101,10 +101,9 @@ export async function create({
   });
 
   await actionQueries.create({
-    userId: adminId,
+    actorId: adminId,
     communityId: id,
-    type: 'CreateCommunity',
-    objectId: null,
+    type: 'Community_Create',
   });
 
   return id;
@@ -132,10 +131,9 @@ export async function edit(
   });
 
   await actionQueries.create({
-    userId: adminId,
+    actorId: adminId,
     communityId: id,
-    type: 'EditCommunity',
-    objectId: null,
+    type: 'Community_Edit',
   });
 }
 
@@ -150,10 +148,9 @@ export async function editWiki(
   });
 
   await actionQueries.create({
-    userId: editorId,
+    actorId: editorId,
     communityId: id,
-    type: 'EditWiki',
-    objectId: null,
+    type: 'Community_EditWiki',
   });
 }
 
@@ -200,10 +197,10 @@ export async function promoteModerator(id: number, userId: number) {
   });
 
   await actionQueries.create({
-    userId: adminId,
+    actorId: adminId,
     communityId: id,
-    type: 'PromoteMod',
-    objectId: id.toString(),
+    type: 'User_PromoteMod',
+    actedId: userId,
   });
 }
 
@@ -218,10 +215,10 @@ export async function demoteModerator(id: number, userId: number) {
   });
 
   await actionQueries.create({
-    userId: adminId,
+    actorId: adminId,
     communityId: id,
-    type: 'DemoteMod',
-    objectId: id.toString(),
+    type: 'User_DemoteMod',
+    actedId: userId,
   });
 }
 
@@ -233,10 +230,9 @@ export async function toggleReadonly(id: number, readonly: 'true' | 'false') {
     });
 
     await actionQueries.create({
-      userId: adminId,
+      actorId: adminId,
       communityId: id,
-      type: 'FreezeCommunity',
-      objectId: null,
+      type: 'Community_Freeze',
     });
   }
   if (readonly === 'false') {
@@ -246,10 +242,9 @@ export async function toggleReadonly(id: number, readonly: 'true' | 'false') {
     });
 
     await actionQueries.create({
-      userId: adminId,
+      actorId: adminId,
       communityId: id,
-      type: 'UnfreezeCommunity',
-      objectId: null,
+      type: 'Community_Unfreeze',
     });
   }
 }

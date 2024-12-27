@@ -26,7 +26,8 @@ model User {
   replies                Reply[]     @relation("replyAuthor")
   repliesUpvoted         Reply[]     @relation("replyUpvotes")
   repliesDownvoted       Reply[]     @relation("replyDownvotes")
-  actions                Action[]    @relation("actionUser")
+  actions                Action[]    @relation("actionActor")
+  actionsAffected        Action[]    @relation("actionUser")
 }
 
 model Community {
@@ -66,6 +67,7 @@ model Post {
   upvotes     User[]      @relation("postUpvotes")
   downvotes   User[]      @relation("postDownvotes")
   rating      PostRating? @relation("postRating")
+  actions     Action[]    @relation("actionPost")
 }
 
 view PostRating {
@@ -95,6 +97,7 @@ model Reply {
   upvotes   User[]       @relation("replyUpvotes")
   downvotes User[]       @relation("replyDownvotes")
   rating    ReplyRating? @relation("replyRating")
+  actions   Action[]     @relation("actionReply")
 }
 
 view ReplyRating {
@@ -109,12 +112,22 @@ view ReplyRating {
 model Action {
   id Int @id @default(autoincrement())
 
-  date           DateTime   @default(now())
-  actionType     ActionType
-  actionObjectId String?
+  date DateTime   @default(now())
+  type ActionType
 
-  actor       User      @relation("actionUser", fields: [actorId], references: [id])
-  actorId     Int
+  // who's doing the action
+  actor   User @relation("actionActor", fields: [actorId], references: [id])
+  actorId Int
+
+  // who/what the action is affecting
+  user    User?   @relation("actionUser", fields: [userId], references: [id])
+  userId  Int?
+  post    Post?   @relation("actionPost", fields: [postId], references: [id])
+  postId  String?
+  reply   Reply?  @relation("actionReply", fields: [replyId], references: [id])
+  replyId String?
+
+  // which community this action happened
   community   Community @relation("actionCommunity", fields: [communityId], references: [id])
   communityId Int
 }
@@ -125,18 +138,18 @@ enum Role {
 }
 
 enum ActionType {
-  CreateCommunity
-  EditCommunity
-  EditWiki
-  PromoteMod
-  DemoteMod
-  FreezeCommunity
-  UnfreezeCommunity
-  CreatePost
-  EditPost
-  FreezePost
-  UnfreezePost
-  CreateReply
-  HideReply
-  UnhideReply
+  Community_Create
+  Community_Edit
+  Community_EditWiki
+  Community_Freeze
+  Community_Unfreeze
+  User_PromoteMod
+  User_DemoteMod
+  Post_Create
+  Post_Edit
+  Post_Freeze
+  Post_Unfreeze
+  Reply_Create
+  Reply_Hide
+  Reply_Unhide
 }

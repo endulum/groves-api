@@ -129,10 +129,10 @@ export async function create(
   });
 
   await actionQueries.create({
-    userId: authorId,
+    actorId: authorId,
     communityId,
-    type: 'CreatePost',
-    objectId: id,
+    type: 'Post_Create',
+    actedId: id,
   });
 
   return id;
@@ -151,10 +151,10 @@ export async function edit(
   });
 
   await actionQueries.create({
-    userId: authorId,
+    actorId: authorId,
     communityId,
-    type: 'EditPost',
-    objectId: postId,
+    type: 'Post_Edit',
+    actedId: postId,
   });
 }
 
@@ -212,10 +212,10 @@ export async function toggleReadonly(
     });
 
     await actionQueries.create({
-      userId: modId,
+      actorId: modId,
       communityId,
-      type: 'FreezePost',
-      objectId: id,
+      type: 'Post_Freeze',
+      actedId: id,
     });
   }
   if (readonly === 'false') {
@@ -225,10 +225,10 @@ export async function toggleReadonly(
     });
 
     await actionQueries.create({
-      userId: modId,
+      actorId: modId,
       communityId,
-      type: 'UnfreezePost',
-      objectId: id,
+      type: 'Post_Unfreeze',
+      actedId: id,
     });
   }
 }

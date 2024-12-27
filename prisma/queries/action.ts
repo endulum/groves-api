@@ -2,22 +2,24 @@ import { type ActionType } from '@prisma/client';
 import { client } from '../client';
 
 export async function create({
-  userId,
+  actorId,
   communityId,
-  objectId,
   type,
+  actedId,
 }: {
-  userId: number;
+  actorId: number;
   communityId: number;
   type: ActionType;
-  objectId: string | null;
+  actedId?: number | string;
 }) {
   return await client.action.create({
     data: {
-      actorId: userId,
+      actorId,
       communityId,
-      actionObjectId: objectId,
-      actionType: type,
+      type,
+      ...(type.startsWith('User') && { userId: actedId as number }),
+      ...(type.startsWith('Post') && { postId: actedId as string }),
+      ...(type.startsWith('Reply') && { replyId: actedId as string }),
     },
   });
 }
@@ -38,21 +40,18 @@ export async function search(
     where: {
       communityId,
       ...(opts.type && {
-        actionType: opts.type as ActionType,
+        type: opts.type as ActionType,
       }),
     },
     orderBy: { date: 'desc' },
     select: {
       id: true,
       date: true,
-      actor: {
-        select: {
-          id: true,
-          username: true,
-        },
-      },
-      actionType: true,
-      actionObjectId: true,
+      actor: { select: { id: true, username: true } },
+      type: true,
+      user: { select: { id: true, username: true } },
+      post: { select: { id: true, title: true } },
+      reply: { select: { id: true } },
     },
     cursor: cursor ? { id: cursor } : undefined,
     skip: direction === 'none' ? undefined : 1,

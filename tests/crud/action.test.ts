@@ -19,7 +19,7 @@ beforeAll(async () => {
 
 const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
   {
-    type: 'CreateCommunity',
+    type: 'Community_Create',
     func: async () => {
       const response = await req('POST /communities', adminToken, {
         urlName: 'comm',
@@ -31,7 +31,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'EditCommunity',
+    type: 'Community_Edit',
     func: async () => {
       const response = await req(`PUT /community/${commId}`, adminToken, {
         urlName: 'comm',
@@ -42,7 +42,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'EditWiki',
+    type: 'Community_EditWiki',
     func: async () => {
       const response = await req(`PUT /community/${commId}/wiki`, adminToken, {
         content: 'Wiki text.',
@@ -51,7 +51,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'PromoteMod',
+    type: 'User_PromoteMod',
     func: async () => {
       const response = await req(
         `PUT /community/${commId}/moderators`,
@@ -65,7 +65,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'DemoteMod',
+    type: 'User_DemoteMod',
     func: async () => {
       const response = await req(
         `PUT /community/${commId}/moderators`,
@@ -79,7 +79,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'FreezeCommunity',
+    type: 'Community_Freeze',
     func: async () => {
       const response = await req(
         `PUT /community/${commId}/status`,
@@ -92,7 +92,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'UnfreezeCommunity',
+    type: 'Community_Unfreeze',
     func: async () => {
       const response = await req(
         `PUT /community/${commId}/status`,
@@ -105,7 +105,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'CreatePost',
+    type: 'Post_Create',
     func: async () => {
       const response = await req(
         `POST /community/${commId}/posts`,
@@ -120,7 +120,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'EditPost',
+    type: 'Post_Edit',
     func: async () => {
       const response = await req(`PUT /post/${postId}`, adminToken, {
         title: 'Post',
@@ -130,7 +130,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'FreezePost',
+    type: 'Post_Freeze',
     func: async () => {
       const response = await req(`PUT /post/${postId}/status`, adminToken, {
         readonly: 'true',
@@ -139,7 +139,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'UnfreezePost',
+    type: 'Post_Unfreeze',
     func: async () => {
       const response = await req(`PUT /post/${postId}/status`, adminToken, {
         readonly: 'false',
@@ -148,7 +148,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'CreateReply',
+    type: 'Reply_Create',
     func: async () => {
       const response = await req(`POST /post/${postId}/replies`, adminToken, {
         content: 'Reply content.',
@@ -158,7 +158,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'HideReply',
+    type: 'Reply_Hide',
     func: async () => {
       const response = await req(`PUT /reply/${replyId}/status`, adminToken, {
         hidden: 'true',
@@ -167,7 +167,7 @@ const tests: Array<{ type: ActionType; func: () => Promise<void> }> = [
     },
   },
   {
-    type: 'UnhideReply',
+    type: 'Reply_Unhide',
     func: async () => {
       const response = await req(`PUT /reply/${replyId}/status`, adminToken, {
         hidden: 'false',
@@ -182,7 +182,7 @@ test('all possible action types', async () => {
     // needs to be sequential
     await test.func();
     const action = await client.action.findFirst({
-      where: { actionType: test.type },
+      where: { type: test.type },
     });
     expect(action).not.toBeNull();
     expect(action?.actorId).toBe(1);

@@ -114,10 +114,10 @@ export async function create(
   });
 
   await actionQueries.create({
-    userId: authorId,
+    actorId: authorId,
     communityId: reply.post.communityId,
-    type: 'CreateReply',
-    objectId: reply.id,
+    type: 'Reply_Create',
+    actedId: reply.id,
   });
 
   return reply;
@@ -185,10 +185,10 @@ export async function toggleHidden(
     });
 
     await actionQueries.create({
-      userId: modId,
+      actorId: modId,
       communityId: post.communityId,
-      type: 'HideReply',
-      objectId: id,
+      type: 'Reply_Hide',
+      actedId: id,
     });
   }
   if (hidden === 'false') {
@@ -206,10 +206,10 @@ export async function toggleHidden(
     });
 
     await actionQueries.create({
-      userId: modId,
+      actorId: modId,
       communityId: post.communityId,
-      type: 'UnhideReply',
-      objectId: id,
+      type: 'Reply_Unhide',
+      actedId: id,
     });
   }
 }
