@@ -43,7 +43,7 @@ export async function search(
         type: opts.type as ActionType,
       }),
     },
-    orderBy: { date: 'desc' },
+    orderBy: [{ date: 'desc' }, { id: 'desc' }],
     select: {
       id: true,
       date: true,

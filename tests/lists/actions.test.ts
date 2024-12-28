@@ -1,11 +1,12 @@
 import { assertCode, logBody, req, token } from '../helpers';
 import { seed } from '../../prisma/seed';
 import { actionTests } from '../actions/actionHelper';
+import { assertPagination } from './_listHelpers';
 
 let adminToken: string = '';
 let community: number = 0;
-let post: string = '';
-let reply: string = '';
+// let post: string = '';
+// let reply: string = '';
 const users: Array<{ username: string; id: number }> = [];
 
 beforeAll(async () => {
@@ -15,17 +16,17 @@ beforeAll(async () => {
   adminToken = await token(1);
   users.push(...seedUsers);
 
-  const { commId, postId, replyId } = await actionTests(adminToken, users);
+  const { commId } = await actionTests(adminToken, users);
   community = commId;
-  post = postId;
-  reply = replyId;
+  // post = postId;
+  // reply = replyId;
 });
 
 describe('GET /community/:community/actions', async () => {
   test('shows a list of actions', async () => {
     const response = await req(`GET /community/${community}/actions`);
     assertCode(response, 200);
-    logBody(response);
+    // logBody(response);
 
     // actions are sorted by date
     expect(
@@ -56,5 +57,51 @@ describe('GET /community/:community/actions', async () => {
         },
       ),
     );
+  });
+
+  test('query param: type', async () => {
+    const response = await req(
+      `GET /community/${community}/actions?type=Post_Unfreeze`,
+    );
+    assertCode(response, 200);
+    expect(
+      response.body.actions.every(
+        (action: { type: string }) => action.type === 'Post_Unfreeze',
+      ),
+    );
+  });
+
+  test('pagination', async () => {
+    // re-seed so we get lots of actions
+    const { commIds } = await seed({
+      userCount: 10,
+      comms: { count: 1 },
+      posts: { perComm: { max: 10, min: 10 } },
+      replies: { perPost: { max: 10, min: 10 } },
+    }); // 111 total actions should be recorded
+    community = commIds[0];
+
+    // without param
+    await assertPagination({
+      url: `/community/${community}/actions`,
+      resultsProperty: 'actions',
+      resultsTotal: 111,
+      resultsPerPage: 30,
+    });
+
+    // with param
+    await assertPagination({
+      url: `/community/${community}/actions?type=Reply_Create`,
+      resultsProperty: 'actions',
+      resultsTotal: 100,
+      resultsPerPage: 30,
+      perPageAssertion: (response) => {
+        expect(
+          response.body.actions.every(
+            (action: { type: string }) => action.type === 'Reply_Create',
+          ),
+        );
+      },
+    });
   });
 });
