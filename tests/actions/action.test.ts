@@ -15,14 +15,11 @@ beforeAll(async () => {
 });
 
 test('all possible action types', async () => {
-  const tests = actionTests(adminToken, users);
-  for (const test of tests) {
-    // needs to be sequential
-    await test.func();
+  await actionTests(adminToken, users, async (_response, type) => {
     const action = await client.action.findFirst({
-      where: { type: test.type },
+      where: { type },
     });
     expect(action).not.toBeNull();
     expect(action?.actorId).toBe(1);
-  }
+  });
 });
