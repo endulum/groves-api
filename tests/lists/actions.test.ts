@@ -25,7 +25,7 @@ describe('GET /community/:community/actions', async () => {
   test('shows a list of actions', async () => {
     const response = await req(`GET /community/${community}/actions`);
     assertCode(response, 200);
-    // logBody(response);
+    logBody(response);
 
     // actions are sorted by date
     expect(

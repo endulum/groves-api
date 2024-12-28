@@ -51,7 +51,9 @@ export async function search(
       type: true,
       user: { select: { id: true, username: true } },
       post: { select: { id: true, title: true } },
-      reply: { select: { id: true } },
+      reply: {
+        select: { id: true, post: { select: { id: true, title: true } } },
+      },
     },
     cursor: cursor ? { id: cursor } : undefined,
     skip: direction === 'none' ? undefined : 1,
