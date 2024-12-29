@@ -59,7 +59,7 @@ describe('GET /community/:community/actions', async () => {
     );
   });
 
-  test('query param: type', async () => {
+  test('query param: type (full)', async () => {
     const response = await req(
       `GET /community/${community}/actions?type=Post_Unfreeze`,
     );
@@ -69,6 +69,29 @@ describe('GET /community/:community/actions', async () => {
         (action: { type: string }) => action.type === 'Post_Unfreeze',
       ),
     );
+  });
+
+  test('query param: type (partial)', async () => {
+    // valid - should get results
+    await Promise.all(
+      ['User', 'Post', 'Reply'].map(async (type) => {
+        const response = await req(
+          `GET /community/${community}/actions?type=${type}`,
+        );
+        assertCode(response, 200);
+        // logBody(response);
+        expect(response.body.actions.length).toBeGreaterThanOrEqual(1);
+        expect(
+          response.body.actions.every((action: { type: string }) =>
+            action.type.includes(type),
+          ),
+        );
+      }),
+    );
+
+    // invalid - don't make an error, just ignore
+    const response = await req(`GET /community/${community}/actions?type=$owo`);
+    assertCode(response, 200);
   });
 
   test('pagination', async () => {

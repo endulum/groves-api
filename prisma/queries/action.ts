@@ -1,4 +1,4 @@
-import { type ActionType } from '@prisma/client';
+import { ActionType } from '@prisma/client';
 import { client } from '../client';
 
 export async function create({
@@ -24,6 +24,14 @@ export async function create({
   });
 }
 
+function isValidActionType(type: string): type is ActionType {
+  return Object.values(ActionType).includes(type as ActionType);
+}
+
+function isValidAction(type: string) {
+  return ['User', 'Post', 'Reply'].includes(type);
+}
+
 export async function search(
   communityId: number,
   opts: {
@@ -40,7 +48,15 @@ export async function search(
     where: {
       communityId,
       ...(opts.type && {
-        type: opts.type as ActionType,
+        ...(isValidActionType(opts.type)
+          ? { type: opts.type as ActionType }
+          : isValidAction(opts.type)
+            ? {
+                ...(opts.type === 'User' && { userId: { not: null } }),
+                ...(opts.type === 'Post' && { postId: { not: null } }),
+                ...(opts.type === 'Reply' && { replyId: { not: null } }),
+              }
+            : {}),
       }),
     },
     orderBy: [{ date: 'desc' }, { id: 'desc' }],

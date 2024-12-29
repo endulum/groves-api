@@ -271,6 +271,7 @@ export async function createBulkReplies(
         replyId: id,
         postId: post,
         communityId: p.communityId,
+        date: reply.date ?? new Date(),
       },
     });
     replyIds.push(id);
