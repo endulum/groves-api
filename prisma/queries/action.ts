@@ -131,6 +131,13 @@ export async function getForUser(
       id: true,
       date: true,
       type: true,
+      community: {
+        select: {
+          id: true,
+          urlName: true,
+          canonicalName: true,
+        },
+      },
       post: {
         select: {
           id: true,
