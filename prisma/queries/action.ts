@@ -109,3 +109,66 @@ export async function search(
 
   return { results, nextCursor, prevCursor };
 }
+
+export async function getForUser(
+  userId: number,
+  opts: {
+    before?: number; // cursor for paging backwards
+    after?: number; // cursor for paging forwards
+    take: number; // page size
+  },
+) {
+  const cursor = opts.after ?? opts.before;
+  const direction = opts.after ? 'forward' : opts.before ? 'backward' : 'none';
+
+  const actions = await client.action.findMany({
+    where: {
+      actorId: userId,
+      OR: [{ postId: { not: null } }, { replyId: { not: null } }],
+    },
+    orderBy: [{ date: 'desc' }, { id: 'desc' }],
+    select: {
+      id: true,
+      date: true,
+      type: true,
+      post: {
+        select: {
+          id: true,
+          title: true,
+          content: true,
+        },
+      },
+      reply: {
+        select: {
+          id: true,
+          post: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
+          content: true,
+        },
+      },
+    },
+    cursor: cursor ? { id: cursor } : undefined,
+    skip: direction === 'none' ? undefined : 1,
+    take: (direction === 'backward' ? -1 : 1) * (opts.take + 1),
+  });
+
+  const results =
+    direction === 'backward'
+      ? actions.slice(-opts.take)
+      : actions.slice(0, opts.take);
+
+  const hasMore = actions.length > opts.take;
+
+  const nextCursor =
+    direction === 'backward' || hasMore ? results.at(-1)?.id : null;
+  const prevCursor =
+    direction === 'forward' || (direction === 'backward' && hasMore)
+      ? results.at(0)?.id
+      : null;
+
+  return { results, nextCursor, prevCursor };
+}

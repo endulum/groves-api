@@ -5,9 +5,7 @@ import { assertPagination } from './_listHelpers';
 
 let adminToken: string = '';
 let community: number = 0;
-// let post: string = '';
-// let reply: string = '';
-const users: Array<{ username: string; id: number }> = [];
+let users: Array<{ username: string; id: number }> = [];
 
 beforeAll(async () => {
   const { users: seedUsers } = await seed({
@@ -18,8 +16,6 @@ beforeAll(async () => {
 
   const { commId } = await actionTests(adminToken, users);
   community = commId;
-  // post = postId;
-  // reply = replyId;
 });
 
 describe('GET /community/:community/actions', async () => {
@@ -79,7 +75,7 @@ describe('GET /community/:community/actions', async () => {
           `GET /community/${community}/actions?type=${type}`,
         );
         assertCode(response, 200);
-        logBody(response);
+        // logBody(response);
         expect(response.body.actions.length).toBeGreaterThanOrEqual(1);
         expect(
           response.body.actions.every((action: { type: string }) =>
@@ -125,6 +121,39 @@ describe('GET /community/:community/actions', async () => {
           ),
         );
       },
+    });
+  });
+});
+
+describe('GET /user/:user/actions', () => {
+  let contentCount: number = 0;
+  beforeAll(async () => {
+    const {
+      users: seedUsers,
+      postIds,
+      replyIds,
+    } = await seed({
+      userCount: 1,
+      comms: { count: 1 },
+      posts: { perComm: { min: 10, max: 10 } },
+      replies: { perPost: { min: 10, max: 10 } },
+    });
+    contentCount = postIds.length + replyIds.length;
+    users = [...seedUsers];
+  });
+
+  test('shows a list of content from user', async () => {
+    const response = await req(`GET /user/${users[0].username}/actions`);
+    assertCode(response, 200);
+    // logBody(response);
+  });
+
+  test('pagination', async () => {
+    await assertPagination({
+      url: `/user/${users[0].username}/actions`,
+      resultsProperty: 'actions',
+      resultsTotal: contentCount,
+      resultsPerPage: 10,
     });
   });
 });

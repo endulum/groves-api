@@ -13,9 +13,13 @@ router.route('/login').post(user.deserialize, auth.login);
 
 router.route('/signup').post(user.deserialize, auth.signup);
 
+// user
+
 router.route('/me').get(user.me).put(user.edit);
 
 router.route('/user/:user').get(user.get);
+
+router.route('/user/:user/actions').get(user.getActions);
 
 // communities
 

@@ -3,6 +3,7 @@ import { body } from 'express-validator';
 import jwt from 'jsonwebtoken';
 
 import * as userQueries from '../../prisma/queries/user';
+import { getForUser } from '../../prisma/queries/action';
 import { usernameValidation } from './auth';
 import { validate } from '../middleware/validate';
 
@@ -101,6 +102,68 @@ export const get = [
   asyncHandler(async (req, res) => {
     delete req.thisUser.password;
     res.json(req.thisUser);
+  }),
+];
+
+function truncate(str: string, n: number) {
+  return str.length > n ? str.slice(0, n - 1) + '&hellip;' : str;
+}
+
+export const getActions = [
+  exists,
+  asyncHandler(async (req, res) => {
+    const { before, after, take } = req.query as Record<
+      string,
+      string | undefined
+    >;
+
+    const { results, nextCursor, prevCursor } = await getForUser(
+      req.thisUser.id,
+      {
+        before: before ? (parseInt(before, 10) ?? undefined) : undefined,
+        after: after ? (parseInt(after, 10) ?? undefined) : undefined,
+        take: take ? (parseInt(take, 10) ?? 10) : 10,
+      },
+    );
+
+    const rebuiltQuery: string[] = [];
+    if (take) rebuiltQuery.push(`take=${take}`);
+    const queryString =
+      rebuiltQuery.length > 0 ? '&' + rebuiltQuery.join('&') : '';
+
+    const nextPage = nextCursor
+      ? `/user/${
+          req.thisUser.username
+        }/actions?after=${nextCursor}${queryString}`
+      : null;
+    const prevPage = prevCursor
+      ? `/user/${
+          req.thisUser.username
+        }/actions?before=${prevCursor}${queryString}`
+      : null;
+
+    res.json({
+      actions: results.map((result) => {
+        if (result.post) {
+          return {
+            ...result,
+            post: {
+              ...result.post,
+              content: truncate(result.post.content, 150),
+            },
+          };
+        } else if (result.reply) {
+          return {
+            ...result,
+            reply: {
+              ...result.reply,
+              content: truncate(result.reply.content, 150),
+            },
+          };
+        }
+      }),
+      links: { nextPage, prevPage },
+    });
   }),
 ];
 
