@@ -269,7 +269,6 @@ export async function createBulkReplies(
         actorId: author,
         type: 'Reply_Create',
         replyId: id,
-        postId: post,
         communityId: p.communityId,
         date: reply.date ?? new Date(),
       },

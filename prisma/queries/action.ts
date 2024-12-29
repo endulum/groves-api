@@ -29,7 +29,7 @@ function isValidActionType(type: string): type is ActionType {
 }
 
 function isValidAction(type: string) {
-  return ['User', 'Post', 'Reply'].includes(type);
+  return ['Community', 'User', 'Post', 'Reply'].includes(type);
 }
 
 export async function search(
@@ -52,9 +52,26 @@ export async function search(
           ? { type: opts.type as ActionType }
           : isValidAction(opts.type)
             ? {
-                ...(opts.type === 'User' && { userId: { not: null } }),
-                ...(opts.type === 'Post' && { postId: { not: null } }),
-                ...(opts.type === 'Reply' && { replyId: { not: null } }),
+                ...(opts.type === 'Community' && {
+                  userId: null,
+                  postId: null,
+                  replyId: null,
+                }),
+                ...(opts.type === 'User' && {
+                  userId: { not: null },
+                  postId: null,
+                  replyId: null,
+                }),
+                ...(opts.type === 'Post' && {
+                  userId: null,
+                  postId: { not: null },
+                  replyId: null,
+                }),
+                ...(opts.type === 'Reply' && {
+                  userId: null,
+                  postId: null,
+                  replyId: { not: null },
+                }),
               }
             : {}),
       }),

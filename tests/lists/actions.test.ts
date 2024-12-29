@@ -79,7 +79,7 @@ describe('GET /community/:community/actions', async () => {
           `GET /community/${community}/actions?type=${type}`,
         );
         assertCode(response, 200);
-        // logBody(response);
+        logBody(response);
         expect(response.body.actions.length).toBeGreaterThanOrEqual(1);
         expect(
           response.body.actions.every((action: { type: string }) =>
