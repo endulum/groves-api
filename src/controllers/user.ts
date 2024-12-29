@@ -143,25 +143,7 @@ export const getActions = [
       : null;
 
     res.json({
-      actions: results.map((result) => {
-        if (result.post) {
-          return {
-            ...result,
-            post: {
-              ...result.post,
-              content: truncate(result.post.content, 150),
-            },
-          };
-        } else if (result.reply) {
-          return {
-            ...result,
-            reply: {
-              ...result.reply,
-              content: truncate(result.reply.content, 150),
-            },
-          };
-        }
-      }),
+      actions: results,
       links: { nextPage, prevPage },
     });
   }),

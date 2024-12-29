@@ -124,7 +124,15 @@ export async function getForUser(
   const actions = await client.action.findMany({
     where: {
       actorId: userId,
-      OR: [{ postId: { not: null } }, { replyId: { not: null } }],
+      OR: [
+        {
+          postId: { not: null },
+        },
+        {
+          replyId: { not: null },
+          reply: { hidden: true },
+        },
+      ],
     },
     orderBy: [{ date: 'desc' }, { id: 'desc' }],
     select: {
