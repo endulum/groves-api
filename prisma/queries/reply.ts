@@ -120,7 +120,8 @@ export async function create(
     actedId: reply.id,
   });
 
-  return reply;
+  const { post, ...rest } = reply;
+  return { ...rest, postId: post.id };
 }
 
 export async function didUserVote(replyId: string, userId: number) {
