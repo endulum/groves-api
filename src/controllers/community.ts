@@ -277,7 +277,10 @@ export const editModerators = [
       await commQueries.demoteModerator(req.thisCommunity.id, req.thisUser.id);
     if (req.body.type === 'promote')
       await commQueries.promoteModerator(req.thisCommunity.id, req.thisUser.id);
-    res.sendStatus(200);
+    res.status(200).json({
+      username: req.thisUser.username,
+      id: req.thisUser.id,
+    });
   }),
 ];
 
