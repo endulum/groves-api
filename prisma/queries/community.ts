@@ -3,6 +3,9 @@ import { Prisma } from '@prisma/client';
 import { client } from '../client';
 import * as actionQueries from './action';
 
+import { paginatedResults } from './helpers/paginatedResults';
+import { getPageUrls } from './helpers/getPageUrls';
+
 export async function find({ id, urlName }: { id?: number; urlName?: string }) {
   const OR: Prisma.CommunityWhereInput[] = [];
   if (id && !Object.is(id, NaN)) OR.push({ id });
@@ -17,15 +20,19 @@ export async function find({ id, urlName }: { id?: number; urlName?: string }) {
   });
 }
 
-export async function search(opts: {
-  before?: number; // cursor for paging backwards
-  after?: number; // cursor for paging forwards
-  take: number; // page size
-  name: string;
-  sort: string;
-}) {
+export async function search(
+  paginationParams: {
+    before?: number;
+    after?: number;
+    take: number;
+  },
+  searchParams: {
+    name: string;
+    sort: string;
+  },
+) {
   const orderBy: Prisma.CommunityOrderByWithRelationInput[] = [{ id: 'desc' }];
-  switch (opts.sort) {
+  switch (searchParams.sort) {
     case 'followers':
       orderBy.unshift({ followers: { _count: 'desc' } });
       break;
@@ -36,48 +43,45 @@ export async function search(opts: {
       orderBy.unshift({ lastActivity: 'desc' });
   }
 
-  const cursor = opts.after ?? opts.before;
-  const direction = opts.after ? 'forward' : opts.before ? 'backward' : 'none';
-
-  const communities = await client.community.findMany({
-    where: {
-      readonly: false,
-      OR: [
-        { canonicalName: { contains: opts.name ?? '' } },
-        { urlName: { contains: opts.name ?? '' } },
-      ],
-    },
-    orderBy,
-    select: {
-      id: true,
-      urlName: true,
-      canonicalName: true,
-      description: true,
-      lastActivity: true,
-      _count: {
-        select: { followers: true, posts: true },
+  const {
+    results: communities,
+    nextCursor,
+    prevCursor,
+  } = await paginatedResults<number>(paginationParams, async (params) =>
+    client.community.findMany({
+      ...params,
+      where: {
+        readonly: false,
+        OR: [
+          { canonicalName: { contains: searchParams.name ?? '' } },
+          { urlName: { contains: searchParams.name ?? '' } },
+        ],
       },
+      orderBy,
+      select: {
+        id: true,
+        urlName: true,
+        canonicalName: true,
+        description: true,
+        lastActivity: true,
+        _count: {
+          select: { followers: true, posts: true },
+        },
+      },
+    }),
+  );
+
+  const { nextPage, prevPage } = getPageUrls(
+    nextCursor?.toString(),
+    prevCursor?.toString(),
+    {
+      ...searchParams,
+      take: paginationParams.take.toString(),
     },
-    cursor: cursor ? { id: cursor } : undefined,
-    skip: direction === 'none' ? undefined : 1,
-    take: (direction === 'backward' ? -1 : 1) * (opts.take + 1),
-  });
+    `/communities`,
+  );
 
-  const results =
-    direction === 'backward'
-      ? communities.slice(-opts.take)
-      : communities.slice(0, opts.take);
-
-  const hasMore = communities.length > opts.take;
-
-  const nextCursor =
-    direction === 'backward' || hasMore ? results.at(-1)?.id : null;
-  const prevCursor =
-    direction === 'forward' || (direction === 'backward' && hasMore)
-      ? results.at(0)?.id
-      : null;
-
-  return { results, nextCursor, prevCursor };
+  return { communities, links: { nextPage, prevPage } };
 }
 
 export async function create({

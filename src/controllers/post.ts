@@ -14,37 +14,20 @@ export const search = [
       string | undefined
     >;
 
-    const { results, nextCursor, prevCursor } = await postQueries.search({
-      communityUrl: req.thisCommunity.urlName,
-      before: before ?? undefined,
-      after: after ?? undefined,
-      take: take ? (parseInt(take, 10) ?? 20) : 20,
-      title: title ?? '',
-      sort: sort ?? 'activity',
-    });
+    const { posts, links } = await postQueries.search(
+      req.thisCommunity.urlName,
+      {
+        before: before ?? undefined,
+        after: after ?? undefined,
+        take: take ? (parseInt(take, 10) ?? 20) : 20,
+      },
+      {
+        title: title ?? '',
+        sort: sort ?? 'activity',
+      },
+    );
 
-    const rebuiltQuery: string[] = [];
-    if (take) rebuiltQuery.push(`take=${take}`);
-    if (title) rebuiltQuery.push(`name=${title}`);
-    if (sort) rebuiltQuery.push(`sort=${sort}`);
-    const queryString =
-      rebuiltQuery.length > 0 ? '&' + rebuiltQuery.join('&') : '';
-
-    const nextPage = nextCursor
-      ? `/community/${
-          req.thisCommunity.urlName
-        }/posts?after=${nextCursor}${queryString}`
-      : null;
-    const prevPage = prevCursor
-      ? `/community/${
-          req.thisCommunity.urlName
-        }/posts?before=${prevCursor}${queryString}`
-      : null;
-
-    res.json({
-      posts: results,
-      links: { nextPage, prevPage },
-    });
+    res.json({ posts, links });
   }),
 ];
 

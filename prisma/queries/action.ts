@@ -1,5 +1,7 @@
 import { ActionType } from '@prisma/client';
 import { client } from '../client';
+import { paginatedResults } from './helpers/paginatedResults';
+import { getPageUrls } from './helpers/getPageUrls';
 
 export async function create({
   actorId,
@@ -32,158 +34,148 @@ function isValidAction(type: string) {
   return ['Community', 'User', 'Post', 'Reply'].includes(type);
 }
 
-export async function search(
+export async function getForCommunity(
   communityId: number,
-  opts: {
-    before?: number; // cursor for paging backwards
-    after?: number; // cursor for paging forwards
-    take: number; // page size
+  paginationParams: {
+    before?: number;
+    after?: number;
+    take: number;
+  },
+  searchParams: {
     type?: string;
   },
 ) {
-  const cursor = opts.after ?? opts.before;
-  const direction = opts.after ? 'forward' : opts.before ? 'backward' : 'none';
-
-  const actions = await client.action.findMany({
-    where: {
-      communityId,
-      ...(opts.type && {
-        ...(isValidActionType(opts.type)
-          ? { type: opts.type as ActionType }
-          : isValidAction(opts.type)
-            ? {
-                ...(opts.type === 'Community' && {
-                  userId: null,
-                  postId: null,
-                  replyId: null,
-                }),
-                ...(opts.type === 'User' && {
-                  userId: { not: null },
-                  postId: null,
-                  replyId: null,
-                }),
-                ...(opts.type === 'Post' && {
-                  userId: null,
-                  postId: { not: null },
-                  replyId: null,
-                }),
-                ...(opts.type === 'Reply' && {
-                  userId: null,
-                  postId: null,
-                  replyId: { not: null },
-                }),
-              }
-            : {}),
-      }),
-    },
-    orderBy: [{ date: 'desc' }, { id: 'desc' }],
-    select: {
-      id: true,
-      date: true,
-      actor: { select: { id: true, username: true } },
-      type: true,
-      user: { select: { id: true, username: true } },
-      post: { select: { id: true, title: true } },
-      reply: {
-        select: { id: true, post: { select: { id: true, title: true } } },
+  const {
+    results: actions,
+    nextCursor,
+    prevCursor,
+  } = await paginatedResults<number>(paginationParams, async (params) =>
+    client.action.findMany({
+      where: {
+        communityId,
+        ...(searchParams.type && {
+          ...(isValidActionType(searchParams.type)
+            ? { type: searchParams.type as ActionType }
+            : isValidAction(searchParams.type)
+              ? {
+                  ...(searchParams.type === 'Community' && {
+                    userId: null,
+                    postId: null,
+                    replyId: null,
+                  }),
+                  ...(searchParams.type === 'User' && {
+                    userId: { not: null },
+                    postId: null,
+                    replyId: null,
+                  }),
+                  ...(searchParams.type === 'Post' && {
+                    userId: null,
+                    postId: { not: null },
+                    replyId: null,
+                  }),
+                  ...(searchParams.type === 'Reply' && {
+                    userId: null,
+                    postId: null,
+                    replyId: { not: null },
+                  }),
+                }
+              : {}),
+        }),
       },
-    },
-    cursor: cursor ? { id: cursor } : undefined,
-    skip: direction === 'none' ? undefined : 1,
-    take: (direction === 'backward' ? -1 : 1) * (opts.take + 1),
-  });
+      orderBy: [{ date: 'desc' }, { id: 'desc' }],
+      select: {
+        id: true,
+        date: true,
+        actor: { select: { id: true, username: true } },
+        type: true,
+        user: { select: { id: true, username: true } },
+        post: { select: { id: true, title: true } },
+        reply: {
+          select: { id: true, post: { select: { id: true, title: true } } },
+        },
+      },
+      ...params,
+    }),
+  );
 
-  const results =
-    direction === 'backward'
-      ? actions.slice(-opts.take)
-      : actions.slice(0, opts.take);
+  const { nextPage, prevPage } = getPageUrls(
+    nextCursor?.toString(),
+    prevCursor?.toString(),
+    searchParams,
+    `/community/${communityId}/actions`,
+  );
 
-  const hasMore = actions.length > opts.take;
-
-  const nextCursor =
-    direction === 'backward' || hasMore ? results.at(-1)?.id : null;
-  const prevCursor =
-    direction === 'forward' || (direction === 'backward' && hasMore)
-      ? results.at(0)?.id
-      : null;
-
-  return { results, nextCursor, prevCursor };
+  return { actions, links: { nextPage, prevPage } };
 }
 
 export async function getForUser(
   userId: number,
-  opts: {
-    before?: number; // cursor for paging backwards
-    after?: number; // cursor for paging forwards
-    take: number; // page size
+  paginationParams: {
+    before?: number;
+    after?: number;
+    take: number;
   },
 ) {
-  const cursor = opts.after ?? opts.before;
-  const direction = opts.after ? 'forward' : opts.before ? 'backward' : 'none';
-
-  const actions = await client.action.findMany({
-    where: {
-      actorId: userId,
-      OR: [
-        {
-          postId: { not: null },
-        },
-        {
-          replyId: { not: null },
-          reply: { hidden: true },
-        },
-      ],
-    },
-    orderBy: [{ date: 'desc' }, { id: 'desc' }],
-    select: {
-      id: true,
-      date: true,
-      type: true,
-      community: {
-        select: {
-          id: true,
-          urlName: true,
-          canonicalName: true,
-        },
-      },
-      post: {
-        select: {
-          id: true,
-          title: true,
-          content: true,
-        },
-      },
-      reply: {
-        select: {
-          id: true,
-          post: {
-            select: {
-              id: true,
-              title: true,
-            },
+  const {
+    results: actions,
+    nextCursor,
+    prevCursor,
+  } = await paginatedResults<number>(paginationParams, async (params) =>
+    client.action.findMany({
+      where: {
+        actorId: userId,
+        OR: [
+          {
+            postId: { not: null },
           },
-          content: true,
+          {
+            replyId: { not: null },
+            reply: { hidden: false },
+          },
+        ],
+      },
+      orderBy: [{ date: 'desc' }, { id: 'desc' }],
+      select: {
+        id: true,
+        date: true,
+        type: true,
+        community: {
+          select: {
+            id: true,
+            urlName: true,
+            canonicalName: true,
+          },
+        },
+        post: {
+          select: {
+            id: true,
+            title: true,
+            content: true,
+          },
+        },
+        reply: {
+          select: {
+            id: true,
+            post: {
+              select: {
+                id: true,
+                title: true,
+              },
+            },
+            content: true,
+          },
         },
       },
-    },
-    cursor: cursor ? { id: cursor } : undefined,
-    skip: direction === 'none' ? undefined : 1,
-    take: (direction === 'backward' ? -1 : 1) * (opts.take + 1),
-  });
+      ...params,
+    }),
+  );
 
-  const results =
-    direction === 'backward'
-      ? actions.slice(-opts.take)
-      : actions.slice(0, opts.take);
+  const { nextPage, prevPage } = getPageUrls(
+    nextCursor?.toString(),
+    prevCursor?.toString(),
+    {},
+    `/user/${userId}/actions`,
+  );
 
-  const hasMore = actions.length > opts.take;
-
-  const nextCursor =
-    direction === 'backward' || hasMore ? results.at(-1)?.id : null;
-  const prevCursor =
-    direction === 'forward' || (direction === 'backward' && hasMore)
-      ? results.at(0)?.id
-      : null;
-
-  return { results, nextCursor, prevCursor };
+  return { actions, links: { nextPage, prevPage } };
 }

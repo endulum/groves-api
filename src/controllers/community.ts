@@ -3,7 +3,7 @@ import { body } from 'express-validator';
 
 import * as userQueries from '../../prisma/queries/user';
 import * as commQueries from '../../prisma/queries/community';
-import * as actionQueries from '../../prisma/queries/action';
+import { getForCommunity } from '../../prisma/queries/action';
 import { validate } from '../middleware/validate';
 
 export const search = asyncHandler(async (req, res) => {
@@ -12,31 +12,21 @@ export const search = asyncHandler(async (req, res) => {
     string | undefined
   >;
 
-  const { results, nextCursor, prevCursor } = await commQueries.search({
-    before: before ? (parseInt(before, 10) ?? undefined) : undefined,
-    after: after ? (parseInt(after, 10) ?? undefined) : undefined,
-    take: take ? (parseInt(take, 10) ?? 15) : 15,
-    name: name ?? '',
-    sort: sort ?? 'activity',
-  });
-
-  const rebuiltQuery: string[] = [];
-  if (take) rebuiltQuery.push(`take=${take}`);
-  if (name) rebuiltQuery.push(`name=${name}`);
-  if (sort) rebuiltQuery.push(`sort=${sort}`);
-  const queryString =
-    rebuiltQuery.length > 0 ? '&' + rebuiltQuery.join('&') : '';
-
-  const nextPage = nextCursor
-    ? `/communities?after=${nextCursor}${queryString}`
-    : null;
-  const prevPage = prevCursor
-    ? `/communities?before=${prevCursor}${queryString}`
-    : null;
+  const { communities, links } = await commQueries.search(
+    {
+      before: before ? (parseInt(before, 10) ?? undefined) : undefined,
+      after: after ? (parseInt(after, 10) ?? undefined) : undefined,
+      take: take ? (parseInt(take, 10) ?? 15) : 15,
+    },
+    {
+      name: name ?? '',
+      sort: sort ?? 'activity',
+    },
+  );
 
   res.json({
-    communities: results,
-    links: { nextPage, prevPage },
+    communities,
+    links,
   });
 });
 
@@ -312,36 +302,18 @@ export const getActions = [
       string | undefined
     >;
 
-    const { results, nextCursor, prevCursor } = await actionQueries.search(
+    const { actions, links } = await getForCommunity(
       req.thisCommunity.id,
       {
         before: before ? (parseInt(before, 10) ?? undefined) : undefined,
         after: after ? (parseInt(after, 10) ?? undefined) : undefined,
         take: take ? (parseInt(take, 10) ?? 15) : 30,
+      },
+      {
         ...(type && { type }),
       },
     );
 
-    const rebuiltQuery: string[] = [];
-    if (take) rebuiltQuery.push(`take=${take}`);
-    if (type) rebuiltQuery.push(`type=${type}`);
-    const queryString =
-      rebuiltQuery.length > 0 ? '&' + rebuiltQuery.join('&') : '';
-
-    const nextPage = nextCursor
-      ? `/community/${
-          req.thisCommunity.urlName
-        }/actions?after=${nextCursor}${queryString}`
-      : null;
-    const prevPage = prevCursor
-      ? `/community/${
-          req.thisCommunity.urlName
-        }/actions?before=${prevCursor}${queryString}`
-      : null;
-
-    res.json({
-      actions: results,
-      links: { nextPage, prevPage },
-    });
+    res.json({ actions, links });
   }),
 ];

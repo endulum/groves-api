@@ -145,7 +145,7 @@ describe('GET /user/:user/actions', () => {
   test('shows a list of content from user', async () => {
     const response = await req(`GET /user/${users[0].username}/actions`);
     assertCode(response, 200);
-    logBody(response);
+    // logBody(response);
   });
 
   test('pagination', async () => {

@@ -2,6 +2,8 @@ import { Prisma } from '@prisma/client';
 
 import { client } from '../client';
 import * as actionQueries from './action';
+import { paginatedResults } from './helpers/paginatedResults';
+import { getPageUrls } from './helpers/getPageUrls';
 
 export async function find(id: string) {
   return client.post.findUnique({
@@ -37,16 +39,20 @@ export async function find(id: string) {
   });
 }
 
-export async function search(opts: {
-  communityUrl: string;
-  before?: string;
-  after?: string;
-  take: number;
-  title: string;
-  sort: string;
-}) {
+export async function search(
+  communityUrl: string,
+  paginationParams: {
+    before?: string;
+    after?: string;
+    take: number;
+  },
+  searchParams: {
+    title: string;
+    sort: string;
+  },
+) {
   const orderBy: Prisma.PostOrderByWithRelationInput[] = [{ id: 'desc' }];
-  switch (opts.sort) {
+  switch (searchParams.sort) {
     case 'newest':
       orderBy.unshift({ datePosted: 'desc' });
       break;
@@ -66,43 +72,40 @@ export async function search(opts: {
       orderBy.unshift({ rating: { hotScore: 'desc' } });
   }
 
-  const cursor = opts.after ?? opts.before;
-  const direction = opts.after ? 'forward' : opts.before ? 'backward' : 'none';
+  const {
+    results: posts,
+    nextCursor,
+    prevCursor,
+  } = await paginatedResults<string>(paginationParams, async (params) =>
+    client.post.findMany({
+      where: {
+        readonly: false,
+        title: { contains: searchParams.title ?? '' },
+        community: { urlName: communityUrl },
+      },
+      orderBy,
+      select: {
+        id: true,
+        title: true,
+        datePosted: true,
+        author: { select: { id: true, username: true } },
+        _count: { select: { replies: true, upvotes: true, downvotes: true } },
+      },
+      ...params,
+    }),
+  );
 
-  const posts = await client.post.findMany({
-    where: {
-      readonly: false,
-      title: { contains: opts.title ?? '' },
-      community: { urlName: opts.communityUrl },
+  const { nextPage, prevPage } = getPageUrls(
+    nextCursor?.toString(),
+    prevCursor?.toString(),
+    {
+      ...searchParams,
+      take: paginationParams.take.toString(),
     },
-    orderBy,
-    select: {
-      id: true,
-      title: true,
-      datePosted: true,
-      author: { select: { id: true, username: true } },
-      _count: { select: { replies: true, upvotes: true, downvotes: true } },
-    },
-    cursor: cursor ? { id: cursor } : undefined,
-    skip: direction === 'none' ? undefined : 1,
-    take: (direction === 'backward' ? -1 : 1) * (opts.take + 1),
-  });
+    `/community/${communityUrl}/posts`,
+  );
 
-  const results =
-    direction === 'backward'
-      ? posts.slice(-opts.take)
-      : posts.slice(0, opts.take);
-
-  const hasMore = posts.length > opts.take;
-
-  const nextCursor =
-    direction === 'backward' || hasMore ? results.at(-1)?.id : null;
-  const prevCursor =
-    direction === 'forward' || (direction === 'backward' && hasMore)
-      ? results.at(0)?.id
-      : null;
-
-  return { results, nextCursor, prevCursor };
+  return { posts, links: { nextPage, prevPage } };
 }
 
 export async function create(

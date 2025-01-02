@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { req } from '../helpers';
+import { assertCode, req } from '../helpers';
 import { type Response } from 'supertest';
 import wilson from 'wilson-score-interval';
 
@@ -39,6 +39,7 @@ export async function assertPagination({
   perPageAssertion?: (response: Response) => void; // test to run each page
 }) {
   let response = await req(`GET ${url}`);
+  assertCode(response, 200);
   expect(response.body).toHaveProperty(resultsProperty);
   expect(response.body).toHaveProperty('links');
   expect(response.body.links.nextPage).not.toBeNull();

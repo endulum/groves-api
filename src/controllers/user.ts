@@ -113,35 +113,13 @@ export const getActions = [
       string | undefined
     >;
 
-    const { results, nextCursor, prevCursor } = await getForUser(
-      req.thisUser.id,
-      {
-        before: before ? (parseInt(before, 10) ?? undefined) : undefined,
-        after: after ? (parseInt(after, 10) ?? undefined) : undefined,
-        take: take ? (parseInt(take, 10) ?? 10) : 10,
-      },
-    );
-
-    const rebuiltQuery: string[] = [];
-    if (take) rebuiltQuery.push(`take=${take}`);
-    const queryString =
-      rebuiltQuery.length > 0 ? '&' + rebuiltQuery.join('&') : '';
-
-    const nextPage = nextCursor
-      ? `/user/${
-          req.thisUser.username
-        }/actions?after=${nextCursor}${queryString}`
-      : null;
-    const prevPage = prevCursor
-      ? `/user/${
-          req.thisUser.username
-        }/actions?before=${prevCursor}${queryString}`
-      : null;
-
-    res.json({
-      actions: results,
-      links: { nextPage, prevPage },
+    const { actions, links } = await getForUser(req.thisUser.id, {
+      before: before ? (parseInt(before, 10) ?? undefined) : undefined,
+      after: after ? (parseInt(after, 10) ?? undefined) : undefined,
+      take: take ? (parseInt(take, 10) ?? 10) : 10,
     });
+
+    res.json({ actions, links });
   }),
 ];
 
