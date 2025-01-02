@@ -15,5 +15,11 @@ Viewing paginated and queryable lists of things.
 ### Actions
 
 - [x] Filter and paginate actions:
-  - [x] by action type
-  - [ ] by `replyId`, `postId`, or `userId`
+- - [x] by action type
+- - [ ] by `replyId`, `postId`, or `userId`
+
+### Feed
+
+- [x] Paginate posts:
+- - [x] `all`: All posts from all comms
+- - [x] `feed`: Only posts from comms auth user is following

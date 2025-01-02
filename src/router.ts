@@ -4,8 +4,14 @@ import * as user from './controllers/user';
 import * as community from './controllers/community';
 import * as post from './controllers/post';
 import * as reply from './controllers/reply';
+import * as feed from './controllers/feed';
 
 const router = express.Router();
+
+// feed
+
+router.route('/all').get(feed.get);
+router.route('/feed').get(user.authenticate, feed.get);
 
 // account
 

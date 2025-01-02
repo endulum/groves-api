@@ -57,6 +57,7 @@ export async function assertPagination({
   let nextPage: string = response.body.links.nextPage;
   while (nextPage !== null) {
     response = await req(`GET ${nextPage}`);
+    assertCode(response, 200);
     if (perPageAssertion) perPageAssertion(response);
     nextPage = response.body.links.nextPage;
     pageCount++;
