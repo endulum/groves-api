@@ -89,6 +89,7 @@ export async function search(
         id: true,
         title: true,
         datePosted: true,
+        readonly: true,
         author: { select: { id: true, username: true } },
         _count: { select: { replies: true, upvotes: true, downvotes: true } },
       },
