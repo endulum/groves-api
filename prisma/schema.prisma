@@ -145,6 +145,7 @@ enum ActionType {
   Community_Unfreeze
   User_PromoteMod
   User_DemoteMod
+  User_ChangeAdmin
   Post_Create
   Post_Edit
   Post_Freeze

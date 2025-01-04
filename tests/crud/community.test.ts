@@ -178,6 +178,48 @@ describe('PUT /community/:community/moderators', () => {
   });
 });
 
+describe('PUT /community/:community/admin', () => {
+  afterAll(async () => {
+    await commQueries.changeAdmin(commId, 1);
+  });
+
+  test('400 and errors', async () => {
+    await assertInputErrors({
+      reqArgs: [`PUT /community/${commId}/admin`, adminToken],
+      correctInputs: { username: 'demo-2' },
+      wrongInputs: [
+        { username: '' },
+        { username: 'owo' }, // user doesn't exist
+        { username: 'admin' }, // can't promote or demote yourself
+      ],
+    });
+  });
+
+  test('200 and makes a user admin', async () => {
+    let response = await req(`PUT /community/${commId}/admin`, adminToken, {
+      username: 'demo-2',
+    });
+    assertCode(response, 200);
+    // admin should be reflected in get
+    response = await req(`GET /community/${commId}`);
+    expect(response.body.admin.username).toBe('demo-2');
+  });
+
+  test('200 and makes a mod admin + removes them from moderators', async () => {
+    const demoToken = await token('demo-2');
+    let response = await req(`PUT /community/${commId}/admin`, demoToken, {
+      username: 'demo-1',
+    });
+    assertCode(response, 200);
+    response = await req(`GET /community/${commId}`);
+    expect(
+      response.body.moderators.every(
+        (mod: { username: string }) => mod.username !== 'demo-1',
+      ),
+    ).toBeTruthy();
+  });
+});
+
 describe('PUT /community/:community/followers', async () => {
   beforeAll(async () => {
     await commQueries.follow(commId, users[0].id, 'true');

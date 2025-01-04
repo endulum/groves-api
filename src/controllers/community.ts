@@ -274,6 +274,37 @@ export const editModerators = [
   }),
 ];
 
+export const changeAdmin = [
+  exists,
+  isAdmin,
+  body('username')
+    .trim()
+    .notEmpty()
+    .withMessage('Please enter a username.')
+    .bail()
+    .custom(async (value, { req }) => {
+      const existingUser = await userQueries.find({ username: value });
+      if (!existingUser) {
+        throw new Error('No user exists with this username.');
+      }
+      if (existingUser.id === req.user.id) {
+        throw new Error('You cannot make yourself admin.');
+      }
+      if (req.thisCommunity.adminId === existingUser.id)
+        throw new Error('This user is already the admin of this community.');
+      req.thisUser = existingUser;
+    })
+    .escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    await commQueries.changeAdmin(req.thisCommunity.id, req.thisUser.id);
+    res.status(200).json({
+      username: req.thisUser.username,
+      id: req.thisUser.id,
+    });
+  }),
+];
+
 export const editStatus = [
   exists,
   isAdmin,

@@ -44,6 +44,10 @@ router
   .put(user.authenticate, community.editModerators);
 
 router
+  .route('/community/:community/admin')
+  .put(user.authenticate, community.changeAdmin);
+
+router
   .route('/community/:community/wiki')
   .get(community.getWiki)
   .put(user.authenticate, community.editWiki);

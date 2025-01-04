@@ -226,6 +226,25 @@ export async function demoteModerator(id: number, userId: number) {
   });
 }
 
+export async function changeAdmin(id: number, userId: number) {
+  const { adminId } = await client.community.update({
+    where: { id },
+    data: {
+      adminId: userId,
+      moderators: {
+        disconnect: { id: userId },
+      },
+    },
+  });
+
+  await actionQueries.create({
+    actorId: adminId,
+    communityId: id,
+    type: 'User_ChangeAdmin',
+    actedId: userId,
+  });
+}
+
 export async function toggleReadonly(id: number, readonly: 'true' | 'false') {
   if (readonly === 'true') {
     const { adminId } = await client.community.update({
