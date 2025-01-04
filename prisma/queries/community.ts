@@ -226,7 +226,7 @@ export async function demoteModerator(id: number, userId: number) {
   });
 }
 
-export async function changeAdmin(id: number, userId: number) {
+export async function changeAdmin(id: number, userId: number, actorId: number) {
   const { adminId } = await client.community.update({
     where: { id },
     data: {
@@ -238,10 +238,10 @@ export async function changeAdmin(id: number, userId: number) {
   });
 
   await actionQueries.create({
-    actorId: adminId,
+    actorId,
     communityId: id,
     type: 'User_ChangeAdmin',
-    actedId: userId,
+    actedId: adminId,
   });
 }
 

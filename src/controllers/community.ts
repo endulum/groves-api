@@ -297,7 +297,11 @@ export const changeAdmin = [
     .escape(),
   validate,
   asyncHandler(async (req, res) => {
-    await commQueries.changeAdmin(req.thisCommunity.id, req.thisUser.id);
+    await commQueries.changeAdmin(
+      req.thisCommunity.id,
+      req.thisUser.id,
+      req.user.id,
+    );
     res.status(200).json({
       username: req.thisUser.username,
       id: req.thisUser.id,

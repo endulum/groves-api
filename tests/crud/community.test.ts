@@ -180,7 +180,7 @@ describe('PUT /community/:community/moderators', () => {
 
 describe('PUT /community/:community/admin', () => {
   afterAll(async () => {
-    await commQueries.changeAdmin(commId, 1);
+    await commQueries.changeAdmin(commId, 1, 3);
   });
 
   test('400 and errors', async () => {
