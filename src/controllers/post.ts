@@ -9,10 +9,8 @@ import * as community from './community';
 export const search = [
   community.exists,
   asyncHandler(async (req, res) => {
-    const { before, after, take, title, sort } = req.query as Record<
-      string,
-      string | undefined
-    >;
+    const { before, after, take, title, sort, includeFrozen } =
+      req.query as Record<string, string | undefined>;
 
     const { posts, links } = await postQueries.search(
       req.thisCommunity.urlName,
@@ -24,6 +22,7 @@ export const search = [
       {
         title: title ?? '',
         sort: sort ?? 'activity',
+        includeFrozen: includeFrozen === 'true' ? 'true' : '',
       },
     );
 

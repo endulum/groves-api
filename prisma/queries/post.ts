@@ -49,6 +49,7 @@ export async function search(
   searchParams: {
     title: string;
     sort: string;
+    includeFrozen: string;
   },
 ) {
   const orderBy: Prisma.PostOrderByWithRelationInput[] = [{ id: 'desc' }];
@@ -79,7 +80,7 @@ export async function search(
   } = await paginatedResults<string>(paginationParams, async (params) =>
     client.post.findMany({
       where: {
-        readonly: false,
+        ...(!(searchParams.includeFrozen === 'true') && { readonly: false }),
         title: { contains: searchParams.title ?? '' },
         community: { urlName: communityUrl },
       },
@@ -101,6 +102,7 @@ export async function search(
     {
       ...searchParams,
       take: paginationParams.take.toString(),
+      ...(searchParams.includeFrozen === 'true' && { includeFrozen: 'true' }),
     },
     `/community/${communityUrl}/posts`,
   );

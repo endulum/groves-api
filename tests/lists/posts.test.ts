@@ -1,13 +1,16 @@
 import { req, assertCode } from '../helpers';
 import { seed } from '../../prisma/seed';
 import { assertPagination, scoreTypes } from './_listHelpers';
+import * as postqueries from '../../prisma/queries/post';
+
+const postIds: string[] = [];
 
 describe('GET /community/:community/posts', () => {
   const testPostCount = 50;
   let commId: number = 0;
 
   beforeAll(async () => {
-    const { commIds } = await seed({
+    const { commIds, postIds: seedPostIds } = await seed({
       logging: false,
       userCount: 200,
       comms: { count: 1 },
@@ -18,6 +21,7 @@ describe('GET /community/:community/posts', () => {
       replies: { perPost: { max: 50 } },
     });
     commId = commIds[0];
+    postIds.push(...seedPostIds);
   });
 
   test('show max 20 posts, activity descending by default', async () => {
@@ -35,10 +39,6 @@ describe('GET /community/:community/posts', () => {
           scoreTypes.hot(post_a._count.upvotes, post_a._count.downvotes),
       ),
     ).toEqual(response.body.posts);
-
-    // do each of them need to reflect your vote?
-    // i'd rather not, and have your vote reflected only on individual view.
-    // in which case, todo: test for vote status in crud/vote, or just vote
   });
 
   describe('query params', () => {
@@ -81,14 +81,11 @@ describe('GET /community/:community/posts', () => {
       );
 
       // newest
-      // wait! this isn't right! todo: sort by DATE, not posts!
       let response = await req(`GET /community/${commId}/posts?sort=newest`);
       expect(
         [...response.body.posts].sort(
-          (
-            post_a: { _count: { posts: number } },
-            post_b: { _count: { posts: number } },
-          ) => post_b._count.posts - post_a._count.posts,
+          (post_a: { datePosted: string }, post_b: { datePosted: string }) =>
+            Date.parse(post_b.datePosted) - Date.parse(post_a.datePosted),
         ),
       ).toEqual(response.body.posts);
 
@@ -102,6 +99,35 @@ describe('GET /community/:community/posts', () => {
           ) => post_b._count.replies - post_a._count.replies,
         ),
       ).toEqual(response.body.posts);
+    });
+
+    test('includeFrozen', async () => {
+      // make half of all posts readonly
+      await Promise.all(
+        postIds
+          .sort(() => 0.5 - Math.random())
+          .slice(0, 24)
+          .map(async (postId) => {
+            await postqueries.toggleReadonly(postId, 'true', 1);
+          }),
+      );
+
+      const response = await req(
+        `GET /community/${commId}/posts?includeFrozen=true`,
+      );
+      assertCode(response, 200);
+      expect(
+        response.body.posts.every(
+          (post: { readonly: boolean }) => post.readonly === false,
+        ),
+      ).toBeFalsy();
+
+      // switch back
+      await Promise.all(
+        postIds.slice(0, 24).map(async (postId) => {
+          await postqueries.toggleReadonly(postId, 'false', 1);
+        }),
+      );
     });
   });
 
