@@ -64,6 +64,10 @@ router
   .route('/community/:community/actions')
   .get(user.deserialize, community.getActions);
 
+router
+  .route('/community/:community/pinned')
+  .get(user.deserialize, post.getPinned);
+
 // posts
 
 router
@@ -79,6 +83,8 @@ router
 router.route('/post/:post/vote').put(user.authenticate, post.vote);
 
 router.route('/post/:post/status').put(user.authenticate, post.editStatus);
+
+router.route('/post/:post/pin').put(user.authenticate, post.pin);
 
 // replies
 

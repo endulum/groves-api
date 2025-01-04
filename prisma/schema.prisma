@@ -150,6 +150,8 @@ enum ActionType {
   Post_Edit
   Post_Freeze
   Post_Unfreeze
+  Post_Pin
+  Post_Unpin
   Reply_Create
   Reply_Hide
   Reply_Unhide

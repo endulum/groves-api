@@ -235,3 +235,74 @@ export async function toggleReadonly(
     });
   }
 }
+
+// max two pinned posts allowed per comm
+export async function togglePinned(
+  id: string,
+  pinned: 'true' | 'false',
+  modId: number,
+) {
+  if (pinned === 'true') {
+    const { communityId } = await client.post.update({
+      where: { id },
+      data: { pinned: true },
+    });
+
+    await actionQueries.create({
+      actorId: modId,
+      communityId,
+      type: 'Post_Pin',
+      actedId: id,
+    });
+  }
+  if (pinned === 'false') {
+    const { communityId } = await client.post.update({
+      where: { id },
+      data: { pinned: false },
+    });
+
+    await actionQueries.create({
+      actorId: modId,
+      communityId,
+      type: 'Post_Unpin',
+      actedId: id,
+    });
+  }
+}
+
+export async function findPinned(communityId: number) {
+  return await client.post.findMany({
+    where: {
+      communityId,
+      pinned: true,
+    },
+    include: {
+      upvotes: { select: { id: true } },
+      downvotes: { select: { id: true } },
+      author: {
+        select: {
+          id: true,
+          username: true,
+        },
+      },
+      community: {
+        select: {
+          id: true,
+          urlName: true,
+          canonicalName: true,
+        },
+      },
+      _count: {
+        select: {
+          upvotes: true,
+          downvotes: true,
+          replies: true,
+        },
+      },
+    },
+    omit: {
+      authorId: true,
+      communityId: true,
+    },
+  });
+}

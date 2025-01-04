@@ -148,3 +148,64 @@ describe('PUT /post/:post/status', () => {
     expect(response.body.readonly).toBe(false);
   });
 });
+
+describe('PUT /post/:post/pin', () => {
+  const postIds: string[] = [];
+
+  beforeAll(async () => {
+    const { commIds, postIds: seedPostIds } = await seed({
+      userCount: 1,
+      comms: { count: 1 },
+      posts: { perComm: { min: 3, max: 3 } },
+    });
+    commId = commIds[0];
+    postIds.push(...seedPostIds);
+  });
+
+  test('400 if double unpin', async () => {
+    const response = await req(`PUT /post/${postIds[0]}/pin`, adminToken, {
+      pin: 'false',
+    });
+    assertCode(response, 400, 'This post is already unpinned.');
+  });
+
+  test('200 and pins', async () => {
+    let response = await req(`PUT /post/${postIds[0]}/pin`, adminToken, {
+      pin: 'true',
+    });
+    assertCode(response, 200);
+    response = await req(`GET /post/${postIds[0]}`);
+    expect(response.body.pinned).toBe(true);
+  });
+
+  test('400 if double pin', async () => {
+    const response = await req(`PUT /post/${postIds[0]}/pin`, adminToken, {
+      pin: 'true',
+    });
+    assertCode(response, 400, 'This post is already pinned.');
+  });
+
+  test('200 and unpins', async () => {
+    let response = await req(`PUT /post/${postIds[0]}/pin`, adminToken, {
+      pin: 'false',
+    });
+    assertCode(response, 200);
+    response = await req(`GET /post/${postIds[0]}`);
+    expect(response.body.pinned).toBe(false);
+  });
+
+  test('400 if reached max pin amount', async () => {
+    for (let i = 0; i < postIds.length; i++) {
+      const response = await req(`PUT /post/${postIds[i]}/pin`, adminToken, {
+        pin: 'true',
+      });
+      if (i === postIds.length - 1) {
+        assertCode(
+          response,
+          400,
+          'There cannot be more than two pinned posts in a community. Unpin one in order to pin another.',
+        );
+      }
+    }
+  });
+});

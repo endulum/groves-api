@@ -122,6 +122,16 @@ export const get = [
   }),
 ];
 
+export const getPinned = [
+  community.exists,
+  asyncHandler(async (req, res) => {
+    const pinnedPosts = await postQueries.findPinned(req.thisCommunity.id);
+    res.json({
+      pinnedPosts,
+    });
+  }),
+];
+
 export const isAuthor = asyncHandler(async (req, res, next) => {
   if (req.thisPost.author.id === req.user.id) next();
   else res.status(403).send('You are not the author of this post.');
@@ -197,6 +207,37 @@ export const editStatus = [
         req.user.id,
       );
       res.sendStatus(200);
+    }
+  }),
+];
+
+export const pin = [
+  exists,
+  community.isNotReadonly,
+  community.isAdminOrMod,
+  body('pin').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    if (req.thisPost.pinned === true && req.body.pin === 'true')
+      res.status(400).send('This post is already pinned.');
+    else if (req.thisPost.pinned === false && req.body.pin === 'false')
+      res.status(400).send('This post is already unpinned.');
+    else {
+      const pinned = await postQueries.findPinned(req.thisCommunity.id);
+      if (req.body.pin === 'true' && pinned.length >= 2)
+        res
+          .status(400)
+          .send(
+            'There cannot be more than two pinned posts in a community. Unpin one in order to pin another.',
+          );
+      else {
+        await postQueries.togglePinned(
+          req.thisPost.id,
+          req.body.pin,
+          req.user.id,
+        );
+        res.sendStatus(200);
+      }
     }
   }),
 ];
