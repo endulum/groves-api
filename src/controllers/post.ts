@@ -104,11 +104,11 @@ export const get = [
         isVoted,
         // does the auth'd user have mod privileges?
         isMod:
-          (req.user !== undefined &&
-            req.thisCommunity.admin.id === req.user.id) ||
-          req.thisCommunity.moderators.find(
-            (mod: { id: number }) => mod.id === req.user.id,
-          ) !== undefined,
+          req.user !== undefined &&
+          (req.thisCommunity.admin.id === req.user.id ||
+            req.thisCommunity.moderators.find(
+              (mod: { id: number }) => mod.id === req.user.id,
+            ) !== undefined),
         // is the author a mod of this comm?
         isPostAuthorMod:
           req.thisCommunity.moderators.find(
