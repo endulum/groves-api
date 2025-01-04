@@ -15,6 +15,14 @@ export async function find({
   if (username) OR.push({ username });
   return client.user.findFirst({
     where: { OR },
+    include: {
+      _count: {
+        select: {
+          posts: true,
+          replies: true,
+        },
+      },
+    },
   });
 }
 
