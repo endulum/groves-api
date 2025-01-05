@@ -34,6 +34,7 @@ export async function get(
         title: true,
         datePosted: true,
         content: true,
+        readonly: true,
         author: { select: { id: true, username: true } },
         community: { select: { id: true, urlName: true, canonicalName: true } },
         _count: { select: { replies: true, upvotes: true, downvotes: true } },
