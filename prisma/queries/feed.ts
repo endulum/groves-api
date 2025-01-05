@@ -18,7 +18,6 @@ export async function get(
     client.post.findMany({
       orderBy: [{ datePosted: 'desc' }, { id: 'desc' }],
       where: {
-        readonly: false,
         ...(userId && {
           authorId: { not: userId },
           community: {
