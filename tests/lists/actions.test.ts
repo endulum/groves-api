@@ -1,4 +1,4 @@
-import { assertCode, logBody, req, token } from '../helpers';
+import { assertCode, req, token } from '../helpers';
 import { seed } from '../../prisma/seed';
 import { actionTests } from '../actions/actionHelper';
 import { assertPagination } from './_listHelpers';
@@ -22,7 +22,6 @@ describe('GET /community/:community/actions', async () => {
   test('shows a list of actions', async () => {
     const response = await req(`GET /community/${community}/actions`);
     assertCode(response, 200);
-    // logBody(response);
 
     // actions are sorted by date
     expect(
@@ -75,7 +74,6 @@ describe('GET /community/:community/actions', async () => {
           `GET /community/${community}/actions?type=${type}`,
         );
         assertCode(response, 200);
-        // logBody(response);
         expect(response.body.actions.length).toBeGreaterThanOrEqual(1);
         expect(
           response.body.actions.every((action: { type: string }) =>
@@ -145,7 +143,6 @@ describe('GET /user/:user/actions', () => {
   test('shows a list of content from user', async () => {
     const response = await req(`GET /user/${users[0].username}/actions`);
     assertCode(response, 200);
-    // logBody(response);
   });
 
   test('pagination', async () => {

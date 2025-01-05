@@ -153,7 +153,6 @@ describe('PUT /reply/:reply/status', () => {
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`);
     assertCode(response, 200);
-    // logBody(response);
     expect(response.body.author).toBeNull();
     expect(response.body.content).toBeNull();
     expect(response.body._count.upvotes).toBeNull();
