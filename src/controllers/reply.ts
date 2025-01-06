@@ -251,7 +251,9 @@ export const pin = [
   body('pin').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    if (req.thisReply.pinned === true && req.body.pin === 'true')
+    if (req.thisReply.hidden)
+      res.status(400).send('Hidden replies cannot be pinned.');
+    else if (req.thisReply.pinned === true && req.body.pin === 'true')
       res.status(400).send('This reply is already pinned.');
     else if (req.thisReply.pinned === false && req.body.pin === 'false')
       res.status(400).send('This reply is already unpinned.');
@@ -264,5 +266,22 @@ export const pin = [
         res.sendStatus(200);
       }
     }
+  }),
+];
+
+export const getPinned = [
+  post.exists,
+  asyncHandler(async (req, res) => {
+    const pinnedReply = await replyQueries.findPinned(req.thisPost.id);
+    if (!pinnedReply) res.status(400).send('This post has no pinned replies.');
+    const { loadChildren, pinned, ...rest } = formatReplies({
+      replies: [pinnedReply],
+      userId: req.user ? req.user.id : null,
+      commMods: req.thisCommunity.moderators,
+      commAdmin: req.thisCommunity.admin,
+    })[0];
+    res.json({
+      ...rest,
+    });
   }),
 ];

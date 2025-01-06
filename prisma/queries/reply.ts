@@ -229,7 +229,6 @@ export async function findPinned(postId: string) {
   });
   return await client.reply.findFirst({
     where: { postId, pinned: true },
-    orderBy: { datePosted: 'asc' },
     ...query,
   });
 }

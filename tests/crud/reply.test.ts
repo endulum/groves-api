@@ -210,6 +210,13 @@ describe('PUT /reply/:reply/pin', () => {
     assertCode(response, 400, 'This reply is already pinned.');
   });
 
+  describe('GET /post/:post/pinned', () => {
+    test('works', async () => {
+      const response = await req(`GET /post/${postId}/pinned`);
+      assertCode(response, 200);
+    });
+  });
+
   test('200 and unpins', async () => {
     let response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
       pin: false,

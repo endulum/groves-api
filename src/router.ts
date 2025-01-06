@@ -86,6 +86,8 @@ router.route('/post/:post/status').put(user.authenticate, post.editStatus);
 
 router.route('/post/:post/pin').put(user.authenticate, post.pin);
 
+router.route('/post/:post/pinned').get(user.deserialize, reply.getPinned);
+
 // replies
 
 router

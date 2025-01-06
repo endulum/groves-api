@@ -178,6 +178,14 @@ describe('PUT /post/:post/pin', () => {
     expect(response.body.pinned).toBe(true);
   });
 
+  describe('GET /community/:community/pinned', () => {
+    test('works', async () => {
+      const response = await req(`GET /community/${commId}/pinned`);
+      assertCode(response, 200);
+      expect(response.body.pinnedPosts.length).not.toBe(0);
+    });
+  });
+
   test('400 if double pin', async () => {
     const response = await req(`PUT /post/${postIds[0]}/pin`, adminToken, {
       pin: 'true',

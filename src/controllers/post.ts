@@ -5,6 +5,7 @@ import { validate } from '../middleware/validate';
 import * as postQueries from '../../prisma/queries/post';
 import * as commQueries from '../../prisma/queries/community';
 import * as community from './community';
+import { findPinned } from '../../prisma/queries/reply';
 
 export const search = [
   community.exists,
@@ -116,6 +117,7 @@ export const get = [
         isPostAuthorAdmin:
           req.thisCommunity.admin.id === req.thisPost.author.id,
         isCommReadonly: req.thisCommunity.readonly,
+        hasPinnedReply: !!(await findPinned(req.thisPost.id)),
       },
     });
   }),
