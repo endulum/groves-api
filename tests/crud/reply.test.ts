@@ -176,3 +176,46 @@ describe('PUT /reply/:reply/status', () => {
     expect(response.body.content).not.toBeNull();
   });
 });
+
+describe('PUT /reply/:reply/pin', () => {
+  test('403 if not the author', async () => {
+    const response = await req(
+      `PUT /reply/${replyId}/pin`,
+      await token(userIds[1]),
+      { pin: true },
+    );
+    assertCode(response, 403, 'You are not the author of this reply.');
+  });
+
+  test('400 if double unpin', async () => {
+    const response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
+      pin: false,
+    });
+    assertCode(response, 400, 'This reply is already unpinned.');
+  });
+
+  test('200 and pins', async () => {
+    let response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
+      pin: true,
+    });
+    assertCode(response, 200);
+    response = await req(`GET /reply/${replyId}`);
+    expect(response.body.pinned).toBe(true);
+  });
+
+  test('400 if double pin', async () => {
+    const response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
+      pin: true,
+    });
+    assertCode(response, 400, 'This reply is already pinned.');
+  });
+
+  test('200 and unpins', async () => {
+    let response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
+      pin: false,
+    });
+    assertCode(response, 200);
+    response = await req(`GET /reply/${replyId}`);
+    expect(response.body.pinned).toBe(false);
+  });
+});

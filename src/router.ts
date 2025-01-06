@@ -101,4 +101,6 @@ router.route('/reply/:reply/vote').put(user.authenticate, reply.vote);
 
 router.route('/reply/:reply/status').put(user.authenticate, reply.editStatus);
 
+router.route('/reply/:reply/pin').put(user.authenticate, reply.pin);
+
 export { router };

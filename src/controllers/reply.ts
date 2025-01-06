@@ -242,3 +242,27 @@ export const editStatus = [
     }
   }),
 ];
+
+export const pin = [
+  exists,
+  community.isNotReadonly,
+  post.isNotReadonly,
+  isAuthor,
+  body('pin').trim().isBoolean().escape(),
+  validate,
+  asyncHandler(async (req, res) => {
+    if (req.thisReply.pinned === true && req.body.pin === 'true')
+      res.status(400).send('This reply is already pinned.');
+    else if (req.thisReply.pinned === false && req.body.pin === 'false')
+      res.status(400).send('This reply is already unpinned.');
+    else {
+      const pinned = await replyQueries.findPinned(req.thisPost.id);
+      if (pinned && req.body.pin === 'true')
+        res.status(400).send('Only one reply can be pinned per post.');
+      else {
+        await replyQueries.togglePinned(req.thisReply.id, req.body.pin);
+        res.sendStatus(200);
+      }
+    }
+  }),
+];

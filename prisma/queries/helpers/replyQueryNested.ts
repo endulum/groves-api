@@ -11,6 +11,7 @@ type Query = {
     datePosted: true;
     content: true;
     hidden: true;
+    pinned: true;
     _count: {
       select: {
         children: true;
@@ -40,6 +41,7 @@ export function replyQueryNested(opts: {
       datePosted: true,
       content: true,
       hidden: true,
+      pinned: true,
       _count: {
         select: {
           children: true,

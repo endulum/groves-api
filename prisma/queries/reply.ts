@@ -167,13 +167,13 @@ export async function vote(
 }
 
 export async function toggleHidden(
-  replyId: string,
+  id: string,
   hidden: 'true' | 'false',
   modId: number,
 ) {
   if (hidden === 'true') {
-    const { id, post } = await client.reply.update({
-      where: { id: replyId },
+    const { post } = await client.reply.update({
+      where: { id },
       data: { hidden: true },
       select: {
         id: true,
@@ -193,8 +193,8 @@ export async function toggleHidden(
     });
   }
   if (hidden === 'false') {
-    const { id, post } = await client.reply.update({
-      where: { id: replyId },
+    const { post } = await client.reply.update({
+      where: { id },
       data: { hidden: false },
       select: {
         id: true,
@@ -213,4 +213,23 @@ export async function toggleHidden(
       actedId: id,
     });
   }
+}
+
+export async function togglePinned(id: string, pinned: 'true' | 'false') {
+  await client.reply.update({
+    where: { id },
+    data: { pinned: pinned === 'true' },
+  });
+}
+
+export async function findPinned(postId: string) {
+  const { orderBy, take, ...query } = replyQueryNested({
+    take: 0,
+    levels: 0,
+  });
+  return await client.reply.findFirst({
+    where: { postId, pinned: true },
+    orderBy: { datePosted: 'asc' },
+    ...query,
+  });
 }
