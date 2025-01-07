@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 
 import * as userQueries from '../../prisma/queries/user';
 import { getForUser } from '../../prisma/queries/action';
+import { getForUser as getVerdancy } from '../../prisma/queries/verdancy';
 import { usernameValidation } from './auth';
 import { validate } from '../middleware/validate';
 
@@ -100,8 +101,12 @@ export const exists = asyncHandler(async (req, res, next) => {
 export const get = [
   exists,
   asyncHandler(async (req, res) => {
+    const verdancy = await getVerdancy(req.thisUser.id);
     delete req.thisUser.password;
-    res.json(req.thisUser);
+    res.json({
+      ...req.thisUser,
+      verdancy,
+    });
   }),
 ];
 

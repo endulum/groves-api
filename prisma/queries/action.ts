@@ -143,6 +143,12 @@ export async function getForUser(
             id: true,
             title: true,
             content: true,
+            _count: {
+              select: {
+                upvotes: true,
+                downvotes: true,
+              },
+            },
           },
         },
         reply: {
@@ -155,6 +161,12 @@ export async function getForUser(
               },
             },
             content: true,
+            _count: {
+              select: {
+                upvotes: true,
+                downvotes: true,
+              },
+            },
           },
         },
       },
