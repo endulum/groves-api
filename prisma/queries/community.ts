@@ -10,14 +10,37 @@ export async function find({ id, urlName }: { id?: number; urlName?: string }) {
   const OR: Prisma.CommunityWhereInput[] = [];
   if (id && !Object.is(id, NaN)) OR.push({ id });
   if (urlName) OR.push({ urlName });
-  return client.community.findFirst({
+  const community = await client.community.findFirst({
     where: { OR },
     include: {
       admin: { select: { id: true, username: true } },
       moderators: { select: { id: true, username: true } },
-      _count: { select: { followers: true, posts: true } },
+      _count: {
+        select: {
+          followers: true,
+          posts: true,
+        },
+      },
+      // i can't count pins in the same spot as _count due to syntax error?
+      // so we'll work around with an id grab here
+      posts: {
+        where: { pinned: true },
+        select: { id: true },
+      },
     },
   });
+
+  if (!community) return null;
+
+  const { posts, ...rest } = {
+    ...community,
+    _count: {
+      ...community._count,
+      pinnedPosts: community.posts.length,
+    },
+  };
+
+  return { ...rest };
 }
 
 export async function search(

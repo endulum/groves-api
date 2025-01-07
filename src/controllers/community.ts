@@ -3,7 +3,6 @@ import { body } from 'express-validator';
 
 import * as userQueries from '../../prisma/queries/user';
 import * as commQueries from '../../prisma/queries/community';
-import { findPinned } from '../../prisma/queries/post';
 import { getForCommunity } from '../../prisma/queries/action';
 import { validate } from '../middleware/validate';
 
@@ -114,13 +113,12 @@ export const get = [
     delete req.thisCommunity.wiki;
     res.json({
       ...req.thisCommunity,
-      context: {
+      meta: {
         isFollowing:
           req.user !== undefined &&
           (await commQueries.findFollowers(req.thisCommunity.id)).find(
             (follower) => follower.id === req.user.id,
           ) !== undefined,
-        hasPinnedPosts: (await findPinned(req.thisCommunity.id)).length > 0,
       },
     });
   }),

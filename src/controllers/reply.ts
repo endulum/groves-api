@@ -40,8 +40,8 @@ export const getForPost = [
       query,
       queryString,
       userId: req.user ? req.user.id : null,
-      commMods: req.thisCommunity.moderators,
-      commAdmin: req.thisCommunity.admin,
+      // commMods: req.thisCommunity.moderators,
+      // commAdmin: req.thisCommunity.admin,
     });
 
     res.json({
@@ -77,8 +77,8 @@ export const get = [
       ...formatReplies({
         replies: [req.thisReply],
         userId: req.user ? req.user.id : null,
-        commMods: req.thisCommunity.moderators,
-        commAdmin: req.thisCommunity.admin,
+        // commMods: req.thisCommunity.moderators,
+        // commAdmin: req.thisCommunity.admin,
       })[0],
     });
   }),
@@ -114,15 +114,15 @@ export const getForReply = [
       query,
       queryString,
       userId: req.user ? req.user.id : null,
-      commMods: req.thisCommunity.moderators,
-      commAdmin: req.thisCommunity.admin,
+      // commMods: req.thisCommunity.moderators,
+      // commAdmin: req.thisCommunity.admin,
     });
 
     const formattedParent = formatReplies({
       replies: [req.thisReply],
       userId: req.user ? req.user.id : null,
-      commMods: req.thisCommunity.moderators,
-      commAdmin: req.thisCommunity.admin,
+      // commMods: req.thisCommunity.moderators,
+      // commAdmin: req.thisCommunity.admin,
     })[0];
     if (formattedReplies.length > 0) delete formattedParent.loadChildren;
 
@@ -168,14 +168,14 @@ export const create = [
       req.body.parent !== '' ? req.body.parent : null,
       req.body.content,
     );
-    // console.log(reply);
     res.json({
       ...reply,
-      voted: {
-        upvoted: false,
-        downvoted: false,
+      meta: {
+        isVoted: {
+          upvoted: false,
+          downvoted: false,
+        },
       },
-      canVote: true,
     });
   }),
 ];
@@ -228,7 +228,11 @@ export const editStatus = [
   body('hidden').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
-    if (req.thisReply.hidden === true && req.body.hidden === 'true')
+    if (req.thisReply.pinned && req.body.hidden === 'true')
+      res
+        .status(400)
+        .send('Pinned posts cannot be hidden. Unpin this post to hide it.');
+    else if (req.thisReply.hidden === true && req.body.hidden === 'true')
       res.status(400).send('This reply is already hidden.');
     else if (req.thisReply.hidden === false && req.body.hidden === 'false')
       res.status(400).send('This reply is not hidden.');
@@ -247,7 +251,7 @@ export const pin = [
   exists,
   community.isNotReadonly,
   post.isNotReadonly,
-  isAuthor,
+  post.isAuthor,
   body('pin').trim().isBoolean().escape(),
   validate,
   asyncHandler(async (req, res) => {
@@ -266,22 +270,5 @@ export const pin = [
         res.sendStatus(200);
       }
     }
-  }),
-];
-
-export const getPinned = [
-  post.exists,
-  asyncHandler(async (req, res) => {
-    const pinnedReply = await replyQueries.findPinned(req.thisPost.id);
-    if (!pinnedReply) res.status(400).send('This post has no pinned replies.');
-    const { loadChildren, pinned, ...rest } = formatReplies({
-      replies: [pinnedReply],
-      userId: req.user ? req.user.id : null,
-      commMods: req.thisCommunity.moderators,
-      commAdmin: req.thisCommunity.admin,
-    })[0];
-    res.json({
-      ...rest,
-    });
   }),
 ];

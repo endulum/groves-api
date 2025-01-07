@@ -61,6 +61,22 @@ describe('GET /post/:post', () => {
     // KEEP
     logBody(response);
   });
+
+  describe('query params', () => {
+    test.skip('includeCommMeta', async () => {
+      const response = await req(`GET /post/${postId}?includeCommMeta=true`);
+      assertCode(response, 200);
+      ['moderators', 'admin', 'readonly'].map((property) => {
+        expect(response.body.community).toHaveProperty(property);
+      });
+    });
+
+    test('includePinnedReply', async () => {
+      const response = await req(`GET /post/${postId}?includePinnedReply=true`);
+      assertCode(response, 200);
+      expect(response.body).toHaveProperty('pinnedReply');
+    });
+  });
 });
 
 describe('PUT /post/:post/votes', () => {

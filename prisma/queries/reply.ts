@@ -103,6 +103,7 @@ export async function create(
       datePosted: true,
       content: true,
       hidden: true,
+      pinned: true,
       _count: {
         select: {
           children: true,
@@ -223,12 +224,20 @@ export async function togglePinned(id: string, pinned: 'true' | 'false') {
 }
 
 export async function findPinned(postId: string) {
-  const { orderBy, take, ...query } = replyQueryNested({
-    take: 0,
-    levels: 0,
-  });
   return await client.reply.findFirst({
     where: { postId, pinned: true },
-    ...query,
+    select: {
+      id: true,
+      postId: true,
+      author: { select: { id: true, username: true } },
+      datePosted: true,
+      content: true,
+      _count: {
+        select: {
+          upvotes: true,
+          downvotes: true,
+        },
+      },
+    },
   });
 }

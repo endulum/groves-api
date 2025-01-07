@@ -17,13 +17,14 @@ const wrongInputs = [
 ];
 
 beforeAll(async () => {
-  const { postIds } = await seed({
+  const { postIds, users: seedUsers } = await seed({
     userCount: 1,
     comms: { count: 1 },
     posts: { perComm: { min: 1, max: 1 } },
   });
   adminToken = await token(1);
   postId = postIds[0];
+  userIds.push(...seedUsers.map((u) => u.id));
 });
 
 describe('POST /post/:post/replies', () => {
@@ -116,7 +117,7 @@ describe('PUT reply/:reply/vote', () => {
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`, await token(userIds[1]));
     expect(response.body._count.upvotes).toBe(2);
-    expect(response.body.context.isVoted).toEqual({
+    expect(response.body.meta.isVoted).toEqual({
       upvoted: true,
       downvoted: false,
     });
@@ -131,7 +132,7 @@ describe('PUT reply/:reply/vote', () => {
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`, await token(userIds[1]));
     expect(response.body._count.upvotes).toBe(1);
-    expect(response.body.context.isVoted).toEqual({
+    expect(response.body.meta.isVoted).toEqual({
       upvoted: false,
       downvoted: false,
     });
@@ -184,43 +185,52 @@ describe('PUT /reply/:reply/pin', () => {
       await token(userIds[1]),
       { pin: true },
     );
-    assertCode(response, 403, 'You are not the author of this reply.');
+    assertCode(response, 403, 'You are not the author of this post.');
   });
 
   test('400 if double unpin', async () => {
-    const response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
-      pin: false,
-    });
+    const response = await req(
+      `PUT /reply/${replyId}/pin`,
+      await token(userIds[0]),
+      {
+        pin: false,
+      },
+    );
     assertCode(response, 400, 'This reply is already unpinned.');
   });
 
   test('200 and pins', async () => {
-    let response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
-      pin: true,
-    });
+    let response = await req(
+      `PUT /reply/${replyId}/pin`,
+      await token(userIds[0]),
+      {
+        pin: true,
+      },
+    );
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`);
     expect(response.body.pinned).toBe(true);
   });
 
   test('400 if double pin', async () => {
-    const response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
-      pin: true,
-    });
+    const response = await req(
+      `PUT /reply/${replyId}/pin`,
+      await token(userIds[0]),
+      {
+        pin: true,
+      },
+    );
     assertCode(response, 400, 'This reply is already pinned.');
   });
 
-  describe('GET /post/:post/pinned', () => {
-    test('works', async () => {
-      const response = await req(`GET /post/${postId}/pinned`);
-      assertCode(response, 200);
-    });
-  });
-
   test('200 and unpins', async () => {
-    let response = await req(`PUT /reply/${replyId}/pin`, adminToken, {
-      pin: false,
-    });
+    let response = await req(
+      `PUT /reply/${replyId}/pin`,
+      await token(userIds[0]),
+      {
+        pin: false,
+      },
+    );
     assertCode(response, 200);
     response = await req(`GET /reply/${replyId}`);
     expect(response.body.pinned).toBe(false);

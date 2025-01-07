@@ -5,8 +5,8 @@ export function formatReplies({
   query,
   queryString,
   userId,
-  commMods,
-  commAdmin,
+  // commMods,
+  // commAdmin,
 }: {
   replies: any[]; // i promise i know what i'm doing!
   query?: {
@@ -20,13 +20,13 @@ export function formatReplies({
   };
   queryString?: string;
   userId: number | null;
-  commMods: Array<{ id: number }>;
-  commAdmin: { id: number };
+  // commMods: Array<{ id: number }>;
+  // commAdmin: { id: number };
 }) {
   return replies.map((reply) => {
-    reply.context = {};
+    reply.meta = {};
     // handle context
-    reply.context.isVoted = {
+    reply.meta.isVoted = {
       upvoted:
         reply.upvotes.find((u: { id: number }) => u.id === userId) !==
         undefined,
@@ -34,9 +34,9 @@ export function formatReplies({
         reply.downvotes.find((u: { id: number }) => u.id === userId) !==
         undefined,
     };
-    reply.context.isReplyAuthorMod =
-      commMods.find((mod) => mod.id === reply.author.id) !== undefined;
-    reply.context.isReplyAuthorAdmin = commAdmin.id === reply.author.id;
+    // reply.context.isReplyAuthorMod =
+    //   commMods.find((mod) => mod.id === reply.author.id) !== undefined;
+    // reply.context.isReplyAuthorAdmin = commAdmin.id === reply.author.id;
 
     // handle pagination links
     if (query && 'children' in reply && reply.children.length > 0) {
@@ -52,8 +52,8 @@ export function formatReplies({
         query,
         queryString,
         userId,
-        commMods,
-        commAdmin,
+        // commMods,
+        // commAdmin,
       });
     } else {
       if (reply._count.children > 0) {

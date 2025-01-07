@@ -79,6 +79,12 @@ export const exists = asyncHandler(async (req, res, next) => {
 export const get = [
   exists,
   asyncHandler(async (req, res) => {
+    const { includeCommMeta, includePinnedReply } = req.query as Record<
+      string,
+      'true' | never
+    >;
+
+    // get vote context
     let isVoted: { upvoted: boolean; downvoted: boolean } = {
       upvoted: false,
       downvoted: false,
@@ -97,27 +103,22 @@ export const get = [
 
     delete req.thisPost.upvotes;
     delete req.thisPost.downvotes;
+
     res.json({
       ...req.thisPost,
-      context: {
-        // did the auth'd user vote?
+      ...(includeCommMeta === 'true' && {
+        community: {
+          ...req.thisPost.community,
+          admin: req.thisCommunity.admin,
+          moderators: req.thisCommunity.moderators,
+          readonly: req.thisCommunity.readonly,
+        },
+      }),
+      ...(includePinnedReply === 'true' && {
+        pinnedReply: await findPinned(req.thisPost.id),
+      }),
+      meta: {
         isVoted,
-        // does the auth'd user have mod privileges?
-        isMod:
-          req.user !== undefined &&
-          (req.thisCommunity.admin.id === req.user.id ||
-            req.thisCommunity.moderators.find(
-              (mod: { id: number }) => mod.id === req.user.id,
-            ) !== undefined),
-        // is the author a mod of this comm?
-        isPostAuthorMod:
-          req.thisCommunity.moderators.find(
-            (mod: { id: number }) => mod.id === req.thisPost.author.id,
-          ) !== undefined,
-        isPostAuthorAdmin:
-          req.thisCommunity.admin.id === req.thisPost.author.id,
-        isCommReadonly: req.thisCommunity.readonly,
-        hasPinnedReply: !!(await findPinned(req.thisPost.id)),
       },
     });
   }),
