@@ -12,6 +12,7 @@ const router = express.Router();
 
 router.route('/all').get(feed.get);
 router.route('/feed').get(user.authenticate, feed.get);
+router.route('/following').get(user.authenticate, community.searchFollowing);
 
 // account
 

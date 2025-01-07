@@ -39,7 +39,6 @@ export async function find({ id, urlName }: { id?: number; urlName?: string }) {
       pinnedPosts: community.posts.length,
     },
   };
-
   return { ...rest };
 }
 
@@ -102,6 +101,58 @@ export async function search(
       take: paginationParams.take.toString(),
     },
     `/communities`,
+  );
+
+  return { communities, links: { nextPage, prevPage } };
+}
+
+export async function searchFollowing(
+  userId: number,
+  paginationParams: {
+    before?: number;
+    after?: number;
+    take: number;
+  },
+  searchParams: {
+    name: string;
+  },
+) {
+  const {
+    results: communities,
+    nextCursor,
+    prevCursor,
+  } = await paginatedResults<number>(paginationParams, async (params) =>
+    client.community.findMany({
+      ...params,
+      where: {
+        OR: [
+          { canonicalName: { contains: searchParams.name ?? '' } },
+          { urlName: { contains: searchParams.name ?? '' } },
+        ],
+        followers: {
+          some: {
+            id: userId,
+          },
+        },
+      },
+      orderBy: [{ lastActivity: 'desc' }, { id: 'desc' }],
+      select: {
+        id: true,
+        urlName: true,
+        canonicalName: true,
+        lastActivity: true,
+      },
+    }),
+  );
+
+  const { nextPage, prevPage } = getPageUrls(
+    nextCursor?.toString(),
+    prevCursor?.toString(),
+    {
+      ...searchParams,
+      take: paginationParams.take.toString(),
+    },
+    `/following`,
   );
 
   return { communities, links: { nextPage, prevPage } };

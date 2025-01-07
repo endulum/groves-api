@@ -1,16 +1,20 @@
-import { req, assertCode } from '../helpers';
+import { req, assertCode, token } from '../helpers';
 import { seed } from '../../prisma/seed';
 import { assertPagination } from './_listHelpers';
+import { follow } from '../../prisma/queries/community';
+
+const commIds: number[] = [];
 
 describe('GET /communities', () => {
   const testCommCount = 50;
 
   beforeAll(async () => {
-    await seed({
+    const { commIds: seedComms } = await seed({
       userCount: 250,
       comms: { count: testCommCount, followers: { max: 250 } },
       posts: { perComm: { max: 100 } },
     });
+    commIds.push(...seedComms);
   });
 
   test('show max 15 communities, activity ascending by default', async () => {
@@ -105,5 +109,25 @@ describe('GET /communities', () => {
         ).toEqual(response.body.communities);
       },
     });
+  });
+});
+
+describe('GET /following', () => {
+  beforeAll(async () => {
+    // follow every community
+    await Promise.all(commIds.map((id) => follow(id, 1, 'true')));
+  });
+
+  test('show max 15 communities, activity ascending', async () => {
+    const response = await req('GET /following', await token(1));
+    assertCode(response, 200);
+    expect(response.body.communities).toBeDefined();
+    expect(response.body.communities.length).toBe(15);
+    expect(
+      [...response.body.communities].sort(
+        (comm_a: { lastActivity: string }, comm_b: { lastActivity: string }) =>
+          Date.parse(comm_b.lastActivity) - Date.parse(comm_a.lastActivity),
+      ),
+    ).toEqual(response.body.communities);
   });
 });

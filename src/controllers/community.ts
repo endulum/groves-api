@@ -30,6 +30,30 @@ export const search = asyncHandler(async (req, res) => {
   });
 });
 
+export const searchFollowing = asyncHandler(async (req, res) => {
+  const { before, after, take, name } = req.query as Record<
+    string,
+    string | undefined
+  >;
+
+  const { communities, links } = await commQueries.searchFollowing(
+    req.user.id,
+    {
+      before: before ? (parseInt(before, 10) ?? undefined) : undefined,
+      after: after ? (parseInt(after, 10) ?? undefined) : undefined,
+      take: take ? (parseInt(take, 10) ?? 15) : 15,
+    },
+    {
+      name: name ?? '',
+    },
+  );
+
+  res.json({
+    communities,
+    links,
+  });
+});
+
 const validation = [
   body('urlName')
     .trim()
