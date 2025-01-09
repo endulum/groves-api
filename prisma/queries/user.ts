@@ -33,10 +33,12 @@ export async function create({
   username,
   password,
   githubId,
+  githubUser,
 }: {
   username: string;
   password?: string;
   githubId?: number;
+  githubUser?: string;
 }) {
   if (password) {
     const salt = await bcrypt.genSalt(10);
@@ -45,9 +47,9 @@ export async function create({
       data: { username, password: hashedPassword },
     });
     return id;
-  } else if (githubId) {
+  } else if (githubId && githubUser) {
     const { id } = await client.user.create({
-      data: { username, githubId },
+      data: { username, githubId, githubUser },
     });
     return id;
   } else {
@@ -102,5 +104,12 @@ export async function update({
       ? { username: userData.username }
       : { id: userData.id },
     data,
+  });
+}
+
+export async function updateGithubUser(id: number, githubUser: string) {
+  await client.user.update({
+    where: { id },
+    data: { githubUser },
   });
 }

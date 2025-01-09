@@ -149,10 +149,12 @@ export const github = asyncHandler(async (req, res) => {
   if (existingUser) {
     username = existingUser.username;
     id = existingUser.id;
+    await userQueries.updateGithubUser(id, githubUser.login);
   } else {
     const newUserId = await userQueries.create({
       username: githubUser.login,
       githubId: githubUser.id,
+      githubUser: githubUser.login,
     });
     username = githubUser.login;
     id = newUserId as number;

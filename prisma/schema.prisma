@@ -11,12 +11,13 @@ datasource db {
 model User {
   id Int @id @default(autoincrement())
 
-  username String   @unique @db.VarChar(32)
-  password String?  @db.VarChar()
-  githubId Int?
-  joined   DateTime @default(now())
-  bio      String?  @db.VarChar(256)
-  role     Role     @default(BASIC)
+  username   String   @unique @db.VarChar(32)
+  password   String?  @db.VarChar()
+  githubId   Int?
+  githubUser String?  @db.VarChar()
+  joined     DateTime @default(now())
+  bio        String?  @db.VarChar(256)
+  role       Role     @default(BASIC)
 
   communitiesFollowing   Community[] @relation("communityFollowers")
   communitiesAdminOf     Community[] @relation("communityAdmin")
