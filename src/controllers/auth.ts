@@ -4,6 +4,8 @@ import jwt from 'jsonwebtoken';
 
 import * as userQueries from '../../prisma/queries/user';
 import { validate } from '../middleware/validate';
+import { ofetch } from 'ofetch';
+import { parse } from 'querystring';
 
 // is imported at user controller for username changing
 export const usernameValidation = body('username')
@@ -66,6 +68,13 @@ export const signup = [
   }),
 ];
 
+const signToken = async (id: number, username: string) => {
+  if (!process.env.TOKEN_SECRET)
+    throw new Error('Token secret is not defined.');
+  const token = jwt.sign({ username, id }, process.env.TOKEN_SECRET);
+  return token;
+};
+
 export const login = [
   isNotLoggedIn,
   body('username')
@@ -92,12 +101,64 @@ export const login = [
     .escape(),
   validate,
   asyncHandler(async (req, res) => {
-    if (!process.env.TOKEN_SECRET)
-      throw new Error('Token secret is not defined.');
-    const token = jwt.sign(
-      { username: req.user.username, id: req.user.id },
-      process.env.TOKEN_SECRET,
-    );
-    res.json({ token });
+    res.json({
+      token: await signToken(req.user.username, req.user.id),
+    });
   }),
 ];
+
+const exchangeCodeForToken = async (code: string) => {
+  const { access_token } = await ofetch(
+    'https://github.com/login/oauth/access_token',
+    {
+      method: 'get',
+      params: {
+        client_id: process.env.GH_CLIENT_ID,
+        client_secret: process.env.GH_SECRET,
+        redirect_uri: `${process.env.FRONTEND_URL}/github`,
+        code,
+      },
+      parseResponse: (response) => parse(response),
+    },
+  );
+  return access_token;
+};
+
+const fetchGithubUser = async (accessToken: string) => {
+  const data = await ofetch('https://api.github.com/user', {
+    method: 'get',
+    headers: {
+      Authorization: `token ${accessToken}`,
+    },
+  });
+  return data;
+};
+
+export const github = asyncHandler(async (req, res) => {
+  const { code } = req.query as Record<string, string | null>;
+  if (!code || code === 'undefined') {
+    res.status(400).send('No code is provided.');
+    return;
+  }
+  const accessToken = await exchangeCodeForToken(code);
+  const githubUser = await fetchGithubUser(accessToken);
+
+  let username = '';
+  let id = 0;
+  const existingUser = await userQueries.find({ githubId: githubUser.id });
+  if (existingUser) {
+    username = existingUser.username;
+    id = existingUser.id;
+  } else {
+    const newUserId = await userQueries.create({
+      username: githubUser.login,
+      githubId: githubUser.id,
+    });
+    username = githubUser.login;
+    id = newUserId as number;
+  }
+
+  res.json({
+    token: await signToken(id, username),
+  });
+});

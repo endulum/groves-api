@@ -47,7 +47,11 @@ export const edit = [
     .escape(),
   body('password')
     .trim()
-    .custom(async (value) => {
+    .custom(async (value, { req }) => {
+      if (req.user.githubId)
+        throw new Error(
+          'This account was authenticated with GitHub and does not need a password.',
+        );
       if (value.length > 0 && value.length < 8)
         throw new Error('New password must be 8 or more characters long.');
     })

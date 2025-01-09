@@ -8,6 +8,8 @@ import * as feed from './controllers/feed';
 
 const router = express.Router();
 
+router.route('/github').get(auth.github);
+
 // feed
 
 router.route('/all').get(feed.get);

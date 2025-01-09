@@ -40,6 +40,8 @@
     "jsonwebtoken": "^9.0.2",
     "lorem-ipsum": "^2.0.8",
     "morgan": "^1.10.0",
+    "ofetch": "^1.4.1",
+    "query-string": "^9.1.1",
     "supertest": "^7.0.0",
     "wilson-score-interval": "^2.1.0"
   },
