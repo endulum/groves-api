@@ -102,7 +102,7 @@ export const login = [
   validate,
   asyncHandler(async (req, res) => {
     res.json({
-      token: await signToken(req.user.username, req.user.id),
+      token: await signToken(req.user.id, req.user.username),
     });
   }),
 ];

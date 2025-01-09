@@ -40,7 +40,7 @@ export async function create({
 }) {
   if (password) {
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password ?? 'password', salt);
+    const hashedPassword = await bcrypt.hash(password, salt);
     const { id } = await client.user.create({
       data: { username, password: hashedPassword },
     });
@@ -48,6 +48,13 @@ export async function create({
   } else if (githubId) {
     const { id } = await client.user.create({
       data: { username, githubId },
+    });
+    return id;
+  } else {
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash('password', salt);
+    const { id } = await client.user.create({
+      data: { username, password: hashedPassword },
     });
     return id;
   }

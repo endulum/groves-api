@@ -82,7 +82,7 @@ describe('PUT reply/:reply/vote', () => {
   beforeAll(async () => {
     // create three demo users *in order* using a for loop
     for (const username of ['demo-1', 'demo-2']) {
-      userIds.push(await create({ username }));
+      userIds.push((await create({ username })) as number);
     }
     await vote(replyId, userIds[0], 'upvote', 'add');
   });
