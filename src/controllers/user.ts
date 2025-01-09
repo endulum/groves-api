@@ -48,7 +48,7 @@ export const edit = [
   body('password')
     .trim()
     .custom(async (value, { req }) => {
-      if (req.user.githubId)
+      if (value.length > 0 && req.user.githubId)
         throw new Error(
           'This account was authenticated with GitHub and does not need a password.',
         );
