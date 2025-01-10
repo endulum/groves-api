@@ -1,17 +1,25 @@
 /* eslint-disable no-console */
 import { client } from './client';
-import { populate } from './populate';
+import { seed } from './seed';
 
 async function main() {
-  await populate(
-    {
-      userCount: 500,
-      commCount: 150,
-      maxMods: 5,
-      maxFollowers: 250,
+  await seed({
+    logging: true,
+    userCount: 100,
+    comms: {
+      count: 10,
+      followers: { max: 100 },
+      mods: { max: 10 },
     },
-    true,
-  );
+    posts: {
+      perComm: { max: 50 },
+      votesPer: { max: 100 },
+    },
+    replies: {
+      perPost: { max: 50 },
+      votesPer: { max: 100 },
+    },
+  });
 }
 
 main()

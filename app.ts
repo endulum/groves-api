@@ -9,14 +9,11 @@ import { router } from './src/router';
 
 dotenv.config({ path: '.env' });
 dotenv.config({ path: `.env.${process.env.ENV}` });
+console.warn(`environment: ${process.env.ENV}`);
 
 const app = express();
 
-app.use(
-  cors({
-    origin: '*',
-  }),
-);
+app.use(cors({ origin: process.env.FRONTEND_URL }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -24,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 // suppress favicon request
 app.get('/favicon.ico', (_req, res) => res.status(204).end());
 
-// log method and given values
+// in dev, log method and given values
 if (process.env.ENV === 'development') {
   app.use(logger('dev'));
   app.use(
@@ -55,4 +52,7 @@ app.use(
 
 app.use(errorHandler);
 
-app.listen(3000);
+const port = process.env.PORT ?? 3000;
+app.listen(port, () => {
+  console.warn(`⚡️ server starting at http://localhost:${port}`);
+});

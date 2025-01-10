@@ -14,14 +14,14 @@
     "docker:reset": "npm run docker:up && npx dotenv -e .env.test -- prisma migrate reset",
     "docker:clean": "docker compose down --rmi all --volumes --remove-orphans",
     "test": "npm run docker:migrate && npx dotenv -e .env.test -- vitest",
-    "build": "tsc -p tsconfig.prod.json",
+    "build": "ENV=production tsc -p tsconfig.prod.json",
     "build:start": "ENV=production node ./dist/app.js",
     "build:clean": "rm -r ./dist",
     "db:generate": "npx dotenv -e .env.development -- npx prisma generate",
     "db:migrate": "npx dotenv -e .env.development -- npx prisma migrate dev",
     "db:reset": "npx dotenv -e .env.development -- nodemon prisma/reset.ts",
     "dev": "ENV=development nodemon --exec ts-node ./app.ts",
-    "play": "npx dotenv -e .env.development -- nodemon playground.ts"
+    "play": "ENV=development nodemon playground.ts"
   },
   "keywords": [],
   "author": "",
