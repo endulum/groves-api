@@ -1,3 +1,6 @@
+
+
+-- ReplyRating.sql
 CREATE OR REPLACE VIEW "ReplyRating" AS SELECT
   "votedReplies".id as "replyId", 
   "votedReplies".upvotes as upvotes, 

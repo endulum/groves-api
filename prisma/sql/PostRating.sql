@@ -1,3 +1,6 @@
+
+
+-- PostRating.sql
 CREATE OR REPLACE VIEW "PostRating" AS SELECT
   "votedPosts".id as "postId", 
   "votedPosts".upvotes as upvotes, 
@@ -36,7 +39,7 @@ FROM (
 		  JOIN "Post" ON "_postDownvotes"."A" = "Post"."id"
 		  GROUP BY "Post"."id"
     ) AS d ON d.id = "Post".id
-) AS "votedPosts"
+) AS "votedPosts";
  
 -- https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx
 -- https://old.reddit.com/r/graphql/comments/oczbkb/how_can_i_sort_items_by_custom_value_in_prisma/

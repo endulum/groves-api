@@ -1,11 +1,16 @@
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('BASIC', 'ADMIN');
 
+-- CreateEnum
+CREATE TYPE "ActionType" AS ENUM ('Community_Create', 'Community_Edit', 'Community_EditWiki', 'Community_Freeze', 'Community_Unfreeze', 'User_PromoteMod', 'User_DemoteMod', 'User_ChangeAdmin', 'Post_Create', 'Post_Edit', 'Post_Freeze', 'Post_Unfreeze', 'Post_Pin', 'Post_Unpin', 'Reply_Create', 'Reply_Hide', 'Reply_Unhide');
+
 -- CreateTable
 CREATE TABLE "User" (
     "id" SERIAL NOT NULL,
     "username" VARCHAR(32) NOT NULL,
-    "password" VARCHAR NOT NULL,
+    "password" VARCHAR,
+    "githubId" INTEGER,
+    "githubUser" VARCHAR,
     "joined" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "bio" VARCHAR(256),
     "role" "Role" NOT NULL DEFAULT 'BASIC',
@@ -61,7 +66,11 @@ CREATE TABLE "Reply" (
 CREATE TABLE "Action" (
     "id" SERIAL NOT NULL,
     "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "activity" TEXT NOT NULL,
+    "type" "ActionType" NOT NULL,
+    "actorId" INTEGER NOT NULL,
+    "userId" INTEGER,
+    "postId" TEXT,
+    "replyId" TEXT,
     "communityId" INTEGER NOT NULL,
 
     CONSTRAINT "Action_pkey" PRIMARY KEY ("id")
@@ -164,6 +173,18 @@ ALTER TABLE "Reply" ADD CONSTRAINT "Reply_postId_fkey" FOREIGN KEY ("postId") RE
 ALTER TABLE "Reply" ADD CONSTRAINT "Reply_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Reply"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "Action" ADD CONSTRAINT "Action_actorId_fkey" FOREIGN KEY ("actorId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Action" ADD CONSTRAINT "Action_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Action" ADD CONSTRAINT "Action_postId_fkey" FOREIGN KEY ("postId") REFERENCES "Post"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Action" ADD CONSTRAINT "Action_replyId_fkey" FOREIGN KEY ("replyId") REFERENCES "Reply"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "Action" ADD CONSTRAINT "Action_communityId_fkey" FOREIGN KEY ("communityId") REFERENCES "Community"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -202,7 +223,7 @@ ALTER TABLE "_replyDownvotes" ADD CONSTRAINT "_replyDownvotes_A_fkey" FOREIGN KE
 -- AddForeignKey
 ALTER TABLE "_replyDownvotes" ADD CONSTRAINT "_replyDownvotes_B_fkey" FOREIGN KEY ("B") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
--- PostRating
+-- PostRating.sql
 CREATE OR REPLACE VIEW "PostRating" AS SELECT
   "votedPosts".id as "postId", 
   "votedPosts".upvotes as upvotes, 
@@ -242,8 +263,13 @@ FROM (
 		  GROUP BY "Post"."id"
     ) AS d ON d.id = "Post".id
 ) AS "votedPosts";
+ 
+-- https://github.com/reddit-archive/reddit/blob/master/r2/r2/lib/db/_sorts.pyx
+-- https://old.reddit.com/r/graphql/comments/oczbkb/how_can_i_sort_items_by_custom_value_in_prisma/
+-- https://www.evanmiller.org/how-not-to-sort-by-average-rating.html
+-- https://www.prisma.io/docs/orm/prisma-migrate/workflows/unsupported-database-features#customize-a-migration-to-include-an-unsupported-feature
 
--- ReplyRating
+-- ReplyRating.sql
 CREATE OR REPLACE VIEW "ReplyRating" AS SELECT
   "votedReplies".id as "replyId", 
   "votedReplies".upvotes as upvotes, 
