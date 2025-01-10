@@ -69,9 +69,8 @@ export const signup = [
 ];
 
 const signToken = async (id: number, username: string) => {
-  if (!process.env.TOKEN_SECRET)
-    throw new Error('Token secret is not defined.');
-  const token = jwt.sign({ username, id }, process.env.TOKEN_SECRET);
+  if (!process.env.JWT_SECRET) throw new Error('JWT secret is not defined.');
+  const token = jwt.sign({ username, id }, process.env.JWT_SECRET);
   return token;
 };
 

@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "envinit": "cp -n .env.example .env.production && cp -n .env.example .env.development && cp -n .env.example .env.test",
     "lint": "npx eslint .",
     "fmt": "npx prettier --write .",
     "docker:up": "docker compose up -d",

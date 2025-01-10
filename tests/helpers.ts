@@ -129,12 +129,11 @@ export async function token(userInfo: string | number): Promise<string> {
     throw new Error(`Given user ${userInfo} does not exist.`);
   }
 
-  if (!process.env.TOKEN_SECRET)
-    throw new Error('Token secret is not defined.');
+  if (!process.env.JWT_SECRET) throw new Error('Token secret is not defined.');
 
   const token = jwt.sign(
     { user: user.username, id: user.id },
-    process.env.TOKEN_SECRET,
+    process.env.JWT_SECRET,
   );
 
   return token;

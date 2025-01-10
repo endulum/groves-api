@@ -14,8 +14,8 @@ export const deserialize = asyncHandler(async (req, _res, next) => {
   if (bearerToken === undefined || bearerToken === 'undefined') return next();
 
   try {
-    if (!process.env.TOKEN_SECRET) throw new Error('Secret is not defined.');
-    const { id } = jwt.verify(bearerToken, process.env.TOKEN_SECRET) as {
+    if (!process.env.JWT_SECRET) throw new Error('Secret is not defined.');
+    const { id } = jwt.verify(bearerToken, process.env.JWT_SECRET) as {
       id: number;
     };
     const user = await userQueries.find({ id });
