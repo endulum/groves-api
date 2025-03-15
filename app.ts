@@ -35,10 +35,6 @@ if (process.env.ENV === 'development') {
       next();
     }),
   );
-  app.use(async (_req, _res, next) => {
-    setTimeout(next, 750);
-    // artificial delay to test visual loading in frontend
-  });
 }
 
 app.use(router);
