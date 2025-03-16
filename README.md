@@ -86,8 +86,6 @@ If doing this in tandem with squashing, this step must be done _before_ running 
 
 ### Endpoint overview
 
-### Endpoint overview
-
 | Endpoint                               | Description                                                  |
 | -------------------------------------- | ------------------------------------------------------------ |
 | `POST /login`                          | Log in to a user account. This returns a JWT representing the user on success. |
