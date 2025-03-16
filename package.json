@@ -14,6 +14,7 @@
     "docker:rollback": "npm run docker:up && npx dotenv -e .env.test -- npx prisma migrate resolve --rolled-back",
     "docker:reset": "npm run docker:up && npx dotenv -e .env.test -- prisma migrate reset",
     "docker:clean": "docker compose down --rmi all --volumes --remove-orphans",
+    "docker:redis": "docker exec -it groves-api-redis-1 redis-cli",
     "test": "npm run docker:migrate && npx dotenv -e .env.test -- vitest",
     "build": "ENV=production tsc -p tsconfig.prod.json",
     "build:start": "ENV=production node ./dist/app.js",
