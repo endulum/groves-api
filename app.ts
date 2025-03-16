@@ -8,8 +8,8 @@ import { errorHandler } from './src/middleware/errorHandler';
 import { router } from './src/router';
 
 dotenv.config({ path: '.env' });
-dotenv.config({ path: `.env.${process.env.ENV}` });
-console.warn(`environment: ${process.env.ENV}`);
+dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
+console.warn(`environment: ${process.env.NODE_ENV}`);
 
 const app = express();
 
@@ -22,7 +22,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/favicon.ico', (_req, res) => res.status(204).end());
 
 // in dev, log method and given values
-if (process.env.ENV === 'development') {
+if (process.env.NODE_ENV === 'development') {
   app.use(logger('dev'));
   app.use(
     asyncHandler(async (req, _res, next) => {

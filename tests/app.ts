@@ -5,7 +5,7 @@ import { errorHandler } from '../src/middleware/errorHandler';
 import { router } from '../src/router';
 
 dotenv.config({ path: '.env' });
-dotenv.config({ path: `.env.${process.env.ENV}` });
+dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
 
 const app = express();
 app.use(express.json());

@@ -16,14 +16,14 @@
     "docker:clean": "docker compose down --rmi all --volumes --remove-orphans",
     "docker:redis": "docker exec -it groves-api-redis-1 redis-cli",
     "test": "npm run docker:migrate && npx dotenv -e .env.test -- vitest",
-    "build": "ENV=production tsc -p tsconfig.prod.json",
-    "build:start": "ENV=production node ./dist/app.js",
+    "build": "NODE_ENV=production tsc -p tsconfig.prod.json",
+    "build:start": "NODE_ENV=production node ./dist/app.js",
     "build:clean": "rm -r ./dist",
     "db:generate": "npx dotenv -e .env.development -- npx prisma generate",
     "db:migrate": "npx dotenv -e .env.development -- npx prisma migrate dev",
     "db:reset": "npx dotenv -e .env.development -- nodemon prisma/reset.ts",
-    "dev": "ENV=development nodemon --exec ts-node ./app.ts",
-    "play": "ENV=development nodemon playground.ts"
+    "dev": "NODE_ENV=development nodemon --exec ts-node ./app.ts",
+    "play": "NODE_ENV=development nodemon playground.ts"
   },
   "keywords": [],
   "author": "",
