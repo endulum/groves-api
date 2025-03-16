@@ -10,6 +10,13 @@ import * as post from './post';
 import * as community from './community';
 import { formatReplies } from '../../prisma/queries/helpers/formatReplies';
 
+async function expire(postId: string) {
+  if (process.env.NODE_ENV !== 'test') {
+    const redis = await import('../../redis/client');
+    await redis.expireSavedForPost(postId);
+  }
+}
+
 export const getForPost = [
   post.exists,
   asyncHandler(async (req, res) => {
@@ -34,14 +41,28 @@ export const getForPost = [
       ...(query.sort && { sort: query.sort }),
     });
 
-    const queryResult = await replyQueries.get({ ...query, queryString });
+    let queryResult: replyQueries.QueriedReplyTree;
+
+    if (process.env.NODE_ENV !== 'test') {
+      const redis = await import('../../redis/client');
+      const cachedResult = await redis.getSavedReplyTree(
+        req.thisPost.id,
+        queryString,
+      );
+      if (cachedResult) queryResult = cachedResult;
+      else {
+        queryResult = await replyQueries.get({ ...query, queryString });
+        await redis.saveReplyTree(req.thisPost.id, queryString, queryResult);
+      }
+    } else {
+      queryResult = await replyQueries.get({ ...query, queryString });
+    }
+
     const formattedReplies = formatReplies({
       replies: queryResult.children,
       query,
       queryString,
       userId: req.user ? req.user.id : null,
-      // commMods: req.thisCommunity.moderators,
-      // commAdmin: req.thisCommunity.admin,
     });
 
     res.json({
@@ -77,8 +98,6 @@ export const get = [
       ...formatReplies({
         replies: [req.thisReply],
         userId: req.user ? req.user.id : null,
-        // commMods: req.thisCommunity.moderators,
-        // commAdmin: req.thisCommunity.admin,
       })[0],
     });
   }),
@@ -114,15 +133,11 @@ export const getForReply = [
       query,
       queryString,
       userId: req.user ? req.user.id : null,
-      // commMods: req.thisCommunity.moderators,
-      // commAdmin: req.thisCommunity.admin,
     });
 
     const formattedParent = formatReplies({
       replies: [req.thisReply],
       userId: req.user ? req.user.id : null,
-      // commMods: req.thisCommunity.moderators,
-      // commAdmin: req.thisCommunity.admin,
     })[0];
     if (formattedReplies.length > 0) delete formattedParent.loadChildren;
 
@@ -168,6 +183,7 @@ export const create = [
       req.body.parent !== '' ? req.body.parent : null,
       req.body.content,
     );
+    await expire(req.thisPost.id);
     res.json({
       ...reply,
       meta: {
@@ -215,6 +231,7 @@ export const vote = [
         req.body.type,
         req.body.action,
       );
+      await expire(req.thisPost.id);
       res.sendStatus(200);
     }
   }),
@@ -242,6 +259,7 @@ export const editStatus = [
         req.body.hidden,
         req.user.id,
       );
+      await expire(req.thisPost.id);
       res.sendStatus(200);
     }
   }),

@@ -5,8 +5,6 @@ export function formatReplies({
   query,
   queryString,
   userId,
-  // commMods,
-  // commAdmin,
 }: {
   replies: any[]; // i promise i know what i'm doing!
   query?: {

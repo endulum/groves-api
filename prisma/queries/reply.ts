@@ -64,6 +64,8 @@ export async function get(query: {
   };
 }
 
+export type QueriedReplyTree = Awaited<ReturnType<typeof get>>;
+
 export async function getOne(id: string) {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { orderBy, take, ...query } = replyQueryNested({
